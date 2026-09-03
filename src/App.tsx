@@ -7,6 +7,7 @@ import WeddingsList from './routes/admin/weddings/WeddingsList';
 import WeddingForm from './routes/admin/weddings/WeddingForm';
 import WeddingDetail from './routes/admin/weddings/WeddingDetail';
 import AppLayout from './routes/app/AppLayout';
+import ClientLogin from './routes/app/ClientLogin';
 import ClientDashboard from './routes/app/ClientDashboard';
 import WeddingConfigLayout from './routes/app/weddings/WeddingConfigLayout';
 import SectionsEditor from './routes/app/weddings/SectionsEditor';
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="weddings/:id/edit" element={<WeddingForm />} />
       </Route>
 
+      <Route path="/app/login" element={<ClientLogin />} />
       <Route path="/app" element={<AppLayout />}>
         <Route index element={<ClientDashboard />} />
         <Route path=":weddingId" element={<WeddingConfigLayout />}>

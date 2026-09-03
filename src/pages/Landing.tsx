@@ -32,7 +32,7 @@ export default function Landing() {
           programme, confirmation de présence, gestion des tables et partage de photos.
         </p>
 
-        <div className="mt-12 grid gap-6 sm:grid-cols-3">
+        <div className="mt-12 grid gap-6 sm:grid-cols-2">
           {[
             {
               icon: <Users className="h-6 w-6" />,
@@ -44,13 +44,7 @@ export default function Landing() {
               icon: <Heart className="h-6 w-6" />,
               title: 'Panel client',
               desc: 'Les mariés configurent leur site sans toucher au code.',
-              to: '/app',
-            },
-            {
-              icon: <Sparkles className="h-6 w-6" />,
-              title: 'Site public',
-              desc: 'Accès invités via un lien sécurisé par mariage.',
-              to: '/w/example',
+              to: '/app/login',
             },
           ].map((c) => (
             <Link

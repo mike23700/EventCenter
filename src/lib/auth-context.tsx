@@ -15,6 +15,7 @@ interface AuthState {
   loaded: boolean;
   setUser: (user: User | null) => void;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
+  signUp: (email: string, password: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
 }
 
@@ -28,6 +29,16 @@ export const authStore = createStore<AuthState>((set) => ({
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     set({ loading: false });
     return error ? { error: error.message } : {};
+  },
+  signUp: async (email, password) => {
+    set({ loading: true });
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    set({ loading: false });
+    if (error) return { error: error.message };
+    if (!data.session) {
+      return { error: 'Verifiez votre boite mail pour confirmer votre inscription.' };
+    }
+    return {};
   },
   signOut: async () => {
     await supabase.auth.signOut();
