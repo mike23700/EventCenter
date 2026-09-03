@@ -1,0 +1,333 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[french]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{tabularx}
+
+\definecolor{primaryblue}{RGB}{30,58,95}
+\definecolor{accentgold}{RGB}{201,162,39}
+
+\titleformat{\section}
+  {\Large\bfseries\color{primaryblue}}{\thesection}{1em}{}
+\titleformat{\subsection}
+  {\large\bfseries\color{primaryblue}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+  {\normalsize\bfseries\color{accentgold}}{\thesubsubsection}{1em}{}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Application de gestion d'évènements de mariage}
+\fancyhead[R]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=primaryblue,
+  urlcolor=primaryblue,
+  pdftitle={Cahier des charges - Application de gestion de mariages},
+  pdfauthor={Michel Vaneck Kengne}
+}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\title{\color{primaryblue}\textbf{Cahier des charges, conception et planification\\
+Application de gestion d'évènements de mariage}}
+\author{Michel Vaneck Kengne}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+
+\vspace{1cm}
+\noindent\textbf{Version :} 1.0 \\
+\textbf{Statut :} Document de cadrage initial
+
+\newpage
+\tableofcontents
+\newpage
+
+% =====================================================
+\section{Présentation du projet}
+% =====================================================
+
+\subsection{Contexte}
+Le projet consiste à concevoir une application web permettant de créer, pour chaque
+mariage, un site évènementiel personnalisé (invitations, programme, confirmation de
+présence, gestion des tables, partage de photos et vidéos). Plutôt que de développer
+un site unique par client, l'application repose sur un \textbf{moteur de gabarits
+(template engine) configurable} : le code reste identique pour tous les mariages,
+seule la configuration de chaque mariage change (contenu, sections actives, ordre,
+couleurs, polices).
+
+\subsection{Objectifs}
+\begin{itemize}[leftmargin=1.2cm]
+  \item Permettre à un administrateur de créer un compte pour chaque client (mariage)
+        et de générer un site unique accessible via un lien.
+  \item Permettre au client de personnaliser son site (contenu, apparence, sections
+        actives, ordre d'affichage) sans toucher au code.
+  \item Permettre aux invités de consulter le programme, confirmer leur présence,
+        retrouver leur table et partager photos/vidéos.
+  \item Fournir une expérience responsive et installable (PWA).
+\end{itemize}
+
+\subsection{Acteurs du système}
+\begin{longtable}{L{3.5cm}L{10.5cm}}
+\toprule
+\textbf{Acteur} & \textbf{Rôle} \\
+\midrule
+\endhead
+Administrateur & Crée et gère les comptes clients, active/désactive les liens, définit
+la période d'accès. \\
+Client (mariés) & Configure son site : contenu, apparence, sections, invités, tables,
+galerie. \\
+Invité & Consulte le site du mariage, confirme sa présence, retrouve sa table, partage
+des médias, laisse un témoignage. \\
+\bottomrule
+\end{longtable}
+
+% =====================================================
+\section{Cahier des charges fonctionnel}
+% =====================================================
+
+\subsection{Module Administration (super-admin)}
+\begin{itemize}[leftmargin=1.2cm]
+  \item Création d'un compte client : nom, téléphone, type d'évènement, période
+        d'accès, couleur, police, logo, choix du template (3 modèles de design),
+        génération automatique du lien du site.
+  \item Activation / désactivation d'un compte client.
+  \item Gestion de la période d'accès : définition des dates de disponibilité du lien,
+        possibilité de désactiver le lien à tout moment.
+\end{itemize}
+
+\subsection{Module Compte client (mariés)}
+\subsubsection{Configuration générale}
+\begin{itemize}[leftmargin=1.2cm]
+  \item Configuration de l'espace : ordre d'affichage des modules, activation ou
+        désactivation de chaque module.
+  \item Modules disponibles : photo de couverture (format mobile et desktop) ou
+        vidéo, lieu (titre, adresse, image, localisation Google Maps), compte à
+        rebours, image/vidéo, programme, partie mixte.
+  \item Le programme peut comporter plusieurs étapes (dot, mairie, mariage religieux,
+        église, soirée...), chacune avec sa propre date et son propre lieu.
+  \item La « partie mixte » accepte des blocs de type texte, image, vidéo ou
+        questionnaire, ajoutés et réordonnés librement (glisser-déposer).
+\end{itemize}
+
+\subsubsection{Gestion des invités}
+\begin{itemize}[leftmargin=1.2cm]
+  \item Ajout manuel d'un invité (nom, téléphone).
+  \item Envoi du lien de l'évènement à l'invité, qui déroule ensuite le programme.
+  \item Suivi de la présence par date et par sous-évènement (ex : présent à la
+        mairie mais pas à la soirée), via case à cocher.
+  \item Distinction des invités selon leurs réponses au questionnaire.
+  \item Segmentation des invités par sous-évènement (dot / mairie / église / soirée).
+\end{itemize}
+
+\subsubsection{Gestion des tables}
+\begin{itemize}[leftmargin=1.2cm]
+  \item Création de tables : nom, capacité (optionnelle).
+  \item Tables créées soit pour un sous-évènement précis (ex : tables de la soirée
+        distinctes des tables de la mairie), soit communes à tout l'évènement.
+  \item Affectation des invités aux tables, avec décompte automatique des places
+        restantes à chaque ajout.
+  \item Côté invité : recherche de sa table par son nom (« Find your table »).
+\end{itemize}
+
+\subsubsection{Galerie photos / vidéos}
+\begin{itemize}[leftmargin=1.2cm]
+  \item Upload d'images et de vidéos par l'administrateur du site (les mariés).
+  \item Upload également possible par les invités ; les médias envoyés par les
+        invités restent en attente jusqu'à validation par l'admin avant d'apparaître
+        dans la galerie publique.
+  \item Génération d'un QR code renvoyant vers la galerie, pour un partage rapide
+        le jour de l'évènement.
+\end{itemize}
+
+\subsubsection{Témoignages}
+\begin{itemize}[leftmargin=1.2cm]
+  \item Formulaire permettant aux invités de laisser un témoignage.
+  \item Possibilité de restreindre qui peut témoigner (accès limité aux invités
+        identifiés / invités explicitement).
+\end{itemize}
+
+\subsection{Besoins non fonctionnels}
+\begin{itemize}[leftmargin=1.2cm]
+  \item \textbf{Responsive \& PWA} : interface adaptée mobile/desktop, installable
+        sur l'écran d'accueil, chargement rapide, cache pour certaines
+        fonctionnalités hors-ligne.
+  \item \textbf{Multi-tenant} : un seul code applicatif sert un nombre illimité de
+        mariages, chacun isolé par sa configuration et ses données.
+  \item \textbf{Sécurité} : isolement des données par mariage (Row Level Security),
+        accès admin protégé, liens invités non devinables.
+  \item \textbf{Performance} : chargement rapide de la galerie et des médias
+        (compression, chargement différé).
+\end{itemize}
+
+% =====================================================
+\section{Conception}
+% =====================================================
+
+\subsection{Architecture générale}
+L'application est structurée en trois couches~:
+
+\begin{enumerate}[leftmargin=1.2cm]
+  \item \textbf{Panel Super-Admin} : gestion des comptes clients (mariages).
+  \item \textbf{Panel Client} : configuration du site (sections, apparence,
+        invités, tables, galerie, témoignages).
+  \item \textbf{Site public du mariage} : rendu du site accessible via
+        \texttt{/w/\{slug\}}, généré à partir de la configuration du mariage.
+\end{enumerate}
+
+Le moteur de rendu (template engine) lit la configuration d'un mariage, filtre les
+sections actives, les trie par position, puis affiche les composants correspondants.
+Aucune section n'est codée en dur pour un mariage particulier : tout passe par la
+configuration stockée en base.
+
+\subsection{Choix techniques}
+\begin{longtable}{L{4cm}L{10cm}}
+\toprule
+\textbf{Couche} & \textbf{Choix} \\
+\midrule
+\endhead
+Frontend & React + TypeScript + Vite, Tailwind CSS, librairie de drag \& drop,
+PWA / Service Worker \\
+Backend / Données & Supabase (PostgreSQL, authentification, stockage de fichiers,
+Row Level Security) \\
+Partage & QR codes générés dynamiquement (galerie, RSVP, localisation) \\
+\bottomrule
+\end{longtable}
+
+\subsection{Modèle de données (synthèse)}
+\begin{longtable}{L{3.5cm}L{10.5cm}}
+\toprule
+\textbf{Table} & \textbf{Rôle} \\
+\midrule
+\endhead
+\texttt{weddings} & Un enregistrement par mariage : slug, noms, template, thème,
+période d'accès, statut actif. \\
+\texttt{wedding\_events} & Sous-évènements d'un mariage (dot, mairie, église, soirée),
+chacun avec sa date et son lieu. \\
+\texttt{sections} & Modules affichables du site : type, activé/désactivé, position,
+contenu (JSON). \\
+\texttt{guests} & Invités d'un mariage, avec les sous-évènements auxquels ils sont
+conviés. \\
+\texttt{attendance} & Présence d'un invité pour un sous-évènement donné (présent /
+absent / en attente), nombre d'accompagnants. \\
+\texttt{guest\_responses} & Réponses des invités au questionnaire, utilisées pour
+la segmentation. \\
+\texttt{tables\_plan} & Tables, rattachées à un sous-évènement ou communes à tout
+le mariage. \\
+\texttt{table\_assignments} & Affectation des invités aux tables. \\
+\texttt{media} & Photos / vidéos de la galerie, avec statut de modération. \\
+\texttt{testimonials} & Témoignages des invités, avec statut de modération. \\
+\bottomrule
+\end{longtable}
+
+% =====================================================
+\section{Découpage du travail en phases}
+% =====================================================
+
+\subsection{Vue d'ensemble}
+Le développement est découpé en huit phases, chacune livrant un incrément
+fonctionnel testable.
+
+\subsection{Phase 1 --- Socle technique}
+\begin{itemize}[leftmargin=1.2cm]
+  \item Initialisation du projet React + TypeScript + Vite + Tailwind.
+  \item Mise en place du projet Supabase : base de données, authentification,
+        stockage.
+  \item Création du schéma de base de données (tables ci-dessus) et des règles
+        Row Level Security.
+  \item Mise en place du routage (\texttt{/admin}, \texttt{/app}, \texttt{/w/\{slug\}}).
+\end{itemize}
+
+\subsection{Phase 2 --- Panel Super-Admin}
+\begin{itemize}[leftmargin=1.2cm]
+  \item Authentification super-admin.
+  \item Création / édition / désactivation d'un compte client (mariage).
+  \item Génération automatique du lien et du slug.
+  \item Gestion de la période d'accès.
+\end{itemize}
+
+\subsection{Phase 3 --- Moteur de gabarits (template engine)}
+\begin{itemize}[leftmargin=1.2cm]
+  \item Implémentation des composants de section (cover, lieu, countdown,
+        programme, partie mixte, galerie, RSVP, tables, témoignages).
+  \item Système de lecture de configuration : filtrage \texttt{enabled}, tri par
+        \texttt{position}.
+  \item Interface d'activation / désactivation et de réordonnancement
+        (glisser-déposer) côté panel client.
+  \item Système de thème (couleurs, polices, 3 modèles de design).
+\end{itemize}
+
+\subsection{Phase 4 --- Programme et sous-évènements}
+\begin{itemize}[leftmargin=1.2cm]
+  \item Création des sous-évènements (dot, mairie, église, soirée) avec date et
+        lieu.
+  \item Affichage du programme multi-étapes côté site public.
+  \item Intégration de la localisation (Google Maps).
+\end{itemize}
+
+\subsection{Phase 5 --- Invités et RSVP}
+\begin{itemize}[leftmargin=1.2cm]
+  \item Ajout manuel des invités (nom, téléphone) et association aux
+        sous-évènements.
+  \item Formulaire de confirmation de présence par sous-évènement.
+  \item Questionnaire personnalisable et enregistrement des réponses.
+  \item Tableau de bord de suivi (présents / absents / en attente) et segmentation
+        des invités.
+\end{itemize}
+
+\subsection{Phase 6 --- Gestion des tables}
+\begin{itemize}[leftmargin=1.2cm]
+  \item Création des tables (nom, capacité), liées à un sous-évènement ou communes.
+  \item Affectation des invités aux tables avec décompte des places restantes.
+  \item Fonction « Find your table » côté invité.
+\end{itemize}
+
+\subsection{Phase 7 --- Galerie, témoignages et QR codes}
+\begin{itemize}[leftmargin=1.2cm]
+  \item Upload de médias par l'admin et par les invités.
+  \item File de modération (validation avant publication).
+  \item Génération des QR codes (galerie, RSVP, localisation).
+  \item Formulaire de témoignages avec restriction d'accès optionnelle.
+\end{itemize}
+
+\subsection{Phase 8 --- PWA, tests et mise en production}
+\begin{itemize}[leftmargin=1.2cm]
+  \item Configuration PWA (manifest, service worker, installation, cache).
+  \item Tests de bout en bout sur mobile et desktop.
+  \item Optimisation des performances (images, chargement différé).
+  \item Déploiement et mise à disposition du premier mariage pilote.
+\end{itemize}
+
+\subsection{Synthèse}
+\begin{longtable}{L{1.5cm}L{6cm}L{6.5cm}}
+\toprule
+\textbf{Phase} & \textbf{Objectif} & \textbf{Livrable} \\
+\midrule
+\endhead
+1 & Socle technique & Projet initialisé, base de données prête \\
+2 & Panel Super-Admin & Création de comptes clients fonctionnelle \\
+3 & Moteur de gabarits & Sections configurables et réordonnables \\
+4 & Programme \& sous-évènements & Programme multi-étapes affiché \\
+5 & Invités \& RSVP & Confirmation de présence et segmentation \\
+6 & Gestion des tables & Affectation et recherche de table \\
+7 & Galerie, témoignages, QR codes & Partage de médias et témoignages \\
+8 & PWA \& mise en production & Application déployée, mariage pilote \\
+\bottomrule
+\end{longtable}
+
+\end{document}
