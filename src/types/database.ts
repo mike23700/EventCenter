@@ -24,6 +24,7 @@ export interface Wedding {
   access_start: string | null;
   access_end: string | null;
   is_active: boolean;
+  owner_user_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -159,6 +160,7 @@ export type Database = {
           access_start: string | null;
           access_end: string | null;
           is_active: boolean;
+          owner_user_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -175,6 +177,7 @@ export type Database = {
           access_start?: string | null;
           access_end?: string | null;
           is_active?: boolean;
+          owner_user_id?: string | null;
         };
         Update: {
           slug?: string;
@@ -189,6 +192,7 @@ export type Database = {
           access_start?: string | null;
           access_end?: string | null;
           is_active?: boolean;
+          owner_user_id?: string | null;
         };
         Relationships: [];
       };

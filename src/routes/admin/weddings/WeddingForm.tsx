@@ -22,6 +22,7 @@ export default function WeddingForm() {
   const [accessEnd, setAccessEnd] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [logoPath, setLogoPath] = useState('');
+  const [ownerUserId, setOwnerUserId] = useState('');
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
@@ -47,6 +48,7 @@ export default function WeddingForm() {
         setAccessEnd(fromIsoForInput(w.access_end));
         setIsActive(w.is_active);
         setLogoPath(w.logo ?? '');
+        setOwnerUserId(w.owner_user_id ?? '');
         const theme = w.theme as { primaryColor?: string } | null;
         setPrimaryColor(theme?.primaryColor ?? '#C9A34A');
       }
@@ -94,6 +96,7 @@ export default function WeddingForm() {
       contact_phone: contactPhone.trim() || null,
       theme: { primaryColor },
       logo: logoPath || null,
+      owner_user_id: ownerUserId.trim() || null,
       access_start: toIso(accessStart),
       access_end: toIso(accessEnd),
       is_active: isActive,
@@ -177,6 +180,12 @@ export default function WeddingForm() {
         <div>
           <label className="label" htmlFor="contactPhone">Téléphone de contact</label>
           <input id="contactPhone" className="input" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="+237 ....." />
+        </div>
+
+        <div>
+          <label className="label" htmlFor="ownerUserId">Compte marié(s) — ID utilisateur (optionnel)</label>
+          <input id="ownerUserId" className="input font-mono" value={ownerUserId} onChange={(e) => setOwnerUserId(e.target.value)} placeholder="uuid du compte (Authentication > Users)" />
+          <p className="mt-1 text-xs text-ink-secondary">Permet aux mariés de se connecter et configurer leur site via l'espace client (/app).</p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">

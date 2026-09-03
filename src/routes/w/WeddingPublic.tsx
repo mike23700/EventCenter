@@ -60,8 +60,18 @@ export default function WeddingPublic() {
     );
   }
 
+  const theme = wedding.theme && typeof wedding.theme === 'object'
+    ? (wedding.theme as Record<string, unknown>)
+    : {};
+  const accent = (theme['primaryColor'] as string) ?? '#C9A34A';
+  const displayFont = (theme['displayFont'] as string) ?? 'Georgia';
+
   return (
-    <div className="min-h-screen bg-paper text-ink">
+    <div
+      className="min-h-screen bg-paper text-ink"
+      style={{ ['--w-accent' as string]: accent, ['--w-font' as string]: displayFont }}
+    >
+      <style>{`.font-display { font-family: var(--w-font), Georgia, serif !important; }`}</style>
       {sections.map((section) => (
         <SectionRenderer key={section.id} section={section} wedding={wedding} events={events} />
       ))}
