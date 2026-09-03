@@ -1,77 +1,14 @@
-// Types TypeScript alignés sur le schéma Supabase (phase 1).
-// Ces génériques permettent un typage strict avec supabase-js.
+// Types TypeScript alignés sur le schéma Supabase.
+// Le type `Database` utilise des types littéraux "inline" (format exact
+// de `supabase gen types`) : requis par supabase-js pour que le schéma
+// satisfasse GenerERIC `GenericSchema` (les `interface` ne sont pas
+// assignables à `Record<string, unknown>`).
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
-export interface Database {
-  public: {
-    Tables: {
-      weddings: {
-        Row: Wedding;
-        Insert: Partial<Wedding>;
-        Update: Partial<Wedding>;
-        Relationships: never[];
-      };
-      wedding_events: {
-        Row: WeddingEvent;
-        Insert: Partial<WeddingEvent>;
-        Update: Partial<WeddingEvent>;
-        Relationships: never[];
-      };
-      sections: {
-        Row: Section;
-        Insert: Partial<Section>;
-        Update: Partial<Section>;
-        Relationships: never[];
-      };
-      guests: {
-        Row: Guest;
-        Insert: Partial<Guest>;
-        Update: Partial<Guest>;
-        Relationships: never[];
-      };
-      attendance: {
-        Row: Attendance;
-        Insert: Partial<Attendance>;
-        Update: Partial<Attendance>;
-        Relationships: never[];
-      };
-      guest_responses: {
-        Row: GuestResponse;
-        Insert: Partial<GuestResponse>;
-        Update: Partial<GuestResponse>;
-        Relationships: never[];
-      };
-      tables_plan: {
-        Row: TablePlan;
-        Insert: Partial<TablePlan>;
-        Update: Partial<TablePlan>;
-        Relationships: never[];
-      };
-      table_assignments: {
-        Row: TableAssignment;
-        Insert: Partial<TableAssignment>;
-        Update: Partial<TableAssignment>;
-        Relationships: never[];
-      };
-      media: {
-        Row: Media;
-        Insert: Partial<Media>;
-        Update: Partial<Media>;
-        Relationships: never[];
-      };
-      testimonials: {
-        Row: Testimonial;
-        Insert: Partial<Testimonial>;
-        Update: Partial<Testimonial>;
-        Relationships: never[];
-      };
-    };
-    Views: Record<string, never>;
-    Functions: Record<string, never>;
-    Enums: Record<string, never>;
-  };
-}
+// ---------------------------------------------------------------------
+// Modèles (interfaces exportées pour les composants)
+// ---------------------------------------------------------------------
 
 export interface Wedding {
   id: string;
@@ -199,3 +136,289 @@ export interface Testimonial {
   status: TestimonialStatus;
   created_at: string;
 }
+
+// ---------------------------------------------------------------------
+// Schéma Supabase (format `supabase gen types`, types littéraux inline)
+// ---------------------------------------------------------------------
+
+export type Database = {
+  public: {
+    Tables: {
+      weddings: {
+        Row: {
+          id: string;
+          slug: string;
+          name: string;
+          secondary_name: string | null;
+          event_type: string | null;
+          template: string;
+          theme: Json;
+          logo: string | null;
+          cover_image: string | null;
+          contact_phone: string | null;
+          access_start: string | null;
+          access_end: string | null;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          slug: string;
+          name: string;
+          secondary_name?: string | null;
+          event_type?: string | null;
+          template?: string;
+          theme?: Json;
+          logo?: string | null;
+          cover_image?: string | null;
+          contact_phone?: string | null;
+          access_start?: string | null;
+          access_end?: string | null;
+          is_active?: boolean;
+        };
+        Update: {
+          slug?: string;
+          name?: string;
+          secondary_name?: string | null;
+          event_type?: string | null;
+          template?: string;
+          theme?: Json;
+          logo?: string | null;
+          cover_image?: string | null;
+          contact_phone?: string | null;
+          access_start?: string | null;
+          access_end?: string | null;
+          is_active?: boolean;
+        };
+        Relationships: [];
+      };
+      wedding_events: {
+        Row: {
+          id: string;
+          wedding_id: string;
+          name: string;
+          date: string | null;
+          location_title: string | null;
+          location_address: string | null;
+          location_image: string | null;
+          location_maps_url: string | null;
+          position: number;
+          created_at: string;
+        };
+        Insert: {
+          wedding_id: string;
+          name: string;
+          date?: string | null;
+          location_title?: string | null;
+          location_address?: string | null;
+          location_image?: string | null;
+          location_maps_url?: string | null;
+          position?: number;
+        };
+        Update: {
+          name?: string;
+          date?: string | null;
+          location_title?: string | null;
+          location_address?: string | null;
+          location_image?: string | null;
+          location_maps_url?: string | null;
+          position?: number;
+        };
+        Relationships: [];
+      };
+      sections: {
+        Row: {
+          id: string;
+          wedding_id: string;
+          type: string;
+          enabled: boolean;
+          position: number;
+          title: string | null;
+          content: Json;
+          created_at: string;
+        };
+        Insert: {
+          wedding_id: string;
+          type: string;
+          enabled?: boolean;
+          position?: number;
+          title?: string | null;
+          content?: Json;
+        };
+        Update: {
+          type?: string;
+          enabled?: boolean;
+          position?: number;
+          title?: string | null;
+          content?: Json;
+        };
+        Relationships: [];
+      };
+      guests: {
+        Row: {
+          id: string;
+          wedding_id: string;
+          name: string;
+          phone: string | null;
+          plus_ones: number;
+          invited_events: string[];
+          response: Json;
+          created_at: string;
+        };
+        Insert: {
+          wedding_id: string;
+          name: string;
+          phone?: string | null;
+          plus_ones?: number;
+          invited_events?: string[];
+          response?: Json;
+        };
+        Update: {
+          name?: string;
+          phone?: string | null;
+          plus_ones?: number;
+          invited_events?: string[];
+          response?: Json;
+        };
+        Relationships: [];
+      };
+      attendance: {
+        Row: {
+          id: string;
+          guest_id: string;
+          event_id: string;
+          status: string;
+          actual_plus_ones: number;
+          updated_at: string;
+        };
+        Insert: {
+          guest_id: string;
+          event_id: string;
+          status?: string;
+          actual_plus_ones?: number;
+        };
+        Update: {
+          status?: string;
+          actual_plus_ones?: number;
+        };
+        Relationships: [];
+      };
+      guest_responses: {
+        Row: {
+          id: string;
+          guest_id: string;
+          question_key: string;
+          answer: Json;
+          created_at: string;
+        };
+        Insert: {
+          guest_id: string;
+          question_key: string;
+          answer?: Json;
+        };
+        Update: {
+          answer?: Json;
+        };
+        Relationships: [];
+      };
+      tables_plan: {
+        Row: {
+          id: string;
+          wedding_id: string;
+          event_id: string | null;
+          name: string;
+          capacity: number | null;
+          position: number;
+          created_at: string;
+        };
+        Insert: {
+          wedding_id: string;
+          name: string;
+          event_id?: string | null;
+          capacity?: number | null;
+          position?: number;
+        };
+        Update: {
+          name?: string;
+          event_id?: string | null;
+          capacity?: number | null;
+          position?: number;
+        };
+        Relationships: [];
+      };
+      table_assignments: {
+        Row: {
+          id: string;
+          table_id: string;
+          guest_id: string;
+          created_at: string;
+        };
+        Insert: {
+          table_id: string;
+          guest_id: string;
+        };
+        Update: {
+          table_id?: string;
+          guest_id?: string;
+        };
+        Relationships: [];
+      };
+      media: {
+        Row: {
+          id: string;
+          wedding_id: string;
+          type: string;
+          storage_path: string | null;
+          url: string | null;
+          uploaded_by: string;
+          status: string;
+          created_at: string;
+        };
+        Insert: {
+          wedding_id: string;
+          type?: string;
+          storage_path?: string | null;
+          url?: string | null;
+          uploaded_by?: string;
+          status?: string;
+        };
+        Update: {
+          type?: string;
+          storage_path?: string | null;
+          url?: string | null;
+          uploaded_by?: string;
+          status?: string;
+        };
+        Relationships: [];
+      };
+      testimonials: {
+        Row: {
+          id: string;
+          wedding_id: string;
+          guest_id: string | null;
+          author: string | null;
+          content: string;
+          status: string;
+          created_at: string;
+        };
+        Insert: {
+          wedding_id: string;
+          guest_id?: string | null;
+          author?: string | null;
+          content: string;
+          status?: string;
+        };
+        Update: {
+          guest_id?: string | null;
+          author?: string | null;
+          content?: string;
+          status?: string;
+        };
+        Relationships: [];
+      };
+    };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+  };
+};

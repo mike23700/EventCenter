@@ -41,6 +41,7 @@ export default function WeddingDetail() {
     (!wedding.access_end || new Date(wedding.access_end) >= new Date());
 
   async function toggleActive(next: boolean) {
+    if (!wedding) return;
     setNotice('');
     setError('');
     const { error } = await supabase.from('weddings').update({ is_active: next }).eq('id', wedding.id);
