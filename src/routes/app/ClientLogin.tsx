@@ -91,7 +91,7 @@ export default function ClientLogin() {
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off" noValidate>
             <div>
               <label className="label" htmlFor="email">
                 Email
@@ -100,7 +100,7 @@ export default function ClientLogin() {
                 id="email"
                 type="email"
                 required
-                autoComplete="email"
+                autoComplete="off"
                 className="input"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -115,7 +115,7 @@ export default function ClientLogin() {
                 id="password"
                 type="password"
                 required
-                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                autoComplete="off"
                 className="input"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -131,7 +131,7 @@ export default function ClientLogin() {
                   id="confirm"
                   type="password"
                   required
-                  autoComplete="new-password"
+                  autoComplete="off"
                   className="input"
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}

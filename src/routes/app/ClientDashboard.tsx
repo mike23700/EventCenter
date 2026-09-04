@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, ArrowRight, Link as LinkIcon } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../lib/auth-context';
 import type { Wedding } from '../../types/database';
 
 /**
@@ -16,12 +17,14 @@ export default function ClientDashboard() {
   const [slug, setSlug] = useState('');
   const [claiming, setClaiming] = useState(false);
   const [claimError, setClaimError] = useState('');
+  const user = useAuth((s) => s.user);
 
   async function load() {
     setLoading(true);
     const { data, error } = await supabase
       .from('weddings')
       .select('*')
+      .eq('owner_user_id', user?.id ?? '')
       .order('created_at', { ascending: false });
     if (error) setError(error.message);
     else setWeddings(data ?? []);
@@ -31,7 +34,7 @@ export default function ClientDashboard() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user]);
 
   async function claim() {
     const code = slug.trim();
