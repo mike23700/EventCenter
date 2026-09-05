@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { SectionProps } from './types';
 import { asRecord, str } from './types';
+import { SectionShell } from './shell';
 
 function diff(target: Date) {
   const ms = target.getTime() - Date.now();
@@ -14,7 +15,7 @@ function diff(target: Date) {
 }
 
 /** Section "compte à rebours" jusqu'à la date du mariage. */
-export default function Countdown({ content, accent }: SectionProps) {
+export default function Countdown({ content, accent, tpl }: SectionProps) {
   const c = asRecord(content);
   const dateStr = str(c, 'date');
   const [, setTick] = useState(0);
@@ -28,25 +29,41 @@ export default function Countdown({ content, accent }: SectionProps) {
   if (!target || Number.isNaN(target.getTime())) return null;
 
   const d = diff(target);
+  const { palette } = tpl;
 
   return (
-    <section className="mx-auto max-w-3xl px-6 py-14 text-center">
-      <p className="font-display text-2xl font-bold" style={{ color: accent }}>
-        Le compte à rebours
-      </p>
-      <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {[
-          { label: 'Jours', value: d.days },
-          { label: 'Heures', value: d.hours },
-          { label: 'Minutes', value: d.minutes },
-          { label: 'Secondes', value: d.seconds },
-        ].map((unit) => (
-          <div key={unit.label} className="rounded-2xl border border-borderlight bg-paper-warm p-4">
-            <div className="font-display text-4xl font-bold text-ink">{unit.value}</div>
-            <div className="mt-1 text-xs tracking-widest uppercase text-ink-secondary">{unit.label}</div>
-          </div>
-        ))}
+    <SectionShell tpl={tpl} accent={accent}>
+      <div className="mx-auto max-w-3xl px-6 py-16 text-center">
+        <p className="font-display tpl-display text-2xl sm:text-3xl font-bold" style={{ color: accent }}>
+          Le compte à rebours
+        </p>
+        <p className="mt-2 tpl-body opacity-70">Nos derniers instants avant le « oui »</p>
+        <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {[
+            { label: 'Jours', value: d.days },
+            { label: 'Heures', value: d.hours },
+            { label: 'Minutes', value: d.minutes },
+            { label: 'Secondes', value: d.seconds },
+          ].map((unit) => (
+            <div
+              key={unit.label}
+              className="rounded-xl px-4 py-6"
+              style={{
+                backgroundColor: palette.surface,
+                border: `1px solid ${palette.border}`,
+                boxShadow: tpl.id === 'royal' ? `0 0 0 1px ${palette.accent}33, 0 10px 30px rgba(0,0,0,0.25)` : undefined,
+              }}
+            >
+              <div className="font-display tpl-display text-4xl font-bold sm:text-5xl" style={{ color: tpl.id === 'minimal' ? accent : palette.ink, fontVariantNumeric: 'tabular-nums' }}>
+                {unit.value}
+              </div>
+              <div className="mt-2 text-[11px] tracking-[0.25em] uppercase" style={{ color: palette.muted }}>
+                {unit.label}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-    </section>
+    </SectionShell>
   );
 }

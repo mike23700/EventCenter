@@ -48,7 +48,16 @@ export const EVENT_TYPES = [
 ] as const;
 
 export const TEMPLATES = [
-  { id: 'classic', label: 'Classique' },
-  { id: 'modern', label: 'Moderne' },
-  { id: 'elegant', label: 'Élégant' },
+  { id: 'florale', label: 'Romantique floral' },
+  { id: 'royal', label: 'Royal or' },
+  { id: 'minimal', label: 'Minimal épuré' },
+  { id: 'africain', label: 'Héritage africain' },
 ] as const;
+
+/** Polices optionnelles proposées pour l'override "police d'affichage". */
+export const DISPLAY_FONTS: { id: string; label: string; stack: string; href: string }[] = [
+  { id: 'Georgia', label: 'Georgia (classique)', stack: 'Georgia, serif', href: '' },
+  { id: 'Playfair Display', label: 'Playfair Display (élégant)', stack: "'Playfair Display', Georgia, serif", href: 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&display=swap' },
+  { id: 'Great Vibes', label: 'Great Vibes (calligraphié)', stack: "'Great Vibes', cursive", href: 'https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap' },
+  { id: 'Cinzel', label: 'Cinzel (antique)', stack: 'Cinzel, serif', href: 'https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&display=swap' },
+];

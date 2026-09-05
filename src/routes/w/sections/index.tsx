@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
 import type { Section, WeddingEvent, Wedding } from '../../../types/database';
+import { getTemplate } from '../../../lib/templates';
 import Cover from './Cover';
 import Countdown from './Countdown';
 import Location from './Location';
@@ -25,19 +26,21 @@ const registry: Record<string, ComponentType<any>> = {
  * Rendu d'une section active du site public.
  * - filtrage `enabled` fait en amont (fetch)
  * - ordre déterminé par la propriété `position` (trié avant rendu)
+ * - le template sélectionné est résolu ici et transmis à chaque section
  */
 export default function SectionRenderer({ section, wedding, events }: SectionRendererProps) {
   const C = registry[section.type];
-  const shared = {
-    accent: wedding.theme && typeof wedding.theme === 'object'
-      ? (wedding.theme as Record<string, unknown>)['primaryColor'] ?? '#C9A34A'
-      : '#C9A34A',
-  };
+  const theme = wedding.theme && typeof wedding.theme === 'object'
+    ? (wedding.theme as Record<string, unknown>)
+    : {};
+  const accent = (theme['primaryColor'] as string) ?? '#C9A34A';
+  const tpl = getTemplate(wedding.template);
+  const shared = { accent, tpl, wedding };
 
   if (!C) return null;
 
   if (section.type === 'program') {
-    return <C {...shared} content={section.content} wedding={wedding} events={events} />;
+    return <C {...shared} content={section.content} events={events} />;
   }
-  return <C {...shared} content={section.content} wedding={wedding} />;
+  return <C {...shared} content={section.content} />;
 }

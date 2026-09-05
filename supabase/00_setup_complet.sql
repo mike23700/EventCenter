@@ -64,7 +64,7 @@ create table if not exists public.weddings (
   owner_user_id  uuid references auth.users(id) on delete set null,
   client_email   text,
   event_type     text,
-  template       text not null default 'classic',
+  template       text not null default 'florale',
   theme          jsonb not null default '{}'::jsonb,
   logo           text,
   cover_image    text,

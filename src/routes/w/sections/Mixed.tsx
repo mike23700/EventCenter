@@ -2,6 +2,7 @@ import type { Json } from '../../../types/database';
 import { storageUrl } from '../../../lib/media';
 import type { SectionProps } from './types';
 import { asRecord } from './types';
+import { SectionShell } from './shell';
 
 type Block = {
   id: string;
@@ -27,56 +28,112 @@ function isBlock(b: unknown): b is Block {
     (o.type === 'text' || o.type === 'image' || o.type === 'video' || o.type === 'questionnaire');
 }
 
-/** Section "partie mixte" : blocs texte / image / vidéo librement ordonnés. */
-export default function Mixed({ content, accent }: SectionProps) {
+/**
+ * Section "partie mixte" : blocs texte / image / vidéo librement ordonnés.
+ * Les images sont mises en page façon magazine / blog selon le template.
+ */
+export default function Mixed({ content, accent, tpl }: SectionProps) {
   const blocks = parseBlocks(content);
   if (blocks.length === 0) return null;
 
+  const { palette, id } = tpl;
+
   return (
-    <section className="mx-auto max-w-3xl space-y-10 px-6 py-14">
-      {blocks.map((block, idx) => {
-        switch (block.type) {
-          case 'text':
-            return (
-              <div key={block.id}>
-                {block.title && (
-                  <h3 className="font-display text-2xl font-bold text-ink" style={idx === 0 ? { color: accent } : undefined}>
-                    {block.title}
+    <SectionShell tpl={tpl} accent={accent}>
+      <div className="mx-auto max-w-3xl space-y-12 px-6 py-16">
+        {blocks.map((block, idx) => {
+          switch (block.type) {
+            case 'text':
+              return (
+                <div key={block.id} style={tpl.id === 'minimal' ? { maxWidth: '42rem', marginLeft: 'auto', marginRight: 'auto', textAlign: 'center' } : undefined}>
+                  {block.title && (
+                    <h3
+                      className="font-display tpl-display text-2xl sm:text-3xl font-bold"
+                      style={{ color: id === 'florale' && idx === 0 ? accent : palette.ink }}
+                    >
+                      {block.title}
+                    </h3>
+                  )}
+                  {block.text && (
+                    <p
+                      className={`mt-3 whitespace-pre-line leading-relaxed tpl-body ${id === 'royal' ? 'text-base' : 'text-lg'}`}
+                      style={{ color: palette.muted }}
+                    >
+                      {block.text}
+                    </p>
+                  )}
+                </div>
+              );
+            case 'image': {
+              const src = storageUrl('media', block.src) ?? block.src;
+              if (!src) return null;
+              return (
+                <figure key={block.id} className={id === 'florale' ? 'rounded-3xl p-3' : undefined} style={id === 'florale' ? { backgroundColor: palette.accentSoft } : undefined}>
+                  <img
+                    src={src}
+                    alt=""
+                    className="w-full"
+                    style={{
+                      borderRadius: id === 'minimal' ? '0.25rem' : '1rem',
+                      border: id === 'minimal' ? `1px solid ${palette.border}` : 'none',
+                      boxShadow: id === 'florale' ? '0 14px 34px rgba(201,138,158,0.25)' : '0 14px 40px rgba(0,0,0,0.1)',
+                    }}
+                  />
+                  {/* Légende style magazine */}
+                  {block.title && (
+                    <figcaption
+                      className="mt-3 text-center text-sm tracking-wide tpl-body italic"
+                      style={{ color: palette.muted }}
+                    >
+                      {block.title}
+                    </figcaption>
+                  )}
+                </figure>
+              );
+            }
+            case 'video': {
+              const src = storageUrl('media', block.src) ?? block.src;
+              if (!src) return null;
+              return (
+                <figure key={block.id}>
+                  <video
+                    src={src}
+                    controls
+                    className="w-full"
+                    style={{
+                      borderRadius: id === 'minimal' ? '0.25rem' : '1rem',
+                      border: `1px solid ${palette.border}`,
+                      boxShadow: '0 14px 40px rgba(0,0,0,0.1)',
+                    }}
+                  />
+                </figure>
+              );
+            }
+            case 'questionnaire':
+              return (
+                <div
+                  key={block.id}
+                  className="rounded-2xl p-7"
+                  style={{
+                    backgroundColor: palette.accentSoft,
+                    border: `1px solid ${palette.border}`,
+                  }}
+                >
+                  <h3 className="font-display tpl-display text-xl font-bold" style={{ color: palette.ink }}>
+                    {block.title || 'Questionnaire'}
                   </h3>
-                )}
-                {block.text && <p className="mt-2 whitespace-pre-line text-ink-secondary">{block.text}</p>}
-              </div>
-            );
-          case 'image': {
-            const src = storageUrl('media', block.src) ?? block.src;
-            if (!src) return null;
-            return (
-              <figure key={block.id}>
-                <img src={src} alt="" className="w-full rounded-2xl border border-borderlight shadow-sm" />
-                {block.title && <figcaption className="mt-2 text-center text-sm text-ink-secondary">{block.title}</figcaption>}
-              </figure>
-            );
+                  {block.text && (
+                    <p className="mt-2 tpl-body" style={{ color: palette.muted }}>
+                      {block.text}
+                    </p>
+                  )}
+                </div>
+              );
+            default:
+              return null;
           }
-          case 'video': {
-            const src = storageUrl('media', block.src) ?? block.src;
-            if (!src) return null;
-            return (
-              <figure key={block.id}>
-                <video src={src} controls className="w-full rounded-2xl border border-borderlight shadow-sm" />
-              </figure>
-            );
-          }
-          case 'questionnaire':
-            return (
-              <div key={block.id} className="rounded-2xl border border-gold/30 bg-paper-warm p-6">
-                <h3 className="font-display text-xl font-bold text-ink">{block.title || 'Questionnaire'}</h3>
-                {block.text && <p className="mt-2 text-ink-secondary">{block.text}</p>}
-              </div>
-            );
-          default:
-            return null;
-        }
-      })}
-    </section>
+        })}
+      </div>
+    </SectionShell>
   );
 }

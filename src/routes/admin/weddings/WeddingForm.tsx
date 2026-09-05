@@ -50,7 +50,7 @@ export default function WeddingForm() {
   const [secondaryName, setSecondaryName] = useState('');
   const [slug, setSlug] = useState('');
   const [eventType, setEventType] = useState('Mariage');
-  const [template, setTemplate] = useState('classic');
+  const [template, setTemplate] = useState('florale');
   const [contactPhone, setContactPhone] = useState('');
   const [primaryColor, setPrimaryColor] = useState('#C9A34A');
   const [accessStart, setAccessStart] = useState('');
