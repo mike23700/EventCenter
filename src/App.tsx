@@ -1,13 +1,12 @@
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, Navigate } from 'react-router-dom';
 import Landing from './pages/Landing';
+import Login from './pages/Login';
 import AdminLayout from './routes/admin/AdminLayout';
-import AdminLogin from './routes/admin/AdminLogin';
 import AdminDashboard from './routes/admin/AdminDashboard';
 import WeddingsList from './routes/admin/weddings/WeddingsList';
 import WeddingForm from './routes/admin/weddings/WeddingForm';
 import WeddingDetail from './routes/admin/weddings/WeddingDetail';
 import AppLayout from './routes/app/AppLayout';
-import ClientLogin from './routes/app/ClientLogin';
 import ClientDashboard from './routes/app/ClientDashboard';
 import WeddingConfigLayout from './routes/app/weddings/WeddingConfigLayout';
 import SectionsEditor from './routes/app/weddings/SectionsEditor';
@@ -19,26 +18,28 @@ import NotFound from './pages/NotFound';
 /**
  * Routage applicatif.
  *  /          → page d'accueil publique
+ *  /login     → portail de connexion unique (admin + clients)
  *  /admin     → panel super-admin (auth requise)
- *  /app       → panel client (phase 3+)
+ *  /app       → panel client (auth requise)
  *  /w/:slug   → site public du mariage
  */
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/admin/login" element={<Navigate to="/login" replace />} />
+      <Route path="/app/login" element={<Navigate to="/login" replace />} />
       <Route path="/w/:slug" element={<WeddingPublic />} />
 
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<AdminDashboard />} />
-        <Route path="login" element={<AdminLogin />} />
         <Route path="weddings" element={<WeddingsList />} />
         <Route path="weddings/new" element={<WeddingForm />} />
         <Route path="weddings/:id" element={<WeddingDetail />} />
         <Route path="weddings/:id/edit" element={<WeddingForm />} />
       </Route>
 
-      <Route path="/app/login" element={<ClientLogin />} />
       <Route path="/app" element={<AppLayout />}>
         <Route index element={<ClientDashboard />} />
         <Route path=":weddingId" element={<WeddingConfigLayout />}>

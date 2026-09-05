@@ -14,7 +14,7 @@ export default function AppLayout() {
     if (!loaded) return;
     if (!user) {
       const next = `${location.pathname}${location.search}`;
-      navigate(`/app/login?next=${encodeURIComponent(next)}`, { replace: true });
+      navigate(`/login?next=${encodeURIComponent(next)}`, { replace: true });
     }
   }, [loaded, user, navigate, location]);
 

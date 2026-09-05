@@ -4,7 +4,42 @@ import { ArrowLeft, Save } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { weddingSlugFromNames } from '../../../lib/slug';
 import { toIso, fromIsoForInput, EVENT_TYPES, TEMPLATES } from '../../../lib/format';
-import type { Wedding } from '../../../types/database';
+import { FunctionsFetchError, FunctionsHttpError } from '@supabase/supabase-js';
+import type { Wedding, Database } from '../../../types/database';
+
+/**
+ * Crée le compte client via l'Edge Function serveur `create-client-account`.
+ * La clé service_role y est gardée côté serveur (jamais exposée dans le front).
+ * Retourne l'id du compte (créé ou déjà existant).
+ */
+async function createClientUserViaEdge(
+  email: string,
+  password: string,
+): Promise<{ id: string; error: string }> {
+  const { data, error } = await supabase.functions.invoke('create-client-account', {
+    body: { email, password },
+  });
+
+  if (error) {
+    if (error instanceof FunctionsHttpError) {
+      const body = (await error.context.json().catch(() => ({}))) as { error?: string };
+      return { id: '', error: body.error || 'Erreur serveur lors de la création du compte.' };
+    }
+    if (error instanceof FunctionsFetchError) {
+      return {
+        id: '',
+        error:
+          "Impossible de joindre l'Edge Function 'create-client-account'. Déployez-la avec la CLI Supabase (voir instructions) puis réessayez.",
+      };
+    }
+    return { id: '', error: error.message || 'Erreur lors de la création du compte.' };
+  }
+
+  const id = (data as { id?: string })?.id;
+  return id
+    ? { id, error: '' }
+    : { id: '', error: 'Réponse vide de la création du compte.' };
+}
 
 export default function WeddingForm() {
   const { id } = useParams();
@@ -22,7 +57,8 @@ export default function WeddingForm() {
   const [accessEnd, setAccessEnd] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [logoPath, setLogoPath] = useState('');
-  const [ownerUserId, setOwnerUserId] = useState('');
+  const [clientEmail, setClientEmail] = useState('');
+  const [clientPassword, setClientPassword] = useState('');
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
@@ -48,7 +84,7 @@ export default function WeddingForm() {
         setAccessEnd(fromIsoForInput(w.access_end));
         setIsActive(w.is_active);
         setLogoPath(w.logo ?? '');
-        setOwnerUserId(w.owner_user_id ?? '');
+        setClientEmail(w.client_email ?? '');
         const theme = w.theme as { primaryColor?: string } | null;
         setPrimaryColor(theme?.primaryColor ?? '#C9A34A');
       }
@@ -61,9 +97,12 @@ export default function WeddingForm() {
 
   function onNameChange(value: string) {
     setName(value);
-    if (!isEdit && value) {
-      setSlug(weddingSlugFromNames(value, secondaryName));
-    }
+    if (!isEdit) setSlug(weddingSlugFromNames(value, secondaryName));
+  }
+
+  function onSecondaryNameChange(value: string) {
+    setSecondaryName(value);
+    if (!isEdit) setSlug(weddingSlugFromNames(name, value));
   }
 
   async function handleUploadLogo(file: File) {
@@ -87,7 +126,7 @@ export default function WeddingForm() {
 
     const finalSlug = slug.trim() || weddingSlugFromNames(name, secondaryName);
 
-    const payload = {
+    const payload: Database['public']['Tables']['weddings']['Insert'] = {
       name: name.trim(),
       secondary_name: secondaryName.trim() || null,
       slug: finalSlug,
@@ -96,7 +135,6 @@ export default function WeddingForm() {
       contact_phone: contactPhone.trim() || null,
       theme: { primaryColor },
       logo: logoPath || null,
-      owner_user_id: ownerUserId.trim() || null,
       access_start: toIso(accessStart),
       access_end: toIso(accessEnd),
       is_active: isActive,
@@ -106,13 +144,35 @@ export default function WeddingForm() {
       if (isEdit && id) {
         const { error } = await supabase.from('weddings').update(payload).eq('id', id);
         if (error) throw error;
-      } else {
-        const { data, error } = await supabase.from('weddings').insert(payload).select('id').single();
-        if (error) throw error;
-        navigate(`/admin/weddings/${data.id}`);
+        navigate(`/admin/weddings/${id}`);
         return;
       }
-      navigate(`/admin/weddings/${id}`);
+
+      // Création : c'est l'Edge Function serveur qui crée le compte client
+      // (la clé service_role est gardée côté serveur, jamais dans le front).
+      const email = clientEmail.trim();
+      const password = clientPassword;
+      if (!email || !email.includes('@') || !password || password.length < 6) {
+        setError("Compte client : saisissez un email valide et un mot de passe d'au moins 6 caractères.");
+        setSaving(false);
+        return;
+      }
+
+      const { id: ownerUserId, error: userError } = await createClientUserViaEdge(email, password);
+      if (userError) {
+        setError(userError);
+        setSaving(false);
+        return;
+      }
+
+      payload.owner_user_id = ownerUserId;
+      payload.client_email = email;
+
+      const { data, error } = await supabase.from('weddings').insert(payload).select('id').single();
+      if (error) throw error;
+      navigate(`/admin/weddings/${data.id}`, {
+        state: { clientCreated: { email, password } },
+      });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setError(msg.includes('duplicate key') ? 'Ce lien (slug) existe déjà. Modifiez-le.' : msg);
@@ -145,7 +205,7 @@ export default function WeddingForm() {
           </div>
           <div>
             <label className="label" htmlFor="secondaryName">Nom du conjoint(e)</label>
-            <input id="secondaryName" className="input" value={secondaryName} onChange={(e) => setSecondaryName(e.target.value)} />
+            <input id="secondaryName" className="input" value={secondaryName} onChange={(e) => onSecondaryNameChange(e.target.value)} />
           </div>
         </div>
 
@@ -182,10 +242,45 @@ export default function WeddingForm() {
           <input id="contactPhone" className="input" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="+237 ....." />
         </div>
 
-        <div>
-          <label className="label" htmlFor="ownerUserId">Compte marié(s) — ID utilisateur (optionnel)</label>
-          <input id="ownerUserId" className="input font-mono" value={ownerUserId} onChange={(e) => setOwnerUserId(e.target.value)} placeholder="uuid du compte (Authentication > Users)" />
-          <p className="mt-1 text-xs text-ink-secondary">Permet aux mariés de se connecter et configurer leur site via l'espace client (/app).</p>
+        <div className="rounded-lg border border-borderlight bg-paper-cream/50 p-4">
+          <div className="mb-2">
+            <h2 className="font-semibold text-ink">Compte client (mariés)</h2>
+            <p className="text-xs text-ink-secondary">
+              {isEdit
+                ? 'Les identifiants du compte sont définis à la création du mariage.'
+                : 'Ces identifiants permettent aux mariés de se connecter via le portail unique (/login) et de configurer leur site.'}
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="label" htmlFor="clientEmail">Email du compte</label>
+              <input
+                id="clientEmail"
+                type="email"
+                className="input"
+                value={clientEmail}
+                disabled={isEdit}
+                onChange={(e) => setClientEmail(e.target.value)}
+                placeholder="maries@exemple.com"
+                required={!isEdit}
+              />
+            </div>
+            {!isEdit && (
+              <div>
+                <label className="label" htmlFor="clientPassword">Mot de passe</label>
+                <input
+                  id="clientPassword"
+                  type="text"
+                  className="input font-mono"
+                  value={clientPassword}
+                  onChange={(e) => setClientPassword(e.target.value)}
+                  placeholder="au moins 6 caractères"
+                  required
+                  autoComplete="off"
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">

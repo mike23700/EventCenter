@@ -26,20 +26,15 @@ export default function AdminLayout() {
 
   useEffect(() => {
     if (!loaded) return;
-    if (location.pathname === '/admin/login') return;
 
     if (!user) {
       const next =
         location.pathname !== '/admin' && location.pathname !== '/admin/'
           ? `${location.pathname}${location.search}`
           : '/admin';
-      navigate(`/admin/login?next=${encodeURIComponent(next)}`, { replace: true });
+      navigate(`/login?next=${encodeURIComponent(next)}`, { replace: true });
     }
   }, [loaded, user, location, navigate]);
-
-  if (location.pathname === '/admin/login') {
-    return <Outlet />;
-  }
 
   if (!loaded) {
     return (

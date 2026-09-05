@@ -16,7 +16,7 @@ if (
 }
 
 export const supabase = createClient<Database>(
-  url ?? 'https://fkbwkvciilvcyrzpmvip.supabase.co',
+  url ?? 'https://hrcpdqmxragasfmuswuu.supabase.co',
   anonKey ?? 'public-anon-placeholder',
   {
     auth: {

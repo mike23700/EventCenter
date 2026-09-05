@@ -1,26 +1,42 @@
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Heart, LogIn } from 'lucide-react';
-import { useAuth } from '../../lib/auth-context';
+import { authStore, useAuth } from '../lib/auth-context';
+import type { AuthState } from '../lib/auth-context';
 
-export default function AdminLogin() {
-  const { loading, signIn } = useAuth();
+/**
+ * Portail de connexion UNIQUE : administrateurs (rôle super_admin) et
+ * clients (mariés). La redirection se fait selon le rôle de l'utilisateur :
+ *   • super_admin → /admin
+ *   • client      → /app
+ */
+export default function Login() {
+  const loading = useAuth((s) => s.loading);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const next = params.get('next') || '/admin';
+
+  function target(user?: AuthState['user']) {
+    const next = params.get('next') || '';
+    const isAdmin = user?.app_metadata?.role === 'super_admin';
+    if (next.startsWith('/admin') || next.startsWith('/app')) {
+      if (isAdmin && next.startsWith('/admin')) return next;
+      if (!isAdmin && next.startsWith('/app')) return next;
+    }
+    return isAdmin ? '/admin' : '/app';
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
-    const res = await signIn(email.trim(), password);
+    const res = await authStore.getState().signIn(email.trim(), password);
     if (res.error) {
       setError(res.error);
       return;
     }
-    navigate(next, { replace: true });
+    navigate(target(res.user), { replace: true });
   }
 
   return (
@@ -32,7 +48,9 @@ export default function AdminLogin() {
               <Heart className="h-8 w-8" fill="currentColor" />
             </div>
             <h1 className="font-display text-2xl font-bold text-ink">EventCenter</h1>
-            <p className="mt-1 text-sm text-ink-secondary">Panel super-admin</p>
+            <p className="mt-1 text-sm text-ink-secondary">
+              Connectez-vous à votre espace
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -48,7 +66,7 @@ export default function AdminLogin() {
                 className="input"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@eventcenter.app"
+                placeholder="vous@exemple.com"
               />
             </div>
             <div>
@@ -78,7 +96,7 @@ export default function AdminLogin() {
           </form>
 
           <p className="mt-6 text-center text-xs text-ink-secondary">
-            Compte initial fourni par l'administrateur du projet.
+            Compte communiqué par l'organisateur de votre évènement.
           </p>
         </div>
         <p className="mt-4 text-center text-xs text-ink-secondary">

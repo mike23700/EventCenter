@@ -14,10 +14,11 @@ interface AuthState {
   loading: boolean;
   loaded: boolean;
   setUser: (user: User | null) => void;
-  signIn: (email: string, password: string) => Promise<{ error?: string }>;
-  signUp: (email: string, password: string) => Promise<{ error?: string }>;
+  signIn: (email: string, password: string) => Promise<{ error?: string; user?: User }>;
   signOut: () => Promise<void>;
 }
+
+export type { AuthState };
 
 export const authStore = createStore<AuthState>((set) => ({
   user: null,
@@ -26,19 +27,12 @@ export const authStore = createStore<AuthState>((set) => ({
   setUser: (user) => set({ user }),
   signIn: async (email, password) => {
     set({ loading: true });
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    set({ loading: false });
-    return error ? { error: error.message } : {};
-  },
-  signUp: async (email, password) => {
-    set({ loading: true });
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     set({ loading: false });
     if (error) return { error: error.message };
-    if (!data.session) {
-      return { error: 'Verifiez votre boite mail pour confirmer votre inscription.' };
-    }
-    return {};
+    const user = data.session?.user ?? null;
+    set({ user });
+    return user ? { user } : {};
   },
   signOut: async () => {
     await supabase.auth.signOut();

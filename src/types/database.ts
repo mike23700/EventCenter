@@ -25,6 +25,7 @@ export interface Wedding {
   access_end: string | null;
   is_active: boolean;
   owner_user_id: string | null;
+  client_email: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -161,6 +162,7 @@ export type Database = {
           access_end: string | null;
           is_active: boolean;
           owner_user_id: string | null;
+          client_email: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -178,6 +180,7 @@ export type Database = {
           access_end?: string | null;
           is_active?: boolean;
           owner_user_id?: string | null;
+          client_email?: string | null;
         };
         Update: {
           slug?: string;
@@ -193,6 +196,7 @@ export type Database = {
           access_end?: string | null;
           is_active?: boolean;
           owner_user_id?: string | null;
+          client_email?: string | null;
         };
         Relationships: [];
       };
@@ -423,8 +427,8 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
-      claim_wedding: {
-        Args: { p_slug: string };
+      admin_create_client_user: {
+        Args: { p_email: string; p_password: string };
         Returns: string;
       };
     };

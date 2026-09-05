@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Pencil, ExternalLink, Copy, Check, Power, PowerOff } from 'lucide-react';
+import { Link, useLocation, useParams } from 'react-router-dom';
+import { ArrowLeft, Pencil, ExternalLink, Copy, Check, Power, PowerOff, User, ShieldCheck } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { weddingPublicUrl } from '../../../lib/supabase';
 import { formatDateTime, formatDate } from '../../../lib/format';
@@ -8,11 +8,14 @@ import type { Wedding } from '../../../types/database';
 
 export default function WeddingDetail() {
   const { id } = useParams();
+  const location = useLocation();
   const [wedding, setWedding] = useState<Wedding | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [copied, setCopied] = useState(false);
+  const clientCreated = (location.state as { clientCreated?: { email: string; password: string } } | null)
+    ?.clientCreated;
 
   useEffect(() => {
     if (!id) return;
@@ -82,12 +85,36 @@ export default function WeddingDetail() {
       {notice && <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{notice}</p>}
       {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
+      {clientCreated && (
+        <div className="rounded-2xl border border-gold/40 bg-gold/5 p-4">
+          <div className="mb-1 flex items-center gap-2 font-semibold text-ink">
+            <User className="h-4 w-4 text-gold" />
+            Compte client créé — à transmettre aux mariés
+          </div>
+          <p className="text-sm text-ink-secondary">
+            Ils se connectent sur <span className="font-mono">/login</span> puis configurent leur site.
+          </p>
+          <div className="mt-2 space-y-1 rounded-lg bg-white/70 p-3 font-mono text-sm text-ink">
+            <div>Email : {clientCreated.email}</div>
+            <div>Mot de passe : {clientCreated.password}</div>
+          </div>
+        </div>
+      )}
+
       <div className="card space-y-4">
         <dl className="grid gap-4 sm:grid-cols-2">
           <div><dt className="text-xs uppercase tracking-wide text-ink-secondary">Statut</dt><dd>{wedding.is_active ? <span className="badge-green">Actif</span> : <span className="badge-red">Inactif</span>}</dd></div>
           <div><dt className="text-xs uppercase tracking-wide text-ink-secondary">Accès</dt><dd>{canAccess ? <span className="badge-green">Lien accessible</span> : <span className="badge-amber">Hors période / inactive</span>}</dd></div>
           <div><dt className="text-xs uppercase tracking-wide text-ink-secondary">Type d'évènement</dt><dd>{wedding.event_type ?? 'Évènement'}</dd></div>
           <div><dt className="text-xs uppercase tracking-wide text-ink-secondary">Template</dt><dd>{wedding.template}</dd></div>
+          {wedding.client_email && (
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-ink-secondary">
+                <span className="inline-flex items-center gap-1"><ShieldCheck className="h-3 w-3" /> Compte client</span>
+              </dt>
+              <dd className="font-mono text-sm">{wedding.client_email}</dd>
+            </div>
+          )}
           <div><dt className="text-xs uppercase tracking-wide text-ink-secondary">Période d'accès</dt><dd>{formatDateTime(wedding.access_start)} → {formatDateTime(wedding.access_end)}</dd></div>
           <div><dt className="text-xs uppercase tracking-wide text-ink-secondary">Créé le</dt><dd>{formatDate(wedding.created_at)}</dd></div>
         </dl>

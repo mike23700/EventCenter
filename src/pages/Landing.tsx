@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Heart, Sparkles, Users } from 'lucide-react';
+import { Heart, Sparkles, LogIn } from 'lucide-react';
 
 export default function Landing() {
   return (
@@ -11,15 +11,16 @@ export default function Landing() {
         </div>
         <nav className="flex items-center gap-3">
           <Link
-            to="/admin/login"
-            className="rounded-lg border border-gold bg-white px-4 py-2 text-sm font-medium text-gold-dark hover:bg-paper-cream"
+            to="/login"
+            className="inline-flex items-center gap-2 rounded-lg border border-gold bg-white px-4 py-2 text-sm font-medium text-gold-dark hover:bg-paper-cream"
           >
-            Panel super-admin
+            <LogIn className="h-4 w-4" />
+            Connexion
           </Link>
         </nav>
       </header>
 
-      <main className="mx-auto max-w-5xl px-6 py-16 text-center">
+      <main className="mx-auto max-w-5xl px-6 py-24 text-center">
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-gold/30 bg-white px-4 py-1 text-sm text-gold-dark">
           <Sparkles className="h-4 w-4 text-gold" />
           Gestion d'évènements de mariage
@@ -28,40 +29,23 @@ export default function Landing() {
           Un site unique pour chaque <span className="text-gold">mariage</span>.
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-ink-secondary">
-          EventCenter génère un site évènementiel personnalisé par mariage : invitations,
-          programme, confirmation de présence, gestion des tables et partage de photos.
+          Programme, confirmation de présence, gestion des tables et partage de photos :
+          tout ce qu'il faut pour votre mariage, accessible partout.
         </p>
 
-        <div className="mt-12 grid gap-6 sm:grid-cols-2">
-          {[
-            {
-              icon: <Users className="h-6 w-6" />,
-              title: 'Panel super-admin',
-              desc: 'Créez des comptes clients, gérez la période d’accès et les liens.',
-              to: '/admin/login',
-            },
-            {
-              icon: <Heart className="h-6 w-6" />,
-              title: 'Panel client',
-              desc: 'Les mariés configurent leur site sans toucher au code.',
-              to: '/app/login',
-            },
-          ].map((c) => (
-            <Link
-              key={c.title}
-              to={c.to}
-              className="group rounded-2xl border border-borderlight bg-white p-6 text-left shadow-sm transition hover:border-gold hover:shadow-md"
-            >
-              <div className="mb-3 inline-flex rounded-lg bg-gold/10 p-2 text-gold-dark">{c.icon}</div>
-              <h2 className="font-semibold text-ink">{c.title}</h2>
-              <p className="mt-1 text-sm text-ink-secondary">{c.desc}</p>
-            </Link>
-          ))}
+        <div className="mt-12">
+          <Link to="/login" className="btn-primary inline-flex px-6 py-3 text-base">
+            <LogIn className="h-5 w-5" />
+            Se connecter à mon espace
+          </Link>
+          <p className="mt-3 text-xs text-ink-secondary">
+            Accédez à votre site de mariage avec le compte communiqué par votre organisateur.
+          </p>
         </div>
       </main>
 
       <footer className="border-t border-borderlight py-6 text-center text-sm text-ink-secondary">
-        EventCenter © {new Date().getFullYear()} — Application de gestion de mariages
+        EventCenter © {new Date().getFullYear()} — Gestion d'évènements de mariage
       </footer>
     </div>
   );
