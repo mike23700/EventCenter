@@ -6,6 +6,8 @@ import Countdown from './Countdown';
 import Location from './Location';
 import Program from './Program';
 import Mixed from './Mixed';
+import ImageVideo from './ImageVideo';
+import Rsvp from './Rsvp';
 
 export interface SectionRendererProps {
   section: Section;
@@ -20,6 +22,8 @@ const registry: Record<string, ComponentType<any>> = {
   location: Location,
   program: Program,
   mixed: Mixed,
+  image_video: ImageVideo,
+  rsvp: Rsvp,
 };
 
 /**
@@ -39,7 +43,7 @@ export default function SectionRenderer({ section, wedding, events }: SectionRen
 
   if (!C) return null;
 
-  if (section.type === 'program') {
+  if (section.type === 'program' || section.type === 'countdown' || section.type === 'rsvp') {
     return <C {...shared} content={section.content} events={events} />;
   }
   return <C {...shared} content={section.content} />;

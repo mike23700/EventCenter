@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, LayoutGrid, Palette, CalendarDays } from 'lucide-react';
+import { ArrowLeft, LayoutGrid, Palette, CalendarDays, Eye, Users } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import type { Wedding } from '../../../types/database';
 
@@ -8,6 +8,8 @@ const tabs = [
   { to: 'sections', label: 'Sections', icon: LayoutGrid },
   { to: 'theme', label: 'Thème', icon: Palette },
   { to: 'programme', label: 'Programme', icon: CalendarDays },
+  { to: 'invites', label: 'Invités', icon: Users },
+  { to: 'apercu', label: 'Aperçu', icon: Eye },
 ];
 
 /** Layout de configuration d'un mariage : charge le mariage + onglets. */

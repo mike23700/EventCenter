@@ -12,6 +12,8 @@ import WeddingConfigLayout from './routes/app/weddings/WeddingConfigLayout';
 import SectionsEditor from './routes/app/weddings/SectionsEditor';
 import ThemeEditor from './routes/app/weddings/ThemeEditor';
 import ProgramEditor from './routes/app/weddings/ProgramEditor';
+import GuestsEditor from './routes/app/weddings/GuestsEditor';
+import SitePreview from './routes/app/weddings/SitePreview';
 import WeddingPublic from './routes/w/WeddingPublic';
 import NotFound from './pages/NotFound';
 
@@ -46,6 +48,8 @@ export default function App() {
           <Route path="sections" element={<SectionsEditor />} />
           <Route path="theme" element={<ThemeEditor />} />
           <Route path="programme" element={<ProgramEditor />} />
+          <Route path="invites" element={<GuestsEditor />} />
+          <Route path="apercu" element={<SitePreview />} />
         </Route>
       </Route>
 

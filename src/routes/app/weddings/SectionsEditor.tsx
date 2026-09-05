@@ -85,6 +85,19 @@ export default function SectionsEditor() {
     }
   }
 
+  async function moveTo(fromIdx: number, toIdx: number) {
+    if (fromIdx === toIdx) return;
+    const list = [...sections];
+    const [movedSection] = list.splice(fromIdx, 1);
+    list.splice(toIdx, 0, movedSection);
+    const withPos = list.map((s, i) => ({ ...s, position: i }));
+    setSections(withPos);
+    for (const s of withPos) {
+      const { error } = await supabase.from('sections').update({ position: s.position }).eq('id', s.id);
+      if (error) setError(error.message);
+    }
+  }
+
   async function saveContent(section: Section, content: Json) {
     setSaving(true);
     setError('');
@@ -145,9 +158,23 @@ export default function SectionsEditor() {
 
       <ul className="space-y-3">
         {sections.map((section, i) => (
-          <li key={section.id} className="rounded-2xl border border-borderlight bg-white p-4 shadow-sm">
+          <li
+            key={section.id}
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData('text/plain', String(i));
+              e.dataTransfer.effectAllowed = 'move';
+            }}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              const from = Number(e.dataTransfer.getData('text/plain'));
+              if (!Number.isNaN(from)) moveTo(from, i);
+            }}
+            className="rounded-2xl border border-borderlight bg-white p-4 shadow-sm"
+          >
             <div className="flex items-center gap-3">
-              <GripVertical className="h-5 w-5 shrink-0 text-ink-secondary/50" />
+              <GripVertical className="h-5 w-5 shrink-0 cursor-grab text-ink-secondary/50 active:cursor-grabbing" />
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-ink">{sectionLabel(section.type)}</p>
                 <p className="text-xs text-ink-secondary">
@@ -173,6 +200,7 @@ export default function SectionsEditor() {
                 <SectionContentEditor
                   type={section.type}
                   content={section.content}
+                  folder={`weddings/${wedding.slug}`}
                   onChange={(content) => setSections((prev) => prev.map((s) => (s.id === section.id ? { ...s, content } : s)))}
                 />
                 <button onClick={() => saveContent(section, section.content)} disabled={saving} className="btn-primary">

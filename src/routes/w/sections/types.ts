@@ -3,7 +3,7 @@ import type { TemplateDef } from '../../../lib/templates';
 
 export interface SectionProps {
   content: Json;
-  wedding: { name: string; secondary_name: string | null; logo: string | null };
+  wedding: { id: string; slug: string; name: string; secondary_name: string | null; logo: string | null };
   accent: string;
   tpl: TemplateDef;
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { WeddingEvent } from '../../../types/database';
 import type { SectionProps } from './types';
 import { asRecord, str } from './types';
 import { SectionShell } from './shell';
@@ -14,10 +15,18 @@ function diff(target: Date) {
   };
 }
 
-/** Section "compte à rebours" jusqu'à la date du mariage. */
-export default function Countdown({ content, accent, tpl }: SectionProps) {
+export interface CountdownProps extends SectionProps {
+  events: WeddingEvent[];
+}
+
+/**
+ * Section "compte à rebours" jusqu'à la date du mariage.
+ * La date est soit définie dans la section, soit reprise du premier
+ * sous-évènement du programme si elle n'est pas renseignée.
+ */
+export default function Countdown({ content, accent, tpl, events }: CountdownProps) {
   const c = asRecord(content);
-  const dateStr = str(c, 'date');
+  const dateStr = str(c, 'date') || events?.[0]?.date || null;
   const [, setTick] = useState(0);
 
   useEffect(() => {

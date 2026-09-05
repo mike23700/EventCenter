@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Check, X, ExternalLink } from 'lucide-react';
+import { Plus, Pencil, Trash2, Check, X, ExternalLink, ArrowUp, ArrowDown } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import type { Wedding, WeddingEvent } from '../../../types/database';
 import { toIso, fromIsoForInput } from '../../../lib/format';
+import MediaUploader from '../../../components/MediaUploader';
+import { storageUrl } from '../../../lib/media';
 
 interface Draft {
   id?: string;
@@ -11,10 +13,18 @@ interface Draft {
   date: string;
   location_title: string;
   location_address: string;
+  location_image: string;
   location_maps_url: string;
 }
 
-const empty: Draft = { name: '', date: '', location_title: '', location_address: '', location_maps_url: '' };
+const empty: Draft = {
+  name: '',
+  date: '',
+  location_title: '',
+  location_address: '',
+  location_image: '',
+  location_maps_url: '',
+};
 
 /** Éditeur des sous-évènements (dot, mairie, église, soirée…). */
 export default function ProgramEditor() {
@@ -57,6 +67,7 @@ export default function ProgramEditor() {
       date: fromIsoForInput(ev.date),
       location_title: ev.location_title ?? '',
       location_address: ev.location_address ?? '',
+      location_image: ev.location_image ?? '',
       location_maps_url: ev.location_maps_url ?? '',
     });
   }
@@ -70,6 +81,7 @@ export default function ProgramEditor() {
       date: toIso(draft.date),
       location_title: draft.location_title.trim() || null,
       location_address: draft.location_address.trim() || null,
+      location_image: draft.location_image || null,
       location_maps_url: draft.location_maps_url.trim() || null,
     };
     if (draft.id) {
@@ -93,6 +105,22 @@ export default function ProgramEditor() {
     const { error } = await supabase.from('wedding_events').delete().eq('id', id);
     if (error) setError(error.message);
     else setEvents((prev) => prev.filter((e) => e.id !== id));
+  }
+
+  async function moveEvent(id: string, dir: -1 | 1) {
+    const idx = events.findIndex((e) => e.id === id);
+    const swapIdx = idx + dir;
+    if (idx < 0 || swapIdx < 0 || swapIdx >= events.length) return;
+    const list = [...events];
+    const a = list[idx];
+    list[idx] = list[swapIdx];
+    list[swapIdx] = a;
+    const withPos = list.map((e, i) => ({ ...e, position: i }));
+    setEvents(withPos);
+    for (const e of [withPos[idx], withPos[swapIdx]]) {
+      const { error } = await supabase.from('wedding_events').update({ position: e.position }).eq('id', e.id);
+      if (error) setError(error.message);
+    }
   }
 
   return (
@@ -135,6 +163,17 @@ export default function ProgramEditor() {
               <label className="label">Lien Google Maps</label>
               <input className="input" value={draft.location_maps_url} onChange={(e) => setDraft({ ...draft, location_maps_url: e.target.value })} placeholder="https://maps.app.goo.gl/..." />
             </div>
+            <div className="sm:col-span-2">
+              <MediaUploader
+                bucket="media"
+                folder={`weddings/${wedding.slug}/lieux`}
+                accept="image/*"
+                label="Photo du lieu"
+                value={draft.location_image}
+                onChange={(v) => setDraft({ ...draft, location_image: v ?? '' })}
+                hint="Une photo pour illustrer ce sous-évènement"
+              />
+            </div>
           </div>
           {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
           <div className="flex justify-end gap-2">
@@ -151,24 +190,39 @@ export default function ProgramEditor() {
       {events.length > 0 && !draft && (
         <ul className="space-y-3">
           {events.map((ev, i) => (
-            <li key={ev.id} className="flex items-start justify-between gap-4 rounded-2xl border border-borderlight bg-white p-4 shadow-sm">
-              <div className="min-w-0">
-                <p className="font-display text-lg font-bold text-ink">
-                  {i + 1}. {ev.name}
-                </p>
-                {ev.date && <p className="text-sm text-gold-dark">{fromIsoForInput(ev.date)}</p>}
-                {ev.location_title && <p className="text-sm text-ink-secondary">{ev.location_title}</p>}
-                {ev.location_address && <p className="text-sm text-ink-secondary">{ev.location_address}</p>}
-                {ev.location_maps_url && (
-                  <a href={ev.location_maps_url} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs text-gold underline">
-                    <ExternalLink className="h-3 w-3" /> Maps
-                  </a>
-                )}
+            <li key={ev.id} className="rounded-2xl border border-borderlight bg-white p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="font-display text-lg font-bold text-ink">
+                    {i + 1}. {ev.name}
+                  </p>
+                  {ev.date && <p className="text-sm text-gold-dark">{fromIsoForInput(ev.date)}</p>}
+                  {ev.location_title && <p className="text-sm text-ink-secondary">{ev.location_title}</p>}
+                  {ev.location_address && <p className="text-sm text-ink-secondary">{ev.location_address}</p>}
+                  {ev.location_maps_url && (
+                    <a href={ev.location_maps_url} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs text-gold underline">
+                      <ExternalLink className="h-3 w-3" /> Maps
+                    </a>
+                  )}
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <button onClick={() => moveEvent(ev.id, -1)} disabled={i === 0} className="btn-outline !px-2" title="Monter">
+                    <ArrowUp className="h-4 w-4" />
+                  </button>
+                  <button onClick={() => moveEvent(ev.id, 1)} disabled={i === events.length - 1} className="btn-outline !px-2" title="Descendre">
+                    <ArrowDown className="h-4 w-4" />
+                  </button>
+                  <button onClick={() => openEdit(ev)} className="btn-outline !px-2" title="Modifier"><Pencil className="h-4 w-4" /></button>
+                  <button onClick={() => remove(ev.id)} className="btn-outline !px-2 hover:!border-red-300 hover:!text-red-600" title="Supprimer"><Trash2 className="h-4 w-4" /></button>
+                </div>
               </div>
-              <div className="flex shrink-0 gap-1">
-                <button onClick={() => openEdit(ev)} className="btn-outline !px-2" title="Modifier"><Pencil className="h-4 w-4" /></button>
-                <button onClick={() => remove(ev.id)} className="btn-outline !px-2 hover:!border-red-300 hover:!text-red-600" title="Supprimer"><Trash2 className="h-4 w-4" /></button>
-              </div>
+              {ev.location_image && (
+                <img
+                  src={storageUrl('media', ev.location_image) ?? ''}
+                  alt=""
+                  className="mt-3 h-28 w-full rounded-lg object-cover"
+                />
+              )}
             </li>
           ))}
         </ul>

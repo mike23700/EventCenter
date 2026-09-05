@@ -1,6 +1,7 @@
 import { MapPin, CalendarDays } from 'lucide-react';
 import type { WeddingEvent } from '../../../types/database';
 import { formatDateTime } from '../../../lib/format';
+import { storageUrl } from '../../../lib/media';
 import type { SectionProps } from './types';
 import { SectionShell } from './shell';
 import { Crown, Flower } from '../../../lib/templates';
@@ -40,7 +41,7 @@ export default function Program({ events, accent, tpl }: ProgramProps) {
             {events.map((ev, i) => (
               <div key={ev.id} className={`flex flex-col items-center gap-4 sm:flex-row ${i % 2 === 1 ? 'sm:flex-row-reverse' : ''}`}>
                 <div
-                  className="w-full flex-1 rounded-2xl p-7"
+                  className="w-full flex-1 overflow-hidden rounded-2xl"
                   style={{
                     backgroundColor: palette.surface,
                     border: `1px solid ${palette.border}`,
@@ -48,6 +49,14 @@ export default function Program({ events, accent, tpl }: ProgramProps) {
                     borderLeftColor: accent,
                   }}
                 >
+                  {ev.location_image && (
+                    <img
+                      src={storageUrl('media', ev.location_image) ?? ''}
+                      alt=""
+                      className="h-36 w-full object-cover"
+                    />
+                  )}
+                  <div className="p-6">
                   <div className="flex items-center gap-2 text-xs tracking-widest uppercase" style={{ color: accent }}>
                     <span>Étape {i + 1}</span>
                   </div>
@@ -76,6 +85,7 @@ export default function Program({ events, accent, tpl }: ProgramProps) {
                       Localisation exacte
                     </a>
                   )}
+                  </div>
                 </div>
                 <div
                   className="flex h-14 w-14 flex-none items-center justify-center rounded-full font-display tpl-display text-xl font-bold"
