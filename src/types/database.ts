@@ -33,7 +33,9 @@ export interface Wedding {
 export interface WeddingEvent {
   id: string;
   wedding_id: string;
+  parent_id: string | null;
   name: string;
+  description: string | null;
   date: string | null;
   location_title: string | null;
   location_address: string | null;
@@ -204,7 +206,9 @@ export type Database = {
         Row: {
           id: string;
           wedding_id: string;
+          parent_id: string | null;
           name: string;
+          description: string | null;
           date: string | null;
           location_title: string | null;
           location_address: string | null;
@@ -215,7 +219,9 @@ export type Database = {
         };
         Insert: {
           wedding_id: string;
+          parent_id?: string | null;
           name: string;
+          description?: string | null;
           date?: string | null;
           location_title?: string | null;
           location_address?: string | null;
@@ -224,7 +230,9 @@ export type Database = {
           position?: number;
         };
         Update: {
+          parent_id?: string | null;
           name?: string;
+          description?: string | null;
           date?: string | null;
           location_title?: string | null;
           location_address?: string | null;

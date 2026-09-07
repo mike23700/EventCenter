@@ -17,6 +17,8 @@ export interface ProgramProps extends SectionProps {
  */
 export default function Program({ events, accent, tpl }: ProgramProps) {
   const { palette, id } = tpl;
+  const topLevel = events.filter((e) => !e.parent_id);
+  const childrenOf = (evId: string) => events.filter((e) => e.parent_id === evId);
 
   if (events.length === 0) {
     return (
@@ -38,7 +40,7 @@ export default function Program({ events, accent, tpl }: ProgramProps) {
         <div className="mx-auto max-w-4xl px-6 py-16">
           <ProgramHeading accent={accent} tpl={tpl} />
           <div className="mt-12 space-y-12">
-            {events.map((ev, i) => (
+            {topLevel.map((ev, i) => (
               <div key={ev.id} className={`flex flex-col items-center gap-4 sm:flex-row ${i % 2 === 1 ? 'sm:flex-row-reverse' : ''}`}>
                 <div
                   className="w-full flex-1 overflow-hidden rounded-2xl"
@@ -74,6 +76,11 @@ export default function Program({ events, accent, tpl }: ProgramProps) {
                       {ev.location_address && <span> — {ev.location_address}</span>}
                     </p>
                   )}
+                  {ev.description && (
+                    <p className="mt-2 whitespace-pre-line text-sm tpl-body" style={{ color: palette.muted }}>
+                      {ev.description}
+                    </p>
+                  )}
                   {ev.location_maps_url && (
                     <a
                       href={ev.location_maps_url}
@@ -84,6 +91,19 @@ export default function Program({ events, accent, tpl }: ProgramProps) {
                     >
                       Localisation exacte
                     </a>
+                  )}
+                  {childrenOf(ev.id).length > 0 && (
+                    <ul className="mt-4 space-y-2 border-t pt-3" style={{ borderColor: palette.border }}>
+                      {childrenOf(ev.id).map((child) => (
+                        <li key={child.id} className="text-sm tpl-body" style={{ color: palette.ink }}>
+                          <span className="font-semibold">{child.name}</span>
+                          {child.date && <span style={{ color: palette.muted }}> — {formatDateTime(child.date)}</span>}
+                          {child.description && (
+                            <p className="text-xs" style={{ color: palette.muted }}>{child.description}</p>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
                   )}
                   </div>
                 </div>
@@ -109,7 +129,7 @@ export default function Program({ events, accent, tpl }: ProgramProps) {
           className="relative mt-12 space-y-10 pl-8"
           style={{ borderLeft: `2px solid ${accent}55` }}
         >
-          {events.map((ev, i) => (
+          {topLevel.map((ev, i) => (
             <li key={ev.id} className="relative">
               <span
                 className="absolute -left-[41px] top-1 flex h-6 w-6 items-center justify-center"
@@ -145,6 +165,11 @@ export default function Program({ events, accent, tpl }: ProgramProps) {
                     {ev.location_address && <span> — {ev.location_address}</span>}
                   </p>
                 )}
+                {ev.description && (
+                  <p className="mt-2 whitespace-pre-line text-sm" style={{ color: palette.muted }}>
+                    {ev.description}
+                  </p>
+                )}
                 {ev.location_maps_url && (
                   <a
                     href={ev.location_maps_url}
@@ -155,6 +180,19 @@ export default function Program({ events, accent, tpl }: ProgramProps) {
                   >
                     Localisation exacte
                   </a>
+                )}
+                {childrenOf(ev.id).length > 0 && (
+                  <ul className="mt-3 space-y-2 border-t pt-3" style={{ borderColor: palette.border }}>
+                    {childrenOf(ev.id).map((child) => (
+                      <li key={child.id} className="text-sm" style={{ color: palette.ink }}>
+                        <span className="font-semibold">{child.name}</span>
+                        {child.date && <span style={{ color: palette.muted }}> — {formatDateTime(child.date)}</span>}
+                        {child.description && (
+                          <p className="text-xs" style={{ color: palette.muted }}>{child.description}</p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </div>
             </li>

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Check, X, Users } from 'lucide-react';
+import { Plus, Pencil, Trash2, Check, X, Users, Filter } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import type { Wedding, WeddingEvent, Guest } from '../../../types/database';
 import { formatDateTime } from '../../../lib/format';
@@ -24,6 +24,8 @@ export default function GuestsEditor() {
   const [error, setError] = useState('');
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saving, setSaving] = useState(false);
+  const [eventFilter, setEventFilter] = useState<string>('');
+  const [responseCounts, setResponseCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (!wedding) return;
@@ -37,17 +39,44 @@ export default function GuestsEditor() {
       setGuests(g ?? []);
       setEvents(evs ?? []);
       setLoading(false);
+
+      const guestIds = (g ?? []).map((row) => row.id);
+      if (guestIds.length > 0) {
+        const { data: resp } = await supabase.from('guest_responses').select('guest_id').in('guest_id', guestIds);
+        if (!active) return;
+        const counts: Record<string, number> = {};
+        for (const r of resp ?? []) counts[r.guest_id] = (counts[r.guest_id] ?? 0) + 1;
+        setResponseCounts(counts);
+      }
     })();
     return () => {
       active = false;
     };
   }, [wedding]);
 
+  const countsByEvent = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const ev of events) counts[ev.id] = 0;
+    for (const g of guests) {
+      for (const evId of g.invited_events ?? []) {
+        if (evId in counts) counts[evId] += 1;
+      }
+    }
+    return counts;
+  }, [events, guests]);
+
+  const filteredGuests = useMemo(
+    () => (eventFilter ? guests.filter((g) => (g.invited_events ?? []).includes(eventFilter)) : guests),
+    [guests, eventFilter],
+  );
+
   if (loading) return <p className="text-ink-secondary">Chargement…</p>;
   if (error) return <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>;
 
   function eventName(id: string): string {
-    return events.find((e) => e.id === id)?.name ?? '?';
+    const ev = events.find((e) => e.id === id);
+    if (!ev) return '?';
+    return ev.parent_id ? `↳ ${ev.name}` : ev.name;
   }
 
   function openCreate() {
@@ -127,7 +156,34 @@ export default function GuestsEditor() {
         </div>
       )}
 
-      {!draft && guests.length === 0 && (
+      {events.length > 0 && !draft && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-ink-secondary">
+            <Filter className="h-3.5 w-3.5" /> Filtrer par partie
+          </span>
+          <button
+            onClick={() => setEventFilter('')}
+            className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+              eventFilter === '' ? 'bg-gold text-white' : 'border border-borderlight bg-paper-warm text-ink-secondary'
+            }`}
+          >
+            Toutes ({guests.length})
+          </button>
+          {events.map((ev) => (
+            <button
+              key={ev.id}
+              onClick={() => setEventFilter(ev.id)}
+              className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                eventFilter === ev.id ? 'bg-gold text-white' : 'border border-borderlight bg-paper-warm text-ink-secondary'
+              }`}
+            >
+              {eventName(ev.id)} ({countsByEvent[ev.id] ?? 0})
+            </button>
+          ))}
+        </div>
+      )}
+
+      {!draft && filteredGuests.length === 0 && (
         <div className="card text-center text-ink-secondary">Aucun invité pour le moment.</div>
       )}
 
@@ -169,7 +225,7 @@ export default function GuestsEditor() {
                     }`}
                     title={ev.date ? formatDateTime(ev.date) : ''}
                   >
-                    {ev.name}
+                    {eventName(ev.id)}
                   </button>
                 ))}
               </div>
@@ -188,7 +244,7 @@ export default function GuestsEditor() {
         </div>
       )}
 
-      {guests.length > 0 && !draft && (
+      {filteredGuests.length > 0 && !draft && (
         <div className="overflow-hidden rounded-2xl border border-borderlight bg-white shadow-sm">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-borderlight bg-paper-cream text-xs uppercase tracking-wide text-ink-secondary">
@@ -197,11 +253,12 @@ export default function GuestsEditor() {
                 <th className="px-4 py-3">Téléphone</th>
                 <th className="px-4 py-3 text-center">Accomp.</th>
                 <th className="px-4 py-3">Convié à</th>
+                <th className="px-4 py-3 text-center">Réponses</th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {guests.map((g) => (
+              {filteredGuests.map((g) => (
                 <tr key={g.id} className="border-b border-borderlight/60 last:border-0">
                   <td className="px-4 py-3 font-medium text-ink">{g.name}</td>
                   <td className="px-4 py-3 text-ink-secondary">{g.phone ?? '—'}</td>
@@ -216,6 +273,9 @@ export default function GuestsEditor() {
                         ))}
                       </div>
                     )}
+                  </td>
+                  <td className="px-4 py-3 text-center text-ink-secondary">
+                    {responseCounts[g.id] ? <span className="badge badge-slate">{responseCounts[g.id]}</span> : '—'}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1">
@@ -232,7 +292,9 @@ export default function GuestsEditor() {
 
       <p className="text-sm text-ink-secondary">
         <Users className="mr-1 inline h-4 w-4" />
-        {guests.length} invité{guests.length > 1 ? 's' : ''} enregistré{guests.length > 1 ? 's' : ''}.
+        {filteredGuests.length} invité{filteredGuests.length > 1 ? 's' : ''}
+        {eventFilter ? ' pour cette partie' : ' enregistré' + (filteredGuests.length > 1 ? 's' : '')}
+        {eventFilter ? ` (sur ${guests.length} au total).` : '.'}
       </p>
     </div>
   );

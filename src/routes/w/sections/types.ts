@@ -6,6 +6,7 @@ export interface SectionProps {
   wedding: { id: string; slug: string; name: string; secondary_name: string | null; logo: string | null };
   accent: string;
   tpl: TemplateDef;
+  sectionId?: string;
 }
 
 /** Extrait un objet depuis content (Json) */

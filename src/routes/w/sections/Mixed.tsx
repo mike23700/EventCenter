@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { Search } from 'lucide-react';
+import { supabase } from '../../../lib/supabase';
 import type { Json } from '../../../types/database';
 import { storageUrl } from '../../../lib/media';
 import type { SectionProps } from './types';
@@ -41,7 +43,7 @@ function isBlock(b: unknown): b is Block {
  * Section "partie mixte" : blocs texte / image / vidéo / questionnaire
  * librement ordonnés, mise en page façon magazine selon le template.
  */
-export default function Mixed({ content, accent, tpl }: SectionProps) {
+export default function Mixed({ content, accent, tpl, wedding, sectionId }: SectionProps) {
   const blocks = parseBlocks(content);
   if (blocks.length === 0) return null;
 
@@ -57,7 +59,16 @@ export default function Mixed({ content, accent, tpl }: SectionProps) {
             case 'video':
               return <VideoView key={block.id} block={block} tpl={tpl} />;
             case 'questionnaire':
-              return <QuestionnaireView key={block.id} block={block} accent={accent} tpl={tpl} />;
+              return (
+                <QuestionnaireView
+                  key={block.id}
+                  block={block}
+                  accent={accent}
+                  tpl={tpl}
+                  weddingId={wedding.id}
+                  sectionId={sectionId ?? ''}
+                />
+              );
             default:
               return null;
           }
@@ -150,31 +161,41 @@ function VideoView({ block, tpl }: { block: Block; tpl: SectionProps['tpl'] }) {
   );
 }
 
+interface GuestRow {
+  id: string;
+  name: string;
+}
+
 /**
- * Questionnaire public : rend les questions définies par le client et
- * propose un formulaire interactif. Les réponses sont conservées dans le
- * navigateur de l'invité et le flux complet (invités + réponse dans la
- * base) sera branché avec la phase RSVP.
+ * Questionnaire public : identifie l'invité par son nom (comme la section
+ * RSVP), puis enregistre ses réponses dans `guest_responses` — une ligne
+ * par question, avec `question_key = "<section>:<bloc>:<question>"` —
+ * pour qu'elles apparaissent dans l'onglet « Réponses » côté client.
  */
-function QuestionnaireView({ block, accent, tpl }: { block: Block; accent: string; tpl: SectionProps['tpl'] }) {
+function QuestionnaireView({
+  block,
+  accent,
+  tpl,
+  weddingId,
+  sectionId,
+}: {
+  block: Block;
+  accent: string;
+  tpl: SectionProps['tpl'];
+  weddingId: string;
+  sectionId: string;
+}) {
   const { palette } = tpl;
   const questions = (block.questions ?? []).filter((q) => q.label);
-  const storageKey = `ec-q-${block.id}`;
-  const [done, setDone] = useState(() => {
-    try {
-      return localStorage.getItem(storageKey) === '1';
-    } catch {
-      return false;
-    }
-  });
+  const [query, setQuery] = useState('');
+  const [guestStatus, setGuestStatus] = useState<'idle' | 'searching' | 'found' | 'missing'>('idle');
+  const [guest, setGuest] = useState<GuestRow | null>(null);
+  const [matches, setMatches] = useState<GuestRow[]>([]);
+  const [chosenId, setChosenId] = useState('');
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
   const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    try {
-      if (done) localStorage.setItem(storageKey, '1');
-    } catch { /* ignore */ }
-  }, [done, storageKey]);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState('');
 
   if (!block.title && questions.length === 0) return null;
 
@@ -182,13 +203,56 @@ function QuestionnaireView({ block, accent, tpl }: { block: Block; accent: strin
     setAnswers((a) => ({ ...a, [qid]: value }));
   }
 
-  function submit() {
+  async function search() {
+    const name = query.trim();
+    if (name.length < 2) return;
+    setError('');
+    setGuestStatus('searching');
+    const { data, error } = await supabase
+      .from('guests')
+      .select('id, name')
+      .eq('wedding_id', weddingId)
+      .ilike('name', `%${name}%`);
+    if (error) {
+      setError(error.message);
+      setGuestStatus('idle');
+      return;
+    }
+    const rows = (data ?? []) as GuestRow[];
+    setMatches(rows);
+    if (rows.length === 1) {
+      setGuest(rows[0]);
+      setGuestStatus('found');
+    } else if (rows.length === 0) {
+      setGuestStatus('missing');
+    }
+  }
+
+  function confirmGuess() {
+    const g = matches.find((m) => m.id === chosenId);
+    if (!g) return;
+    setGuest(g);
+    setGuestStatus('found');
+  }
+
+  async function submit() {
+    if (!guest) return;
     setSubmitting(true);
-    // Les réponses seront transmises à la base lors de la phase RSVP.
-    window.setTimeout(() => {
-      setDone(true);
-      setSubmitting(false);
-    }, 400);
+    setError('');
+    const rows = questions.map((q) => ({
+      guest_id: guest.id,
+      question_key: `${sectionId}:${block.id}:${q.id}`,
+      answer: (answers[q.id] ?? (q.type === 'multiple' ? [] : '')) as Json,
+    }));
+    const { error } = await supabase
+      .from('guest_responses')
+      .upsert(rows, { onConflict: 'guest_id,question_key' });
+    setSubmitting(false);
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    setDone(true);
   }
 
   if (done) {
@@ -225,6 +289,63 @@ function QuestionnaireView({ block, accent, tpl }: { block: Block; accent: strin
         </p>
       )}
 
+      {error && (
+        <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-xs text-red-600">{error}</p>
+      )}
+
+      {guestStatus !== 'found' ? (
+        <div className="mt-5 space-y-3">
+          <p className="tpl-body text-sm" style={{ color: palette.muted }}>
+            Indiquez votre nom pour que vos réponses soient rattachées à votre invitation.
+          </p>
+          <div className="flex gap-2">
+            <input
+              className="input"
+              placeholder="Votre nom"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && search()}
+              style={{ backgroundColor: palette.surface, borderColor: palette.border, color: palette.text }}
+            />
+            <button
+              onClick={search}
+              disabled={query.trim().length < 2}
+              className="rounded-full px-5 text-sm font-medium text-white disabled:opacity-40"
+              style={{ backgroundColor: accent }}
+            >
+              <Search className="h-4 w-4" />
+            </button>
+          </div>
+          {guestStatus === 'searching' && matches.length > 1 && (
+            <div className="space-y-2">
+              {matches.map((m) => (
+                <label
+                  key={m.id}
+                  className="flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-2.5"
+                  style={{ borderColor: chosenId === m.id ? accent : palette.border }}
+                >
+                  <input type="radio" name={`gp-${block.id}`} checked={chosenId === m.id} onChange={() => setChosenId(m.id)} />
+                  <span style={{ color: palette.ink }}>{m.name}</span>
+                </label>
+              ))}
+              <button
+                onClick={confirmGuess}
+                disabled={!chosenId}
+                className="rounded-full px-5 py-2 text-sm font-medium text-white disabled:opacity-40"
+                style={{ backgroundColor: accent }}
+              >
+                C'est moi
+              </button>
+            </div>
+          )}
+          {guestStatus === 'missing' && (
+            <p className="tpl-body text-sm" style={{ color: palette.muted }}>
+              Nous ne trouvons pas votre nom dans la liste des invités.
+            </p>
+          )}
+        </div>
+      ) : (
+      <>
       <div className="mt-5 space-y-5">
         {questions.map((q, qi) => (
           <div key={q.id}>
@@ -295,6 +416,8 @@ function QuestionnaireView({ block, accent, tpl }: { block: Block; accent: strin
           {submitting ? 'Envoi…' : 'Envoyer mes réponses'}
         </button>
       </div>
+      </>
+      )}
     </div>
   );
 }

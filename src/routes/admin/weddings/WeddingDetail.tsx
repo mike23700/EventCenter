@@ -5,6 +5,7 @@ import { supabase } from '../../../lib/supabase';
 import { weddingPublicUrl } from '../../../lib/supabase';
 import { formatDateTime, formatDate } from '../../../lib/format';
 import type { Wedding } from '../../../types/database';
+import WeddingMediaPanel from '../../../components/WeddingMediaPanel';
 
 export default function WeddingDetail() {
   const { id } = useParams();
@@ -151,6 +152,8 @@ export default function WeddingDetail() {
           </button>
         )}
       </div>
+
+      <WeddingMediaPanel wedding={wedding} publicUrl={publicUrl} />
     </div>
   );
 }

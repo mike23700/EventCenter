@@ -94,51 +94,55 @@ function CoverShell({
         </>
       )}
 
-      <div className="relative z-10 px-6 py-20 max-w-4xl mx-auto">
-        {logoUrl && (
-          <img
-            src={logoUrl}
-            alt=""
-            className="mx-auto mb-8 h-24 w-24 rounded-full object-cover shadow-xl ring-4"
-            style={{ ['--tw-ring-color' as string]: `${palette.accent}55` }}
-          />
-        )}
+      <div className="relative z-10 mx-auto max-w-4xl px-6 py-20 text-center">
+        <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-center sm:text-left">
+          <div className="min-w-0">
+            {id === 'royal' ? (
+              <div className="mb-6 flex items-center justify-center gap-4 text-gold sm:justify-start" style={{ color: accent }}>
+                <svg viewBox="0 0 60 12" className="h-3 w-16" fill={accent}><rect y="5" width="60" height="1.5" /></svg>
+                <svg viewBox="0 0 24 24" className="h-6 w-6"><path d="M2 8 L6 14 L9 6 L12 11 L15 6 L18 14 L22 8 L20 18 H4 Z" fill={accent} /></svg>
+                <svg viewBox="0 0 60 12" className="h-3 w-16" fill={accent}><rect y="5" width="60" height="1.5" /></svg>
+              </div>
+            ) : (
+              <div className="mb-6 flex items-center justify-center gap-3 sm:justify-start" style={{ color: accent }}>
+                <span className="h-px w-12" style={{ backgroundColor: accent }} />
+                {id === 'florale' ? <Feather color={accent} className="h-5 w-5" /> : <span className="h-2 w-2 rotate-45" style={{ backgroundColor: accent }} />}
+                <span className="h-px w-12" style={{ backgroundColor: accent }} />
+              </div>
+            )}
 
-        {id === 'royal' ? (
-          <div className="mb-6 flex items-center justify-center gap-4 text-gold" style={{ color: accent }}>
-            <svg viewBox="0 0 60 12" className="h-3 w-16" fill={accent}><rect y="5" width="60" height="1.5" /></svg>
-            <svg viewBox="0 0 24 24" className="h-6 w-6"><path d="M2 8 L6 14 L9 6 L12 11 L15 6 L18 14 L22 8 L20 18 H4 Z" fill={accent} /></svg>
-            <svg viewBox="0 0 60 12" className="h-3 w-16" fill={accent}><rect y="5" width="60" height="1.5" /></svg>
-          </div>
-        ) : (
-          <div className="mx-auto mb-6 flex items-center justify-center gap-3" style={{ color: accent }}>
-            <span className="h-px w-12" style={{ backgroundColor: accent }} />
-            {id === 'florale' ? <Feather color={accent} className="h-5 w-5" /> : <span className="h-2 w-2 rotate-45" style={{ backgroundColor: accent }} />}
-            <span className="h-px w-12" style={{ backgroundColor: accent }} />
-          </div>
-        )}
+            <h1 className="font-display tpl-display text-5xl font-bold leading-tight sm:text-7xl" style={{ color: palette.surface }}>
+              {wedding.name}
+              {wedding.secondary_name && (
+                <span className="mt-3 block text-3xl sm:text-5xl" style={{ color: accent }}>
+                  &amp; {wedding.secondary_name}
+                </span>
+              )}
+            </h1>
 
-        <h1 className="font-display tpl-display text-5xl font-bold leading-tight sm:text-7xl" style={{ color: palette.surface }}>
-          {wedding.name}
-          {wedding.secondary_name && (
-            <span className="mt-3 block text-3xl sm:text-5xl" style={{ color: accent }}>
-              &amp; {wedding.secondary_name}
-            </span>
+            <p
+              className="mt-7 inline-block px-5 py-2 text-xs tracking-[0.35em] uppercase"
+              style={{ border: `1px solid ${accent}`, color: accent }}
+            >
+              Nous nous marions
+            </p>
+
+            {date && (
+              <p className="mt-6 text-sm tracking-widest uppercase tpl-body" style={{ color: palette.muted }}>
+                {date}
+              </p>
+            )}
+          </div>
+
+          {logoUrl && (
+            <img
+              src={logoUrl}
+              alt=""
+              className="h-28 w-28 flex-none rounded-full object-cover shadow-xl ring-4 sm:h-36 sm:w-36"
+              style={{ ['--tw-ring-color' as string]: `${palette.accent}55` }}
+            />
           )}
-        </h1>
-
-        <p
-          className="mx-auto mt-7 inline-block px-5 py-2 text-xs tracking-[0.35em] uppercase"
-          style={{ border: `1px solid ${accent}`, color: accent }}
-        >
-          Nous nous marions
-        </p>
-
-        {date && (
-          <p className="mt-6 text-sm tracking-widest uppercase tpl-body" style={{ color: palette.muted }}>
-            {date}
-          </p>
-        )}
+        </div>
       </div>
     </header>
   );

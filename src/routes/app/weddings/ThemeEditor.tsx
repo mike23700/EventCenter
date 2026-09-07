@@ -3,7 +3,7 @@ import { useOutletContext } from 'react-router-dom';
 import { Check, ExternalLink, Flower, Crown } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import type { Wedding, Json } from '../../../types/database';
-import { DISPLAY_FONTS } from '../../../lib/format';
+import { DISPLAY_FONTS, BODY_FONTS } from '../../../lib/format';
 import { TEMPLATE_DEFS, getTemplate } from '../../../lib/templates';
 
 function themeRecord(theme: Json): Record<string, unknown> {
@@ -51,14 +51,20 @@ export default function ThemeEditor() {
   const [displayFont, setDisplayFont] = useState<string>(
     (themeRecord(wedding.theme)['displayFont'] as string) ?? '',
   );
+  const [bodyFont, setBodyFont] = useState<string>(
+    (themeRecord(wedding.theme)['bodyFont'] as string) ?? '',
+  );
   const [template, setTemplate] = useState<string>(wedding.template);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
 
   const activeTpl = getTemplate(template);
-  const fontsList = DISPLAY_FONTS.filter(
+  const displayFontsList = DISPLAY_FONTS.filter(
     (f) => !activeTpl.fonts.display.includes(f.id),
+  );
+  const bodyFontsList = BODY_FONTS.filter(
+    (f) => !activeTpl.fonts.body.includes(f.id),
   );
 
   async function save() {
@@ -73,6 +79,7 @@ export default function ThemeEditor() {
           ...themeRecord(wedding.theme),
           primaryColor,
           displayFont,
+          bodyFont,
         },
       })
       .eq('id', wedding.id);
@@ -163,17 +170,37 @@ export default function ThemeEditor() {
           </div>
 
           <div>
-            <label className="label">Police d'affichage</label>
+            <label className="label">Police des titres</label>
             <select
               className="input"
               value={displayFont}
               onChange={(e) => setDisplayFont(e.target.value)}
             >
               <option value="">Police du modèle (recommandé)</option>
-              {fontsList.map((f) => (
+              {displayFontsList.map((f) => (
                 <option key={f.id} value={f.id}>{f.label}</option>
               ))}
             </select>
+            <p className="mt-2 text-lg" style={{ fontFamily: DISPLAY_FONTS.find((f) => f.id === displayFont)?.stack ?? activeTpl.fonts.display }}>
+              Camille &amp; Jean
+            </p>
+          </div>
+
+          <div>
+            <label className="label">Police du texte</label>
+            <select
+              className="input"
+              value={bodyFont}
+              onChange={(e) => setBodyFont(e.target.value)}
+            >
+              <option value="">Police du modèle (recommandé)</option>
+              {bodyFontsList.map((f) => (
+                <option key={f.id} value={f.id}>{f.label}</option>
+              ))}
+            </select>
+            <p className="mt-2 text-sm text-ink-secondary" style={{ fontFamily: BODY_FONTS.find((f) => f.id === bodyFont)?.stack ?? activeTpl.fonts.body }}>
+              Nous serions heureux de vous compter parmi nous.
+            </p>
           </div>
         </div>
 

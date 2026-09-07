@@ -4,6 +4,7 @@ import { ArrowLeft, Save } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { weddingSlugFromNames } from '../../../lib/slug';
 import { toIso, fromIsoForInput, EVENT_TYPES, TEMPLATES } from '../../../lib/format';
+import { logoImageHint } from '../../../lib/imageHints';
 import { FunctionsFetchError, FunctionsHttpError } from '@supabase/supabase-js';
 import type { Wedding, Database } from '../../../types/database';
 
@@ -303,7 +304,7 @@ export default function WeddingForm() {
             </div>
           </div>
           <div>
-            <label className="label" htmlFor="logo">Logo</label>
+            <label className="label" htmlFor="logo">Photo des mariés (affichée sur le site, à côté du titre)</label>
             {logoPath ? (
               <div className="flex items-center gap-2">
                 <img src={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/logos/${logoPath}`} alt="logo" className="h-10 w-10 rounded object-cover" />
@@ -313,6 +314,7 @@ export default function WeddingForm() {
               <input id="logo" type="file" accept="image/*" disabled={uploading} onChange={(e) => e.target.files?.[0] && handleUploadLogo(e.target.files[0])} className="block w-full text-sm text-ink-secondary file:mr-3 file:rounded-md file:border-0 file:bg-gold file:px-3 file:py-2 file:text-sm file:text-white" />
             )}
             {uploading && <p className="mt-1 text-xs text-ink-secondary">Upload…</p>}
+            <p className="mt-1 text-xs text-ink-secondary">{logoImageHint()}</p>
           </div>
         </div>
 

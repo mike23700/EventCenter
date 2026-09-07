@@ -14,7 +14,7 @@ const SECTION_LABELS: Record<string, string> = {
   mixed: 'Partie mixte',
   rsvp: 'Confirmation de présence (RSVP)',
   gallery: 'Galerie',
-  tables: 'Tables',
+  tables: 'Tables (ancien module — géré depuis l\'onglet Tables)',
   testimonials: 'Témoignages',
 };
 
@@ -22,9 +22,11 @@ export function sectionLabel(type: string): string {
   return SECTION_LABELS[type] ?? type;
 }
 
+// Les tables de placement ne sont plus une section du site : elles se
+// gèrent depuis l'onglet « Tables », à part.
 const ALL_TYPES: SectionType[] = [
   'cover', 'location', 'countdown', 'program', 'image_video',
-  'mixed', 'rsvp', 'gallery', 'tables', 'testimonials',
+  'mixed', 'rsvp', 'gallery', 'testimonials',
 ];
 
 /** Liste des sections, activation, réordonnancement et édition de contenu. */

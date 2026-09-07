@@ -3,6 +3,7 @@ import { Type, Image as ImageIcon, Video, ClipboardList, GripVertical, Trash2, C
 import type { Json } from '../../../types/database';
 import MediaUploader from '../../../components/MediaUploader';
 import { randomString } from '../../../lib/slug';
+import { galleryImageHint } from '../../../lib/imageHints';
 
 export interface MixedBlock {
   id: string;
@@ -240,7 +241,7 @@ function BlockForm({
             label="Photo"
             value={block.src}
             onChange={(src) => onChange({ src: src ?? undefined })}
-            hint="JPG, PNG ou WebP"
+            hint={`JPG, PNG ou WebP · ${galleryImageHint()}`}
           />
           <div>
             <label className="label">Légende</label>

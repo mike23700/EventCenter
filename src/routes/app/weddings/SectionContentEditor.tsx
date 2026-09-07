@@ -1,6 +1,7 @@
 import type { Json } from '../../../types/database';
 import MediaUploader from '../../../components/MediaUploader';
 import MixedEditor from './MixedEditor';
+import { coverImageHint, galleryImageHint } from '../../../lib/imageHints';
 
 export interface SectionContentEditorProps {
   type: string;
@@ -60,7 +61,7 @@ export default function SectionContentEditor({ type, content, onChange, folder =
             label="Photo de couverture — mobile / portrait"
             value={str('image_mobile')}
             onChange={(v) => set('image_mobile', v)}
-            hint="Affichée en priorité sur mobile"
+            hint={coverImageHint('mobile')}
           />
           <MediaUploader
             bucket="covers"
@@ -69,7 +70,7 @@ export default function SectionContentEditor({ type, content, onChange, folder =
             label="Photo de couverture — bureau / paysage"
             value={str('image_desktop')}
             onChange={(v) => set('image_desktop', v)}
-            hint="Utilisée pour grands écrans"
+            hint={coverImageHint('desktop')}
           />
           <MediaUploader
             bucket="covers"
@@ -138,6 +139,7 @@ export default function SectionContentEditor({ type, content, onChange, folder =
             label="Photo"
             value={str('image')}
             onChange={(v) => set('image', v)}
+            hint={galleryImageHint()}
           />
           <MediaUploader
             bucket="media"
@@ -177,11 +179,35 @@ export default function SectionContentEditor({ type, content, onChange, folder =
     case 'mixed':
       return <MixedEditor content={content} onChange={onChange} folder={folder} />;
     case 'gallery':
-    case 'tables':
+      return (
+        <div className="space-y-4">
+          <Field label="Titre"><input className="input" value={str('title')} onChange={(e) => set('title', e.target.value)} placeholder="Galerie" /></Field>
+          <Field label="Message d'introduction">
+            <textarea className="input min-h-16" value={str('intro')} onChange={(e) => set('intro', e.target.value)} placeholder="Photos et vidéos de l'évènement — ajoutez les vôtres !" />
+          </Field>
+          <p className="text-xs text-ink-secondary">
+            Les invités peuvent y déposer leurs photos/vidéos ; elles sont mises en attente de
+            validation depuis l'espace administrateur avant publication.
+          </p>
+        </div>
+      );
     case 'testimonials':
       return (
+        <div className="space-y-4">
+          <Field label="Titre"><input className="input" value={str('title')} onChange={(e) => set('title', e.target.value)} placeholder="Témoignages" /></Field>
+          <Field label="Message d'introduction">
+            <textarea className="input min-h-16" value={str('intro')} onChange={(e) => set('intro', e.target.value)} placeholder="Laissez un petit mot aux mariés." />
+          </Field>
+          <p className="text-xs text-ink-secondary">
+            Les messages sont mis en attente de validation depuis l'espace administrateur avant
+            publication.
+          </p>
+        </div>
+      );
+    case 'tables':
+      return (
         <p className="text-sm text-ink-secondary">
-          Ce module sera bientôt configurable ici (phase de développement invités & RSVP).
+          Les tables ne se configurent plus ici : rendez-vous dans l'onglet « Tables » du menu.
         </p>
       );
     default:

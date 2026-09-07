@@ -8,6 +8,8 @@ import Program from './Program';
 import Mixed from './Mixed';
 import ImageVideo from './ImageVideo';
 import Rsvp from './Rsvp';
+import Gallery from './Gallery';
+import Testimonials from './Testimonials';
 
 export interface SectionRendererProps {
   section: Section;
@@ -24,6 +26,8 @@ const registry: Record<string, ComponentType<any>> = {
   mixed: Mixed,
   image_video: ImageVideo,
   rsvp: Rsvp,
+  gallery: Gallery,
+  testimonials: Testimonials,
 };
 
 /**
@@ -39,7 +43,7 @@ export default function SectionRenderer({ section, wedding, events }: SectionRen
     : {};
   const accent = (theme['primaryColor'] as string) ?? '#C9A34A';
   const tpl = getTemplate(wedding.template);
-  const shared = { accent, tpl, wedding };
+  const shared = { accent, tpl, wedding, sectionId: section.id };
 
   if (!C) return null;
 

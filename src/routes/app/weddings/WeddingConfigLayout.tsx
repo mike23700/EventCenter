@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, LayoutGrid, Palette, CalendarDays, Eye, Users } from 'lucide-react';
+import { ArrowLeft, LayoutGrid, Palette, CalendarDays, Eye, Users, Table2, ClipboardList, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import type { Wedding } from '../../../types/database';
 
@@ -9,6 +9,9 @@ const tabs = [
   { to: 'theme', label: 'Thème', icon: Palette },
   { to: 'programme', label: 'Programme', icon: CalendarDays },
   { to: 'invites', label: 'Invités', icon: Users },
+  { to: 'tables', label: 'Tables', icon: Table2 },
+  { to: 'reponses', label: 'Réponses', icon: ClipboardList },
+  { to: 'galerie', label: 'Galerie', icon: ImageIcon },
   { to: 'apercu', label: 'Aperçu', icon: Eye },
 ];
 
