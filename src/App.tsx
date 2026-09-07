@@ -19,6 +19,7 @@ import GalleryModerationEditor from './routes/app/weddings/GalleryModerationEdit
 import SitePreview from './routes/app/weddings/SitePreview';
 import WeddingPublic from './routes/w/WeddingPublic';
 import GalleryPage from './routes/w/GalleryPage';
+import TestimonialsPage from './routes/w/TestimonialsPage';
 import NotFound from './pages/NotFound';
 
 /**
@@ -38,6 +39,7 @@ export default function App() {
       <Route path="/app/login" element={<Navigate to="/login" replace />} />
       <Route path="/w/:slug" element={<WeddingPublic />} />
       <Route path="/w/:slug/galerie" element={<GalleryPage />} />
+      <Route path="/w/:slug/temoignages" element={<TestimonialsPage />} />
 
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<AdminDashboard />} />

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Image as ImageIcon, UploadCloud, Loader2, Check } from 'lucide-react';
+import { ArrowLeft, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { mediaUrl, uploadFile } from '../../lib/media';
+import { mediaUrl } from '../../lib/media';
 import type { Media } from '../../types/database';
 import { useWeddingBySlug } from './useWeddingBySlug';
 import WeddingThemeShell from './WeddingThemeShell';
+import GalleryUploadButton from './sections/GalleryUploadButton';
 import { getTemplate } from '../../lib/templates';
 
 /**
@@ -19,9 +20,6 @@ export default function GalleryPage() {
   const { wedding, loading: weddingLoading } = useWeddingBySlug();
   const [items, setItems] = useState<Media[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [done, setDone] = useState(false);
-  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!wedding) return;
@@ -41,29 +39,6 @@ export default function GalleryPage() {
       active = false;
     };
   }, [wedding]);
-
-  async function pick(file: File | undefined) {
-    if (!file || !wedding) return;
-    setUploading(true);
-    setError('');
-    try {
-      const type = file.type.startsWith('video') ? 'video' : 'image';
-      const path = await uploadFile(file, { bucket: 'media', folder: `weddings/${wedding.slug}/galerie-invites` });
-      const { error } = await supabase.from('media').insert({
-        wedding_id: wedding.id,
-        type,
-        storage_path: path,
-        uploaded_by: 'invite',
-        status: 'pending',
-      });
-      if (error) throw error;
-      setDone(true);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Envoi impossible');
-    } finally {
-      setUploading(false);
-    }
-  }
 
   if (weddingLoading || (wedding && loading)) return <p className="p-8 text-center text-ink-secondary">Chargement…</p>;
 
@@ -104,22 +79,8 @@ export default function GalleryPage() {
         </div>
 
         <div className="mt-8 flex justify-center">
-          {done ? (
-            <p className="flex items-center gap-2 rounded-full px-5 py-2.5 text-sm" style={{ backgroundColor: palette.accentSoft, color: palette.ink }}>
-              <Check className="h-4 w-4" style={{ color: accent }} /> Merci ! Votre média sera visible après validation.
-            </p>
-          ) : (
-            <label
-              className="flex cursor-pointer items-center gap-2 rounded-full px-6 py-2.5 text-sm font-medium text-white transition hover:opacity-85"
-              style={{ backgroundColor: accent }}
-            >
-              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
-              {uploading ? 'Envoi…' : 'Ajouter une photo ou vidéo'}
-              <input type="file" accept="image/*,video/*" className="hidden" disabled={uploading} onChange={(e) => pick(e.target.files?.[0])} />
-            </label>
-          )}
+          <GalleryUploadButton weddingId={wedding.id} weddingSlug={wedding.slug} accent={accent} />
         </div>
-        {error && <p className="mt-3 text-center text-sm text-red-600">{error}</p>}
 
         {items.length === 0 ? (
           <p className="mt-10 text-center text-sm tpl-body" style={{ color: palette.muted }}>

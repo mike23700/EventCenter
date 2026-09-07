@@ -132,7 +132,7 @@ export default function WeddingMediaPanel({ wedding, publicUrl }: { wedding: Wed
   const qrTargets: QrTarget[] = [
     { key: 'site', label: 'Lien du site', url: publicUrl },
     { key: 'gallery', label: 'Galerie', url: `${publicUrl}/galerie` },
-    { key: 'testimonials', label: 'Témoignages', url: `${publicUrl}#testimonials` },
+    { key: 'testimonials', label: 'Témoignages', url: `${publicUrl}/temoignages` },
   ];
 
   return (

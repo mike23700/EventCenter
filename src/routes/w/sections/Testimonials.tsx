@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react';
-import { MessageCircleHeart, Send } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { MessageCircleHeart, ArrowRight } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import type { Testimonial } from '../../../types/database';
 import type { SectionProps } from './types';
 import { asRecord, str } from './types';
 import { SectionShell } from './shell';
+import TestimonialForm from './TestimonialForm';
+
+const PREVIEW_COUNT = 3;
 
 /**
- * Section « Témoignages » : messages laissés par les invités (modérés par
- * les mariés avant publication) + formulaire de dépôt.
+ * Section « Témoignages » : formulaire de dépôt + aperçu des 3 premiers
+ * messages validés, avec un bouton vers la page dédiée qui liste tous les
+ * témoignages (`/w/:slug/temoignages`).
  */
 export default function Testimonials({ content, accent, tpl, wedding }: SectionProps) {
   const c = asRecord(content);
@@ -17,48 +22,26 @@ export default function Testimonials({ content, accent, tpl, wedding }: SectionP
   const { palette } = tpl;
 
   const [items, setItems] = useState<Testimonial[]>([]);
-  const [author, setAuthor] = useState('');
-  const [text, setText] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState(false);
-  const [error, setError] = useState('');
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
     let active = true;
     (async () => {
-      const { data } = await supabase
+      const { data, count } = await supabase
         .from('testimonials')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('wedding_id', wedding.id)
         .eq('status', 'published')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(PREVIEW_COUNT);
       if (!active) return;
       setItems((data ?? []) as Testimonial[]);
+      setTotal(count ?? 0);
     })();
     return () => {
       active = false;
     };
   }, [wedding.id]);
-
-  async function submit() {
-    if (!text.trim()) return;
-    setSubmitting(true);
-    setError('');
-    const { error } = await supabase.from('testimonials').insert({
-      wedding_id: wedding.id,
-      author: author.trim() || null,
-      content: text.trim(),
-      status: 'pending',
-    });
-    setSubmitting(false);
-    if (error) {
-      setError(error.message);
-      return;
-    }
-    setDone(true);
-    setAuthor('');
-    setText('');
-  }
 
   return (
     <SectionShell tpl={tpl} accent={accent}>
@@ -71,40 +54,8 @@ export default function Testimonials({ content, accent, tpl, wedding }: SectionP
           <p className="mt-2 tpl-body" style={{ color: palette.muted }}>{intro}</p>
         </div>
 
-        <div className="mt-8 rounded-2xl p-6" style={{ backgroundColor: palette.surface, border: `1px solid ${palette.border}` }}>
-          {done ? (
-            <p className="text-center tpl-body" style={{ color: palette.ink }}>
-              Merci pour votre message ! Il sera visible après validation.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              <input
-                className="input"
-                placeholder="Votre nom (optionnel)"
-                value={author}
-                onChange={(e) => setAuthor(e.target.value)}
-                style={{ backgroundColor: palette.background, borderColor: palette.border, color: palette.text }}
-              />
-              <textarea
-                className="input min-h-24"
-                placeholder="Votre message pour les mariés…"
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                style={{ backgroundColor: palette.background, borderColor: palette.border, color: palette.text }}
-              />
-              {error && <p className="text-sm text-red-600">{error}</p>}
-              <div className="flex justify-end">
-                <button
-                  onClick={submit}
-                  disabled={submitting || !text.trim()}
-                  className="flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-medium text-white transition hover:opacity-85 disabled:opacity-40"
-                  style={{ backgroundColor: accent }}
-                >
-                  <Send className="h-4 w-4" /> {submitting ? 'Envoi…' : 'Envoyer'}
-                </button>
-              </div>
-            </div>
-          )}
+        <div className="mt-8">
+          <TestimonialForm weddingId={wedding.id} accent={accent} tpl={tpl} />
         </div>
 
         {items.length > 0 && (
@@ -119,6 +70,19 @@ export default function Testimonials({ content, accent, tpl, wedding }: SectionP
                 )}
               </div>
             ))}
+          </div>
+        )}
+
+        {total > 0 && (
+          <div className="mt-6 text-center">
+            <Link
+              to={`/w/${wedding.slug}/temoignages`}
+              className="inline-flex items-center gap-2 rounded-full border px-6 py-2.5 text-sm font-medium transition hover:opacity-75"
+              style={{ borderColor: accent, color: accent }}
+            >
+              Voir tous les témoignages ({total})
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
         )}
       </div>
