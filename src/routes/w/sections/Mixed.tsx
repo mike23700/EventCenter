@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search, UserPlus } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
-import type { Json } from '../../../types/database';
+import type { Json, WeddingEvent } from '../../../types/database';
 import { storageUrl } from '../../../lib/media';
 import type { SectionProps } from './types';
 import { asRecord } from './types';
 import { SectionShell } from './shell';
+import { useGuestIdentity } from './useGuestIdentity';
+import GuestSelfRegister from './GuestSelfRegister';
 
 type Question = {
   id: string;
@@ -39,11 +41,15 @@ function isBlock(b: unknown): b is Block {
     (o.type === 'text' || o.type === 'image' || o.type === 'video' || o.type === 'questionnaire');
 }
 
+export interface MixedProps extends SectionProps {
+  events?: WeddingEvent[];
+}
+
 /**
  * Section "partie mixte" : blocs texte / image / vidéo / questionnaire
  * librement ordonnés, mise en page façon magazine selon le template.
  */
-export default function Mixed({ content, accent, tpl, wedding, sectionId }: SectionProps) {
+export default function Mixed({ content, accent, tpl, wedding, sectionId, events }: MixedProps) {
   const blocks = parseBlocks(content);
   if (blocks.length === 0) return null;
 
@@ -67,6 +73,7 @@ export default function Mixed({ content, accent, tpl, wedding, sectionId }: Sect
                   tpl={tpl}
                   weddingId={wedding.id}
                   sectionId={sectionId ?? ''}
+                  events={events ?? []}
                 />
               );
             default:
@@ -161,16 +168,13 @@ function VideoView({ block, tpl }: { block: Block; tpl: SectionProps['tpl'] }) {
   );
 }
 
-interface GuestRow {
-  id: string;
-  name: string;
-}
-
 /**
  * Questionnaire public : identifie l'invité par son nom (comme la section
- * RSVP), puis enregistre ses réponses dans `guest_responses` — une ligne
- * par question, avec `question_key = "<section>:<bloc>:<question>"` —
- * pour qu'elles apparaissent dans l'onglet « Réponses » côté client.
+ * RSVP), ou — recevoir le lien du site vaut invitation — laisse la personne
+ * s'inscrire elle-même si elle n'y figure pas, puis enregistre ses réponses
+ * dans `guest_responses` — une ligne par question, avec
+ * `question_key = "<section>:<bloc>:<question>"` — pour qu'elles
+ * apparaissent dans l'onglet « Réponses » côté client.
  */
 function QuestionnaireView({
   block,
@@ -178,20 +182,21 @@ function QuestionnaireView({
   tpl,
   weddingId,
   sectionId,
+  events,
 }: {
   block: Block;
   accent: string;
   tpl: SectionProps['tpl'];
   weddingId: string;
   sectionId: string;
+  events: WeddingEvent[];
 }) {
   const { palette } = tpl;
   const questions = (block.questions ?? []).filter((q) => q.label);
-  const [query, setQuery] = useState('');
-  const [guestStatus, setGuestStatus] = useState<'idle' | 'searching' | 'found' | 'missing'>('idle');
-  const [guest, setGuest] = useState<GuestRow | null>(null);
-  const [matches, setMatches] = useState<GuestRow[]>([]);
-  const [chosenId, setChosenId] = useState('');
+  const id = useGuestIdentity(weddingId);
+  const { guest } = id;
+  const guestStatus = id.status;
+  const [registering, setRegistering] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
@@ -203,36 +208,9 @@ function QuestionnaireView({
     setAnswers((a) => ({ ...a, [qid]: value }));
   }
 
-  async function search() {
-    const name = query.trim();
-    if (name.length < 2) return;
-    setError('');
-    setGuestStatus('searching');
-    const { data, error } = await supabase
-      .from('guests')
-      .select('id, name')
-      .eq('wedding_id', weddingId)
-      .ilike('name', `%${name}%`);
-    if (error) {
-      setError(error.message);
-      setGuestStatus('idle');
-      return;
-    }
-    const rows = (data ?? []) as GuestRow[];
-    setMatches(rows);
-    if (rows.length === 1) {
-      setGuest(rows[0]);
-      setGuestStatus('found');
-    } else if (rows.length === 0) {
-      setGuestStatus('missing');
-    }
-  }
-
-  function confirmGuess() {
-    const g = matches.find((m) => m.id === chosenId);
-    if (!g) return;
-    setGuest(g);
-    setGuestStatus('found');
+  async function registerSelf(name: string, phone: string, eventIds: string[]) {
+    await id.registerSelf({ name, phone, eventIds });
+    setRegistering(false);
   }
 
   async function submit() {
@@ -293,7 +271,39 @@ function QuestionnaireView({
         <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-xs text-red-600">{error}</p>
       )}
 
-      {guestStatus !== 'found' ? (
+      {guestStatus === 'missing' ? (
+        registering ? (
+          <div className="mt-5">
+            <GuestSelfRegister
+              initialName={id.query.trim()}
+              events={events}
+              accent={accent}
+              palette={palette}
+              submitting={id.registering}
+              error={id.error}
+              onSubmit={registerSelf}
+              onCancel={() => setRegistering(false)}
+            />
+          </div>
+        ) : (
+          <div className="mt-5 space-y-3 text-center">
+            <p className="tpl-body text-sm" style={{ color: palette.muted }}>
+              Nous ne trouvons pas votre nom. Vous avez reçu ce lien ? Vous êtes invité(e), confirmez votre invitation !
+            </p>
+            <div className="flex justify-center gap-2">
+              <button onClick={id.reset} className="btn-outline">Réessayer</button>
+              <button
+                onClick={() => setRegistering(true)}
+                className="flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white"
+                style={{ backgroundColor: accent }}
+              >
+                <UserPlus className="h-4 w-4" />
+                Confirmer mon invitation
+              </button>
+            </div>
+          </div>
+        )
+      ) : guestStatus !== 'found' ? (
         <div className="mt-5 space-y-3">
           <p className="tpl-body text-sm" style={{ color: palette.muted }}>
             Indiquez votre nom pour que vos réponses soient rattachées à votre invitation.
@@ -302,46 +312,41 @@ function QuestionnaireView({
             <input
               className="input"
               placeholder="Votre nom"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && search()}
+              value={id.query}
+              onChange={(e) => id.setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && id.search()}
               style={{ backgroundColor: palette.surface, borderColor: palette.border, color: palette.text }}
             />
             <button
-              onClick={search}
-              disabled={query.trim().length < 2}
+              onClick={id.search}
+              disabled={id.query.trim().length < 2}
               className="rounded-full px-5 text-sm font-medium text-white disabled:opacity-40"
               style={{ backgroundColor: accent }}
             >
               <Search className="h-4 w-4" />
             </button>
           </div>
-          {guestStatus === 'searching' && matches.length > 1 && (
+          {guestStatus === 'choosing' && (
             <div className="space-y-2">
-              {matches.map((m) => (
+              {id.matches.map((m) => (
                 <label
                   key={m.id}
                   className="flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-2.5"
-                  style={{ borderColor: chosenId === m.id ? accent : palette.border }}
+                  style={{ borderColor: id.chosenId === m.id ? accent : palette.border }}
                 >
-                  <input type="radio" name={`gp-${block.id}`} checked={chosenId === m.id} onChange={() => setChosenId(m.id)} />
+                  <input type="radio" name={`gp-${block.id}`} checked={id.chosenId === m.id} onChange={() => id.setChosenId(m.id)} />
                   <span style={{ color: palette.ink }}>{m.name}</span>
                 </label>
               ))}
               <button
-                onClick={confirmGuess}
-                disabled={!chosenId}
+                onClick={id.confirmGuess}
+                disabled={!id.chosenId}
                 className="rounded-full px-5 py-2 text-sm font-medium text-white disabled:opacity-40"
                 style={{ backgroundColor: accent }}
               >
                 C'est moi
               </button>
             </div>
-          )}
-          {guestStatus === 'missing' && (
-            <p className="tpl-body text-sm" style={{ color: palette.muted }}>
-              Nous ne trouvons pas votre nom dans la liste des invités.
-            </p>
           )}
         </div>
       ) : (

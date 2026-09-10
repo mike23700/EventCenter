@@ -168,11 +168,12 @@ export default function SectionContentEditor({ type, content, onChange, folder =
             <textarea className="input min-h-20" value={str('intro')} onChange={(e) => set('intro', e.target.value)} placeholder="Dites-nous sur quelles étapes nous pouvons compter sur vous…" />
           </Field>
           <Field label="Message si l'invité n'est pas trouvé">
-            <textarea className="input min-h-16" value={str('not_found')} onChange={(e) => set('not_found', e.target.value)} placeholder="Nom introuvable, contactez les mariés." />
+            <textarea className="input min-h-16" value={str('not_found')} onChange={(e) => set('not_found', e.target.value)} placeholder="Vous avez reçu ce lien ? Vous êtes invité(e), confirmez votre présence !" />
           </Field>
           <p className="text-xs text-ink-secondary">
-            Les invités sont saisis et envoyés depuis l'onglet « Invités » (venir). Les étapes proposées
-            sont celles du programme.
+            Les invités saisis depuis l'onglet « Invités » se retrouvent directement par leur nom.
+            Un visiteur qui ne s'y trouve pas peut s'inscrire lui-même (nom, téléphone, étapes) —
+            il apparaîtra ensuite dans l'onglet « Invités ». Les étapes proposées sont celles du programme.
           </p>
         </div>
       );

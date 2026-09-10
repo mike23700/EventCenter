@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Check, X, Users, Filter } from 'lucide-react';
+import { Plus, Pencil, Trash2, Check, X, Users, Filter, ClipboardList } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
-import type { Wedding, WeddingEvent, Guest } from '../../../types/database';
+import type { Wedding, WeddingEvent, Guest, Section, GuestResponse, Json } from '../../../types/database';
 import { formatDateTime } from '../../../lib/format';
 
 interface Draft {
@@ -15,6 +15,57 @@ interface Draft {
 
 const empty: Draft = { name: '', phone: '', plus_ones: 0, invited_events: [] };
 
+interface QuestionMeta {
+  key: string;
+  label: string;
+  type: 'single' | 'multiple' | 'open';
+  options: string[];
+  sectionTitle: string;
+}
+
+/** Extrait les questions des blocs "questionnaire" des parties mixtes du mariage. */
+function parseQuestionsFromSections(sections: Section[]): QuestionMeta[] {
+  const out: QuestionMeta[] = [];
+  for (const section of sections) {
+    const record = section.content && typeof section.content === 'object' && !Array.isArray(section.content)
+      ? (section.content as Record<string, unknown>)
+      : {};
+    const blocks = record['blocks'];
+    if (!Array.isArray(blocks)) continue;
+    for (const b of blocks) {
+      if (!b || typeof b !== 'object') continue;
+      const block = b as Record<string, unknown>;
+      if (block.type !== 'questionnaire' || !Array.isArray(block.questions)) continue;
+      for (const q of block.questions) {
+        if (!q || typeof q !== 'object') continue;
+        const question = q as Record<string, unknown>;
+        if (typeof question.id !== 'string' || typeof question.label !== 'string' || !question.label) continue;
+        out.push({
+          key: `${section.id}:${block.id}:${question.id}`,
+          label: question.label,
+          type: (question.type as QuestionMeta['type']) ?? 'open',
+          options: Array.isArray(question.options) ? question.options.filter((o): o is string => typeof o === 'string' && o !== '') : [],
+          sectionTitle: (block.title as string) || section.title || 'Partie mixte',
+        });
+      }
+    }
+  }
+  return out;
+}
+
+function answerMatches(answer: Json | undefined, wanted: string): boolean {
+  if (Array.isArray(answer)) return answer.includes(wanted);
+  if (typeof answer === 'string') return answer === wanted;
+  return false;
+}
+
+function answerContains(answer: Json | undefined, needle: string): boolean {
+  const text = Array.isArray(answer)
+    ? answer.filter((v) => typeof v === 'string').join(' ')
+    : typeof answer === 'string' ? answer : '';
+  return text.toLowerCase().includes(needle.toLowerCase());
+}
+
 /** Gestion des invités : ajout manuel, téléphone, étapes conviées. */
 export default function GuestsEditor() {
   const { wedding } = useOutletContext<{ wedding: Wedding }>();
@@ -26,24 +77,31 @@ export default function GuestsEditor() {
   const [saving, setSaving] = useState(false);
   const [eventFilter, setEventFilter] = useState<string>('');
   const [responseCounts, setResponseCounts] = useState<Record<string, number>>({});
+  const [questions, setQuestions] = useState<QuestionMeta[]>([]);
+  const [responses, setResponses] = useState<GuestResponse[]>([]);
+  const [questionFilter, setQuestionFilter] = useState('');
+  const [answerFilter, setAnswerFilter] = useState('');
 
   useEffect(() => {
     if (!wedding) return;
     let active = true;
     (async () => {
-      const [{ data: g }, { data: evs }] = await Promise.all([
+      const [{ data: g }, { data: evs }, { data: secs }] = await Promise.all([
         supabase.from('guests').select('*').eq('wedding_id', wedding.id).order('created_at'),
         supabase.from('wedding_events').select('*').eq('wedding_id', wedding.id).order('position'),
+        supabase.from('sections').select('*').eq('wedding_id', wedding.id).eq('type', 'mixed'),
       ]);
       if (!active) return;
       setGuests(g ?? []);
       setEvents(evs ?? []);
+      setQuestions(parseQuestionsFromSections(secs ?? []));
       setLoading(false);
 
       const guestIds = (g ?? []).map((row) => row.id);
       if (guestIds.length > 0) {
-        const { data: resp } = await supabase.from('guest_responses').select('guest_id').in('guest_id', guestIds);
+        const { data: resp } = await supabase.from('guest_responses').select('*').in('guest_id', guestIds);
         if (!active) return;
+        setResponses(resp ?? []);
         const counts: Record<string, number> = {};
         for (const r of resp ?? []) counts[r.guest_id] = (counts[r.guest_id] ?? 0) + 1;
         setResponseCounts(counts);
@@ -53,6 +111,29 @@ export default function GuestsEditor() {
       active = false;
     };
   }, [wedding]);
+
+  const answersByGuestAndQuestion = useMemo(() => {
+    const map = new Map<string, Json>();
+    for (const r of responses) map.set(`${r.guest_id}::${r.question_key}`, r.answer);
+    return map;
+  }, [responses]);
+
+  const selectedQuestion = useMemo(
+    () => questions.find((q) => q.key === questionFilter) ?? null,
+    [questions, questionFilter],
+  );
+
+  const answerOptions = useMemo(() => {
+    if (!selectedQuestion) return [];
+    const seen = new Set(selectedQuestion.options);
+    for (const r of responses) {
+      if (r.question_key !== selectedQuestion.key) continue;
+      const a = r.answer;
+      if (Array.isArray(a)) a.forEach((v) => typeof v === 'string' && v && seen.add(v));
+      else if (typeof a === 'string' && a) seen.add(a);
+    }
+    return Array.from(seen);
+  }, [selectedQuestion, responses]);
 
   const countsByEvent = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -65,10 +146,17 @@ export default function GuestsEditor() {
     return counts;
   }, [events, guests]);
 
-  const filteredGuests = useMemo(
-    () => (eventFilter ? guests.filter((g) => (g.invited_events ?? []).includes(eventFilter)) : guests),
-    [guests, eventFilter],
-  );
+  const filteredGuests = useMemo(() => {
+    let list = eventFilter ? guests.filter((g) => (g.invited_events ?? []).includes(eventFilter)) : guests;
+    if (selectedQuestion) {
+      list = list.filter((g) => {
+        const answer = answersByGuestAndQuestion.get(`${g.id}::${selectedQuestion.key}`);
+        if (!answerFilter) return answer !== undefined;
+        return selectedQuestion.type === 'open' ? answerContains(answer, answerFilter) : answerMatches(answer, answerFilter);
+      });
+    }
+    return list;
+  }, [guests, eventFilter, selectedQuestion, answerFilter, answersByGuestAndQuestion]);
 
   if (loading) return <p className="text-ink-secondary">Chargement…</p>;
   if (error) return <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>;
@@ -183,6 +271,51 @@ export default function GuestsEditor() {
         </div>
       )}
 
+      {questions.length > 0 && !draft && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-ink-secondary">
+            <ClipboardList className="h-3.5 w-3.5" /> Filtrer par réponse
+          </span>
+          <select
+            className="input w-auto"
+            value={questionFilter}
+            onChange={(e) => {
+              setQuestionFilter(e.target.value);
+              setAnswerFilter('');
+            }}
+          >
+            <option value="">Toutes les questions</option>
+            {questions.map((q) => (
+              <option key={q.key} value={q.key}>
+                {q.sectionTitle} — {q.label}
+              </option>
+            ))}
+          </select>
+          {selectedQuestion && (
+            selectedQuestion.type === 'open' ? (
+              <input
+                className="input w-auto"
+                placeholder="Contient…"
+                value={answerFilter}
+                onChange={(e) => setAnswerFilter(e.target.value)}
+              />
+            ) : (
+              <select className="input w-auto" value={answerFilter} onChange={(e) => setAnswerFilter(e.target.value)}>
+                <option value="">A répondu (peu importe quoi)</option>
+                {answerOptions.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+            )
+          )}
+          {selectedQuestion && (
+            <button onClick={() => { setQuestionFilter(''); setAnswerFilter(''); }} className="btn-outline !px-2" title="Effacer le filtre">
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      )}
+
       {!draft && filteredGuests.length === 0 && (
         <div className="card text-center text-ink-secondary">Aucun invité pour le moment.</div>
       )}
@@ -293,8 +426,8 @@ export default function GuestsEditor() {
       <p className="text-sm text-ink-secondary">
         <Users className="mr-1 inline h-4 w-4" />
         {filteredGuests.length} invité{filteredGuests.length > 1 ? 's' : ''}
-        {eventFilter ? ' pour cette partie' : ' enregistré' + (filteredGuests.length > 1 ? 's' : '')}
-        {eventFilter ? ` (sur ${guests.length} au total).` : '.'}
+        {eventFilter || selectedQuestion ? ' correspondant' + (filteredGuests.length > 1 ? 's' : '') : ' enregistré' + (filteredGuests.length > 1 ? 's' : '')}
+        {eventFilter || selectedQuestion ? ` (sur ${guests.length} au total).` : '.'}
       </p>
     </div>
   );
