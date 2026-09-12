@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Search, UserPlus } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
-import type { Json, WeddingEvent } from '../../../types/database';
+import type { Json } from '../../../types/database';
 import { storageUrl } from '../../../lib/media';
 import type { SectionProps } from './types';
 import { asRecord } from './types';
@@ -41,15 +41,11 @@ function isBlock(b: unknown): b is Block {
     (o.type === 'text' || o.type === 'image' || o.type === 'video' || o.type === 'questionnaire');
 }
 
-export interface MixedProps extends SectionProps {
-  events?: WeddingEvent[];
-}
-
 /**
  * Section "partie mixte" : blocs texte / image / vidéo / questionnaire
  * librement ordonnés, mise en page façon magazine selon le template.
  */
-export default function Mixed({ content, accent, tpl, wedding, sectionId, events }: MixedProps) {
+export default function Mixed({ content, accent, tpl, wedding, sectionId }: SectionProps) {
   const blocks = parseBlocks(content);
   if (blocks.length === 0) return null;
 
@@ -73,7 +69,6 @@ export default function Mixed({ content, accent, tpl, wedding, sectionId, events
                   tpl={tpl}
                   weddingId={wedding.id}
                   sectionId={sectionId ?? ''}
-                  events={events ?? []}
                 />
               );
             default:
@@ -182,14 +177,12 @@ function QuestionnaireView({
   tpl,
   weddingId,
   sectionId,
-  events,
 }: {
   block: Block;
   accent: string;
   tpl: SectionProps['tpl'];
   weddingId: string;
   sectionId: string;
-  events: WeddingEvent[];
 }) {
   const { palette } = tpl;
   const questions = (block.questions ?? []).filter((q) => q.label);
@@ -208,8 +201,8 @@ function QuestionnaireView({
     setAnswers((a) => ({ ...a, [qid]: value }));
   }
 
-  async function registerSelf(name: string, phone: string, eventIds: string[]) {
-    await id.registerSelf({ name, phone, eventIds });
+  async function registerSelf(name: string, phone: string) {
+    await id.registerSelf({ name, phone });
     setRegistering(false);
   }
 
@@ -276,7 +269,6 @@ function QuestionnaireView({
           <div className="mt-5">
             <GuestSelfRegister
               initialName={id.query.trim()}
-              events={events}
               accent={accent}
               palette={palette}
               submitting={id.registering}

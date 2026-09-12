@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
-import { Check, GripVertical, Pencil, Power, ArrowUp, ArrowDown, X } from 'lucide-react';
+import { Check, GripVertical, Pencil, Power, ArrowUp, ArrowDown, X, Trash2 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import type { Wedding, Section, Json, SectionType } from '../../../types/database';
 import SectionContentEditor from './SectionContentEditor';
@@ -9,6 +9,7 @@ const SECTION_LABELS: Record<string, string> = {
   cover: 'Photo de couverture',
   location: 'Lieu',
   countdown: 'Compte à rebours',
+  save_the_date: 'Save the date (calendrier)',
   program: 'Programme',
   image_video: 'Image / vidéo',
   mixed: 'Partie mixte',
@@ -25,7 +26,7 @@ export function sectionLabel(type: string): string {
 // Les tables de placement ne sont plus une section du site : elles se
 // gèrent depuis l'onglet « Tables », à part.
 const ALL_TYPES: SectionType[] = [
-  'cover', 'location', 'countdown', 'program', 'image_video',
+  'cover', 'location', 'countdown', 'save_the_date', 'program', 'image_video',
   'mixed', 'rsvp', 'gallery', 'testimonials',
 ];
 
@@ -37,6 +38,8 @@ export default function SectionsEditor() {
   const [error, setError] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState<Section | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!wedding) return;
@@ -116,10 +119,31 @@ export default function SectionsEditor() {
     setEditingId(null);
   }
 
+  async function confirmDelete() {
+    if (!confirmingDelete) return;
+    const section = confirmingDelete;
+    setDeleting(true);
+    setError('');
+    const { error } = await supabase.from('sections').delete().eq('id', section.id);
+    setDeleting(false);
+    if (error) {
+      setError(error.message);
+      setConfirmingDelete(null);
+      return;
+    }
+    setSections((prev) =>
+      prev
+        .filter((s) => s.id !== section.id)
+        .map((s, i) => ({ ...s, position: i })),
+    );
+    if (editingId === section.id) setEditingId(null);
+    setConfirmingDelete(null);
+  }
+
   async function addSection(type: string) {
     if (!wedding) return;
     const position = sections.length;
-    const defaultContent: Json = type === 'countdown' ? { date: '' } : {};
+    const defaultContent: Json = type === 'countdown' || type === 'save_the_date' ? { date: '' } : {};
     const { data, error } = await supabase
       .from('sections')
       .insert({ wedding_id: wedding.id, type, position, enabled: true, content: defaultContent })
@@ -195,6 +219,13 @@ export default function SectionsEditor() {
               <button onClick={() => setEditingId(editingId === section.id ? null : section.id)} className="btn-outline !px-2" title="Modifier le contenu">
                 {editingId === section.id ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
               </button>
+              <button
+                onClick={() => setConfirmingDelete(section)}
+                className="btn-outline !px-2 hover:!border-red-300 hover:!text-red-600"
+                title="Supprimer la section"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
 
             {editingId === section.id && (
@@ -220,6 +251,37 @@ export default function SectionsEditor() {
           Voir le site public →
         </Link>
       </p>
+
+      {confirmingDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => !deleting && setConfirmingDelete(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-display text-lg font-bold text-ink">Supprimer cette section ?</h3>
+            <p className="mt-2 text-sm text-ink-secondary">
+              « {sectionLabel(confirmingDelete.type)} » sera définitivement supprimée, avec tout son
+              contenu. Cette action est irréversible.
+            </p>
+            <div className="mt-6 flex justify-end gap-2">
+              <button onClick={() => setConfirmingDelete(null)} disabled={deleting} className="btn-outline">
+                Annuler
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={deleting}
+                className="btn bg-red-600 text-white hover:bg-red-700"
+              >
+                <Trash2 className="h-4 w-4" />
+                {deleting ? 'Suppression…' : 'Supprimer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

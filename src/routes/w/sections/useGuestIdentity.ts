@@ -6,16 +6,18 @@ export interface GuestIdentity {
   name: string;
   phone: string | null;
   invited_events: string[];
+  qr_token: string;
 }
 
 export type GuestIdentityStatus = 'idle' | 'searching' | 'choosing' | 'found' | 'missing';
 
 /**
- * Identification d'un invité côté site public, partagée entre la section
- * RSVP et les blocs "questionnaire" de la partie mixte : recherche par nom
- * parmi les invités déjà saisis par les mariés, ou — recevoir le lien du
- * site vaut invitation — auto-inscription (nom, téléphone, étapes) quand la
- * personne ne s'y trouve pas.
+ * Identification d'un invité côté site public, utilisée par les blocs
+ * "questionnaire" de la partie mixte : recherche par nom parmi les invités
+ * déjà saisis, ou — recevoir le lien du site vaut invitation —
+ * auto-inscription (nom, téléphone) quand la personne ne s'y trouve pas.
+ * (La section RSVP, elle, utilise son propre parcours inscription/retrouver
+ * mon QR — voir Rsvp.tsx, GuestQrLookup.tsx.)
  */
 export function useGuestIdentity(weddingId: string) {
   const [query, setQuery] = useState('');
@@ -33,7 +35,7 @@ export function useGuestIdentity(weddingId: string) {
     setStatus('searching');
     const { data, error } = await supabase
       .from('guests')
-      .select('id, name, phone, invited_events')
+      .select('id, name, phone, invited_events, qr_token')
       .eq('wedding_id', weddingId)
       .ilike('name', `%${name}%`);
     if (error) {
@@ -61,7 +63,7 @@ export function useGuestIdentity(weddingId: string) {
     setStatus('found');
   }
 
-  async function registerSelf(payload: { name: string; phone: string; eventIds: string[] }) {
+  async function registerSelf(payload: { name: string; phone: string }) {
     const name = payload.name.trim();
     if (!name) return;
     setError('');
@@ -72,9 +74,8 @@ export function useGuestIdentity(weddingId: string) {
         wedding_id: weddingId,
         name,
         phone: payload.phone.trim() || null,
-        invited_events: payload.eventIds,
       })
-      .select('id, name, phone, invited_events')
+      .select('id, name, phone, invited_events, qr_token')
       .single();
     setRegistering(false);
     if (error) {

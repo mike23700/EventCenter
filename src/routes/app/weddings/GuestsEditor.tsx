@@ -1,19 +1,51 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Check, X, Users, Filter, ClipboardList } from 'lucide-react';
+import { Plus, Pencil, Trash2, Check, X, Users, Filter, ClipboardList, QrCode } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import type { Wedding, WeddingEvent, Guest, Section, GuestResponse, Json } from '../../../types/database';
 import { formatDateTime } from '../../../lib/format';
+import { generateGuestQrDataUrl } from '../../../lib/guestQr';
+
+/** Bouton de téléchargement du QR d'invitation d'un invité (pour impression/envoi). */
+function GuestQrDownload({ wedding, guest }: { wedding: Wedding; guest: Guest }) {
+  const [dataUrl, setDataUrl] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  async function download() {
+    if (dataUrl) return;
+    setLoading(true);
+    const url = await generateGuestQrDataUrl(wedding.id, guest.qr_token);
+    setDataUrl(url);
+    setLoading(false);
+  }
+
+  if (dataUrl) {
+    return (
+      <a
+        href={dataUrl}
+        download={`invitation-${guest.name.trim().toLowerCase().replace(/\s+/g, '-')}.png`}
+        className="btn-outline !px-2"
+        title="Télécharger le QR"
+      >
+        <QrCode className="h-4 w-4" />
+      </a>
+    );
+  }
+  return (
+    <button onClick={download} disabled={loading} className="btn-outline !px-2" title="Générer / télécharger le QR">
+      <QrCode className="h-4 w-4" />
+    </button>
+  );
+}
 
 interface Draft {
   id?: string;
   name: string;
   phone: string;
-  plus_ones: number;
   invited_events: string[];
 }
 
-const empty: Draft = { name: '', phone: '', plus_ones: 0, invited_events: [] };
+const empty: Draft = { name: '', phone: '', invited_events: [] };
 
 interface QuestionMeta {
   key: string;
@@ -81,6 +113,7 @@ export default function GuestsEditor() {
   const [responses, setResponses] = useState<GuestResponse[]>([]);
   const [questionFilter, setQuestionFilter] = useState('');
   const [answerFilter, setAnswerFilter] = useState('');
+  const [viewingResponsesFor, setViewingResponsesFor] = useState<string | null>(null);
 
   useEffect(() => {
     if (!wedding) return;
@@ -117,6 +150,21 @@ export default function GuestsEditor() {
     for (const r of responses) map.set(`${r.guest_id}::${r.question_key}`, r.answer);
     return map;
   }, [responses]);
+
+  function formatAnswer(a: Json | undefined): string {
+    if (Array.isArray(a)) {
+      const parts = a.filter((v): v is string => typeof v === 'string' && v !== '');
+      return parts.length > 0 ? parts.join(', ') : '—';
+    }
+    if (typeof a === 'string') return a || '—';
+    return '—';
+  }
+
+  function guestAnswers(guestId: string): { question: QuestionMeta; answer: Json | undefined }[] {
+    return questions
+      .map((q) => ({ question: q, answer: answersByGuestAndQuestion.get(`${guestId}::${q.key}`) }))
+      .filter((entry) => entry.answer !== undefined);
+  }
 
   const selectedQuestion = useMemo(
     () => questions.find((q) => q.key === questionFilter) ?? null,
@@ -175,7 +223,6 @@ export default function GuestsEditor() {
       id: g.id,
       name: g.name,
       phone: g.phone ?? '',
-      plus_ones: g.plus_ones ?? 0,
       invited_events: g.invited_events ?? [],
     });
   }
@@ -195,7 +242,6 @@ export default function GuestsEditor() {
     const payload = {
       name: draft.name.trim(),
       phone: draft.phone.trim() || null,
-      plus_ones: Number(draft.plus_ones) || 0,
       invited_events: draft.invited_events,
     };
     if (draft.id) {
@@ -227,8 +273,9 @@ export default function GuestsEditor() {
         <div>
           <h2 className="font-display text-xl font-bold text-ink">Invités</h2>
           <p className="text-sm text-ink-secondary">
-            Ajoutez vos invités et indiquez à quelles étapes ils sont conviés. Ils pourront
-            confirmer leur présence sur le site via la section RSVP.
+            Ajoutez vos invités et indiquez à quelles étapes ils sont conviés — ou laissez-les
+            s'inscrire eux-mêmes depuis le site. Chacun reçoit un QR d'invitation, à scanner
+            (onglet « Entrée ») pour pointer sa présence le jour J.
           </p>
         </div>
         <button onClick={openCreate} className="btn-primary">
@@ -322,7 +369,7 @@ export default function GuestsEditor() {
 
       {draft && (
         <div className="card space-y-4">
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="label">Nom *</label>
               <input className="input" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Marie Dupont" />
@@ -330,16 +377,6 @@ export default function GuestsEditor() {
             <div>
               <label className="label">Téléphone</label>
               <input className="input" value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} placeholder="+237 6.." />
-            </div>
-            <div>
-              <label className="label">Accompagnants</label>
-              <input
-                type="number"
-                min={0}
-                className="input"
-                value={draft.plus_ones}
-                onChange={(e) => setDraft({ ...draft, plus_ones: Number(e.target.value) })}
-              />
             </div>
           </div>
 
@@ -384,39 +421,74 @@ export default function GuestsEditor() {
               <tr>
                 <th className="px-4 py-3">Nom</th>
                 <th className="px-4 py-3">Téléphone</th>
-                <th className="px-4 py-3 text-center">Accomp.</th>
                 <th className="px-4 py-3">Convié à</th>
-                <th className="px-4 py-3 text-center">Réponses</th>
+                <th className="px-4 py-3 text-center" title="Réponses aux questions personnalisées ajoutées dans une partie mixte du site (allergies, chanson, etc.)">
+                  Réponses
+                </th>
+                <th className="px-4 py-3 text-center">Présence</th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredGuests.map((g) => (
-                <tr key={g.id} className="border-b border-borderlight/60 last:border-0">
-                  <td className="px-4 py-3 font-medium text-ink">{g.name}</td>
-                  <td className="px-4 py-3 text-ink-secondary">{g.phone ?? '—'}</td>
-                  <td className="px-4 py-3 text-center text-ink-secondary">{g.plus_ones ?? 0}</td>
-                  <td className="px-4 py-3">
-                    {(g.invited_events ?? []).length === 0 ? (
-                      <span className="text-xs text-ink-secondary/70">Toutes ?</span>
-                    ) : (
-                      <div className="flex flex-wrap gap-1">
-                        {(g.invited_events ?? []).map((id) => (
-                          <span key={id} className="badge badge-slate">{eventName(id)}</span>
-                        ))}
+                <Fragment key={g.id}>
+                  <tr className="border-b border-borderlight/60 last:border-0">
+                    <td className="px-4 py-3 font-medium text-ink">{g.name}</td>
+                    <td className="px-4 py-3 text-ink-secondary">{g.phone ?? '—'}</td>
+                    <td className="px-4 py-3">
+                      {(g.invited_events ?? []).length === 0 ? (
+                        <span className="text-xs text-ink-secondary/70">Toutes ?</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {(g.invited_events ?? []).map((id) => (
+                            <span key={id} className="badge badge-slate">{eventName(id)}</span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center text-ink-secondary">
+                      {responseCounts[g.id] ? (
+                        <button
+                          onClick={() => setViewingResponsesFor(viewingResponsesFor === g.id ? null : g.id)}
+                          className="badge badge-slate hover:opacity-75"
+                          title="Voir les réponses de cet invité"
+                        >
+                          {responseCounts[g.id]}
+                        </button>
+                      ) : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {g.checked_in_at ? (
+                        <span className="badge-green" title={new Date(g.checked_in_at).toLocaleString('fr-FR')}>Présent</span>
+                      ) : (
+                        <span className="text-xs text-ink-secondary/70">En attente</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-1">
+                        <GuestQrDownload wedding={wedding} guest={g} />
+                        <button onClick={() => openEdit(g)} className="btn-outline !px-2" title="Modifier"><Pencil className="h-4 w-4" /></button>
+                        <button onClick={() => remove(g.id)} className="btn-outline !px-2 hover:!border-red-300 hover:!text-red-600" title="Supprimer"><Trash2 className="h-4 w-4" /></button>
                       </div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-center text-ink-secondary">
-                    {responseCounts[g.id] ? <span className="badge badge-slate">{responseCounts[g.id]}</span> : '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-1">
-                      <button onClick={() => openEdit(g)} className="btn-outline !px-2" title="Modifier"><Pencil className="h-4 w-4" /></button>
-                      <button onClick={() => remove(g.id)} className="btn-outline !px-2 hover:!border-red-300 hover:!text-red-600" title="Supprimer"><Trash2 className="h-4 w-4" /></button>
-                    </div>
-                  </td>
-                </tr>
+                    </td>
+                  </tr>
+                  {viewingResponsesFor === g.id && (
+                    <tr className="border-b border-borderlight/60 bg-paper-cream/60 last:border-0">
+                      <td colSpan={6} className="px-4 py-3">
+                        <div className="space-y-2">
+                          {guestAnswers(g.id).map(({ question, answer }) => (
+                            <div key={question.key} className="text-sm">
+                              <p className="text-xs font-medium uppercase tracking-wide text-ink-secondary">
+                                {question.sectionTitle} — {question.label}
+                              </p>
+                              <p className="text-ink">{formatAnswer(answer)}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               ))}
             </tbody>
           </table>

@@ -108,6 +108,28 @@ export default function SectionContentEditor({ type, content, onChange, folder =
           />
         </Field>
       );
+    case 'save_the_date':
+      return (
+        <div className="space-y-4">
+          <Field label="Date du mariage (calendrier)">
+            <input
+              type="datetime-local"
+              className="input"
+              value={str('date')}
+              onChange={(e) => set('date', e.target.value)}
+            />
+          </Field>
+          <Field label="Titre">
+            <input className="input" value={str('title')} onChange={(e) => set('title', e.target.value)} placeholder="Réservez la date" />
+          </Field>
+          <Field label="Message (optionnel)">
+            <textarea className="input min-h-16" value={str('message')} onChange={(e) => set('message', e.target.value)} placeholder="Les détails suivront très bientôt !" />
+          </Field>
+          <p className="text-xs text-ink-secondary">
+            Si aucune date n'est renseignée ici, celle du premier évènement du programme est utilisée.
+          </p>
+        </div>
+      );
     case 'location':
       return (
         <div className="space-y-4">
@@ -162,18 +184,16 @@ export default function SectionContentEditor({ type, content, onChange, folder =
       return (
         <div className="space-y-4">
           <Field label="Titre">
-            <input className="input" value={str('title')} onChange={(e) => set('title', e.target.value)} placeholder="Confirmation de présence" />
+            <input className="input" value={str('title')} onChange={(e) => set('title', e.target.value)} placeholder="Confirmez votre invitation" />
           </Field>
           <Field label="Message d'introduction">
-            <textarea className="input min-h-20" value={str('intro')} onChange={(e) => set('intro', e.target.value)} placeholder="Dites-nous sur quelles étapes nous pouvons compter sur vous…" />
-          </Field>
-          <Field label="Message si l'invité n'est pas trouvé">
-            <textarea className="input min-h-16" value={str('not_found')} onChange={(e) => set('not_found', e.target.value)} placeholder="Vous avez reçu ce lien ? Vous êtes invité(e), confirmez votre présence !" />
+            <textarea className="input min-h-20" value={str('intro')} onChange={(e) => set('intro', e.target.value)} placeholder="Inscrivez-vous pour recevoir votre QR d'invitation, à présenter le jour J." />
           </Field>
           <p className="text-xs text-ink-secondary">
-            Les invités saisis depuis l'onglet « Invités » se retrouvent directement par leur nom.
-            Un visiteur qui ne s'y trouve pas peut s'inscrire lui-même (nom, téléphone, étapes) —
-            il apparaîtra ensuite dans l'onglet « Invités ». Les étapes proposées sont celles du programme.
+            Un visiteur s'inscrit avec juste son nom et son téléphone et reçoit un QR
+            d'invitation à télécharger (à présenter le jour J, scanné depuis l'onglet
+            « Entrée » pour pointer sa présence). Il peut aussi retrouver un QR déjà généré en
+            recherchant son nom.
           </p>
         </div>
       );

@@ -39,6 +39,13 @@ export default function Countdown({ content, accent, tpl, events }: CountdownPro
 
   const d = diff(target);
   const { palette } = tpl;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const units = [
+    { label: 'Jours', value: d.days },
+    { label: 'Heures', value: d.hours },
+    { label: 'Minutes', value: d.minutes },
+    { label: 'Secondes', value: d.seconds },
+  ];
 
   return (
     <SectionShell tpl={tpl} accent={accent}>
@@ -47,28 +54,29 @@ export default function Countdown({ content, accent, tpl, events }: CountdownPro
           Le compte à rebours
         </p>
         <p className="mt-2 tpl-body opacity-70">Nos derniers instants avant le « oui »</p>
-        <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {[
-            { label: 'Jours', value: d.days },
-            { label: 'Heures', value: d.hours },
-            { label: 'Minutes', value: d.minutes },
-            { label: 'Secondes', value: d.seconds },
-          ].map((unit) => (
-            <div
-              key={unit.label}
-              className="rounded-xl px-4 py-6"
-              style={{
-                backgroundColor: palette.surface,
-                border: `1px solid ${palette.border}`,
-                boxShadow: tpl.id === 'royal' ? `0 0 0 1px ${palette.accent}33, 0 10px 30px rgba(0,0,0,0.25)` : undefined,
-              }}
-            >
-              <div className="font-display tpl-display text-4xl font-bold sm:text-5xl" style={{ color: tpl.id === 'minimal' ? accent : palette.ink, fontVariantNumeric: 'tabular-nums' }}>
-                {unit.value}
+        <div className="mt-10 inline-flex items-start justify-center">
+          {units.map((unit, i) => (
+            <div key={unit.label} className="flex items-start">
+              <div className="flex flex-col items-center px-1.5 sm:px-3">
+                <span
+                  className="font-display tpl-display text-4xl font-bold leading-none sm:text-6xl"
+                  style={{ color: palette.ink, fontVariantNumeric: 'tabular-nums' }}
+                >
+                  {pad(unit.value)}
+                </span>
+                <span className="mt-3 text-[10px] tracking-[0.25em] uppercase tpl-body sm:text-[11px]" style={{ color: palette.muted }}>
+                  {unit.label}
+                </span>
               </div>
-              <div className="mt-2 text-[11px] tracking-[0.25em] uppercase" style={{ color: palette.muted }}>
-                {unit.label}
-              </div>
+              {i < units.length - 1 && (
+                <span
+                  className="font-display tpl-display text-4xl font-bold leading-none sm:text-6xl"
+                  style={{ color: accent }}
+                  aria-hidden="true"
+                >
+                  :
+                </span>
+              )}
             </div>
           ))}
         </div>

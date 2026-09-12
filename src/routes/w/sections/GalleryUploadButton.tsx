@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { UploadCloud, Loader2, Check } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
-import { uploadFile } from '../../../lib/media';
+import { uploadFile, validateGalleryFile } from '../../../lib/media';
 
 /**
  * Bouton d'upload d'une photo/vidéo par un invité — mis en attente de
@@ -23,6 +23,11 @@ export default function GalleryUploadButton({
 
   async function pick(file: File | undefined) {
     if (!file) return;
+    const sizeError = validateGalleryFile(file);
+    if (sizeError) {
+      setError(sizeError);
+      return;
+    }
     setUploading(true);
     setError('');
     try {

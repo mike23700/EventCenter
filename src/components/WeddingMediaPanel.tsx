@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { Check, X, Trash2, QrCode, UploadCloud, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { mediaUrl, uploadFile } from '../lib/media';
+import { mediaUrl, uploadFile, validateGalleryFile } from '../lib/media';
 import type { Wedding, Media, Testimonial } from '../types/database';
 
 interface QrTarget {
@@ -110,6 +110,11 @@ export default function WeddingMediaPanel({ wedding, publicUrl }: { wedding: Wed
 
   async function uploadMedia(file: File | undefined) {
     if (!file) return;
+    const sizeError = validateGalleryFile(file);
+    if (sizeError) {
+      setError(sizeError);
+      return;
+    }
     setUploading(true);
     setError('');
     try {

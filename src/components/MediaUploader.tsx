@@ -12,6 +12,8 @@ export interface MediaUploaderProps {
   accept?: string;
   label?: string;
   hint?: string;
+  /** Validation avant upload (taille, format, durée…) : renvoyer un message d'erreur pour bloquer, ou null/undefined pour laisser passer. */
+  validate?: (file: File) => string | null | undefined | Promise<string | null | undefined>;
 }
 
 /**
@@ -26,6 +28,7 @@ export default function MediaUploader({
   accept = 'image/*,video/*',
   label = 'Image / vidéo',
   hint,
+  validate,
 }: MediaUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -37,6 +40,13 @@ export default function MediaUploader({
 
   async function pick(file: File | undefined) {
     if (!file) return;
+    if (validate) {
+      const validationError = await validate(file);
+      if (validationError) {
+        setError(validationError);
+        return;
+      }
+    }
     setUploading(true);
     setError('');
     setProgress(0);

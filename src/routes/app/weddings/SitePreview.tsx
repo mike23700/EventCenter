@@ -1,15 +1,20 @@
 import { useState } from 'react';
-import { useOutletContext, Link } from 'react-router-dom';
+import { useOutletContext, useParams, Link } from 'react-router-dom';
 import { RefreshCw, ExternalLink, Smartphone, Monitor } from 'lucide-react';
 import type { Wedding } from '../../../types/database';
 
 /**
- * Aperçu intégré du site public directement dans le panel client.
+ * Aperçu intégré du site public, monté à la fois côté admin
+ * (`/admin/weddings/:id/config/apercu`) et côté client (`/app/:weddingId/apercu`).
  * L'iframe recharge les données de la base à chaque réinitialisation,
  * pour refléter instantanément les derniers changements enregistrés.
+ * Le lien « enregistrer le contenu » ne s'affiche que côté admin, seul
+ * espace où les sections restent éditables.
  */
 export default function SitePreview() {
   const { wedding } = useOutletContext<{ wedding: Wedding }>();
+  const { id } = useParams();
+  const isAdmin = Boolean(id);
   const [reloadKey, setReloadKey] = useState(0);
   const [width, setWidth] = useState<'mobile' | 'desktop'>('desktop');
 
@@ -78,10 +83,16 @@ export default function SitePreview() {
         </div>
       </div>
 
-      <p className="text-sm text-ink-secondary">
-        Astuce : pensez à <Link to={`/app/${wedding.id}/sections`} className="text-gold underline">enregistrer le contenu</Link> de
-        chaque section puis à cliquer « Actualiser » pour voir vos changements.
-      </p>
+      {isAdmin ? (
+        <p className="text-sm text-ink-secondary">
+          Astuce : pensez à <Link to={`/admin/weddings/${wedding.id}/config/sections`} className="text-gold underline">enregistrer le contenu</Link> de
+          chaque section puis à cliquer « Actualiser » pour voir vos changements.
+        </p>
+      ) : (
+        <p className="text-sm text-ink-secondary">
+          Le contenu des sections est géré par l'administrateur de la plateforme. Cliquez « Actualiser » pour voir les derniers changements.
+        </p>
+      )}
     </div>
   );
 }

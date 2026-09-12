@@ -26,6 +26,8 @@ export interface Wedding {
   is_active: boolean;
   owner_user_id: string | null;
   client_email: string | null;
+  splash_media_url: string | null;
+  splash_media_type: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -60,6 +62,7 @@ export type SectionType =
   | 'cover'
   | 'location'
   | 'countdown'
+  | 'save_the_date'
   | 'program'
   | 'image_video'
   | 'mixed'
@@ -76,6 +79,9 @@ export interface Guest {
   plus_ones: number;
   invited_events: string[];
   response: Json;
+  qr_token: string;
+  checked_in_at: string | null;
+  checked_in_by: string | null;
   created_at: string;
 }
 
@@ -101,7 +107,7 @@ export interface GuestResponse {
 export interface TablePlan {
   id: string;
   wedding_id: string;
-  event_id: string | null; // null = commune à tout l'évènement
+  event_id: string | null; // null = ancienne table "générale" (créée avant l'obligation de rattacher à une partie)
   name: string;
   capacity: number | null;
   position: number;
@@ -165,6 +171,8 @@ export type Database = {
           is_active: boolean;
           owner_user_id: string | null;
           client_email: string | null;
+          splash_media_url: string | null;
+          splash_media_type: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -183,6 +191,8 @@ export type Database = {
           is_active?: boolean;
           owner_user_id?: string | null;
           client_email?: string | null;
+          splash_media_url?: string | null;
+          splash_media_type?: string | null;
         };
         Update: {
           slug?: string;
@@ -199,6 +209,8 @@ export type Database = {
           is_active?: boolean;
           owner_user_id?: string | null;
           client_email?: string | null;
+          splash_media_url?: string | null;
+          splash_media_type?: string | null;
         };
         Relationships: [];
       };
@@ -279,6 +291,9 @@ export type Database = {
           plus_ones: number;
           invited_events: string[];
           response: Json;
+          qr_token: string;
+          checked_in_at: string | null;
+          checked_in_by: string | null;
           created_at: string;
         };
         Insert: {
@@ -288,6 +303,9 @@ export type Database = {
           plus_ones?: number;
           invited_events?: string[];
           response?: Json;
+          qr_token?: string;
+          checked_in_at?: string | null;
+          checked_in_by?: string | null;
         };
         Update: {
           name?: string;
@@ -295,6 +313,9 @@ export type Database = {
           plus_ones?: number;
           invited_events?: string[];
           response?: Json;
+          qr_token?: string;
+          checked_in_at?: string | null;
+          checked_in_by?: string | null;
         };
         Relationships: [];
       };

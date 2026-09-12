@@ -106,7 +106,7 @@ create table if not exists public.sections (
   id         uuid primary key default gen_random_uuid(),
   wedding_id uuid not null references public.weddings(id) on delete cascade,
   type       text not null
-             check (type in ('cover','location','countdown','program',
+             check (type in ('cover','location','countdown','save_the_date','program',
                              'image_video','mixed','rsvp','gallery',
                              'tables','testimonials')),
   enabled    boolean not null default true,

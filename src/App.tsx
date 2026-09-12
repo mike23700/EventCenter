@@ -6,17 +6,20 @@ import AdminDashboard from './routes/admin/AdminDashboard';
 import WeddingsList from './routes/admin/weddings/WeddingsList';
 import WeddingForm from './routes/admin/weddings/WeddingForm';
 import WeddingDetail from './routes/admin/weddings/WeddingDetail';
-import AppLayout from './routes/app/AppLayout';
-import ClientDashboard from './routes/app/ClientDashboard';
-import WeddingConfigLayout from './routes/app/weddings/WeddingConfigLayout';
+import AdminWeddingConfigLayout from './routes/admin/weddings/WeddingConfigLayout';
 import SectionsEditor from './routes/app/weddings/SectionsEditor';
 import ThemeEditor from './routes/app/weddings/ThemeEditor';
 import ProgramEditor from './routes/app/weddings/ProgramEditor';
+import CheckIn from './routes/admin/weddings/CheckIn';
+import AppLayout from './routes/app/AppLayout';
+import ClientDashboard from './routes/app/ClientDashboard';
+import WeddingConfigLayout from './routes/app/weddings/WeddingConfigLayout';
 import GuestsEditor from './routes/app/weddings/GuestsEditor';
 import TablesEditor from './routes/app/weddings/TablesEditor';
 import ResponsesEditor from './routes/app/weddings/ResponsesEditor';
 import GalleryModerationEditor from './routes/app/weddings/GalleryModerationEditor';
 import SitePreview from './routes/app/weddings/SitePreview';
+import AppCheckIn from './routes/app/weddings/CheckIn';
 import WeddingPublic from './routes/w/WeddingPublic';
 import GalleryPage from './routes/w/GalleryPage';
 import TestimonialsPage from './routes/w/TestimonialsPage';
@@ -47,19 +50,29 @@ export default function App() {
         <Route path="weddings/new" element={<WeddingForm />} />
         <Route path="weddings/:id" element={<WeddingDetail />} />
         <Route path="weddings/:id/edit" element={<WeddingForm />} />
-      </Route>
-
-      <Route path="/app" element={<AppLayout />}>
-        <Route index element={<ClientDashboard />} />
-        <Route path=":weddingId" element={<WeddingConfigLayout />}>
+        <Route path="weddings/:id/checkin" element={<CheckIn />} />
+        <Route path="weddings/:id/config" element={<AdminWeddingConfigLayout />}>
           <Route path="sections" element={<SectionsEditor />} />
           <Route path="theme" element={<ThemeEditor />} />
           <Route path="programme" element={<ProgramEditor />} />
           <Route path="invites" element={<GuestsEditor />} />
           <Route path="tables" element={<TablesEditor />} />
+          <Route path="apercu" element={<SitePreview />} />
+        </Route>
+      </Route>
+
+      <Route path="/app" element={<AppLayout />}>
+        <Route index element={<ClientDashboard />} />
+        <Route path=":weddingId" element={<WeddingConfigLayout />}>
+          <Route path="invites" element={<GuestsEditor />} />
+          <Route path="tables" element={<TablesEditor />} />
           <Route path="reponses" element={<ResponsesEditor />} />
           <Route path="galerie" element={<GalleryModerationEditor />} />
           <Route path="apercu" element={<SitePreview />} />
+          <Route path="checkin" element={<AppCheckIn />} />
+          {/* Les sections ne sont plus éditables côté client (gérées par l'admin) :
+              on redirige les anciens liens/marque-pages vers un onglet existant. */}
+          <Route path="sections" element={<Navigate to="../apercu" replace />} />
         </Route>
       </Route>
 

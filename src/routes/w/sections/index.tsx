@@ -3,6 +3,7 @@ import type { Section, WeddingEvent, Wedding } from '../../../types/database';
 import { getTemplate } from '../../../lib/templates';
 import Cover from './Cover';
 import Countdown from './Countdown';
+import SaveTheDate from './SaveTheDate';
 import Location from './Location';
 import Program from './Program';
 import Mixed from './Mixed';
@@ -21,6 +22,7 @@ export interface SectionRendererProps {
 const registry: Record<string, ComponentType<any>> = {
   cover: Cover,
   countdown: Countdown,
+  save_the_date: SaveTheDate,
   location: Location,
   program: Program,
   mixed: Mixed,
@@ -47,7 +49,7 @@ export default function SectionRenderer({ section, wedding, events }: SectionRen
 
   if (!C) return null;
 
-  if (section.type === 'program' || section.type === 'countdown' || section.type === 'rsvp' || section.type === 'mixed') {
+  if (section.type === 'program' || section.type === 'countdown' || section.type === 'save_the_date') {
     return <C {...shared} content={section.content} events={events} />;
   }
   return <C {...shared} content={section.content} />;

@@ -5,8 +5,10 @@ import { supabase } from '../../../lib/supabase';
 import { weddingSlugFromNames } from '../../../lib/slug';
 import { toIso, fromIsoForInput, EVENT_TYPES, TEMPLATES } from '../../../lib/format';
 import { logoImageHint } from '../../../lib/imageHints';
+import { validateSplashFile } from '../../../lib/media';
 import { FunctionsFetchError, FunctionsHttpError } from '@supabase/supabase-js';
 import type { Wedding, Database } from '../../../types/database';
+import MediaUploader from '../../../components/MediaUploader';
 
 /**
  * Crée le compte client via l'Edge Function serveur `create-client-account`.
@@ -58,6 +60,8 @@ export default function WeddingForm() {
   const [accessEnd, setAccessEnd] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [logoPath, setLogoPath] = useState('');
+  const [splashPath, setSplashPath] = useState('');
+  const [splashType, setSplashType] = useState<'video' | 'gif' | null>(null);
   const [clientEmail, setClientEmail] = useState('');
   const [clientPassword, setClientPassword] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -85,6 +89,8 @@ export default function WeddingForm() {
         setAccessEnd(fromIsoForInput(w.access_end));
         setIsActive(w.is_active);
         setLogoPath(w.logo ?? '');
+        setSplashPath(w.splash_media_url ?? '');
+        setSplashType(w.splash_media_type === 'gif' ? 'gif' : w.splash_media_type === 'video' ? 'video' : null);
         setClientEmail(w.client_email ?? '');
         const theme = w.theme as { primaryColor?: string } | null;
         setPrimaryColor(theme?.primaryColor ?? '#C9A34A');
@@ -136,6 +142,8 @@ export default function WeddingForm() {
       contact_phone: contactPhone.trim() || null,
       theme: { primaryColor },
       logo: logoPath || null,
+      splash_media_url: splashPath || null,
+      splash_media_type: splashPath ? splashType : null,
       access_start: toIso(accessStart),
       access_end: toIso(accessEnd),
       is_active: isActive,
@@ -316,6 +324,26 @@ export default function WeddingForm() {
             {uploading && <p className="mt-1 text-xs text-ink-secondary">Upload…</p>}
             <p className="mt-1 text-xs text-ink-secondary">{logoImageHint()}</p>
           </div>
+        </div>
+
+        <div>
+          <MediaUploader
+            bucket="media"
+            folder={`weddings/${id ?? 'new'}/splash`}
+            accept="video/mp4,video/webm,image/gif,image/webp"
+            label="Splash d'accueil (GIF, WebP ou vidéo, avant le site public)"
+            hint={`GIF, WebP (animé ou non) ou vidéo MP4/WebM, ${8}s max, 15 Mo max`}
+            value={splashPath || null}
+            validate={validateSplashFile}
+            onChange={(path) => {
+              setSplashPath(path ?? '');
+              const isImage = /\.(gif|webp)$/i.test(path ?? '');
+              setSplashType(path ? (isImage ? 'gif' : 'video') : null);
+            }}
+          />
+          <p className="mt-1 text-xs text-ink-secondary">
+            Affiché en plein écran à chaque visite du site public, avant que le contenu n'apparaisse. Laissez vide pour ne pas en afficher.
+          </p>
         </div>
 
         <label className="flex items-center gap-2 text-sm text-ink">

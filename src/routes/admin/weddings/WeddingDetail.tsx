@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { ArrowLeft, Pencil, ExternalLink, Copy, Check, Power, PowerOff, User, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Pencil, ExternalLink, Copy, Check, Power, PowerOff, User, ShieldCheck, Settings, ScanLine } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { weddingPublicUrl } from '../../../lib/supabase';
 import { formatDateTime, formatDate } from '../../../lib/format';
@@ -69,14 +69,22 @@ export default function WeddingDetail() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Link to="/admin/weddings" className="inline-flex rounded-md p-2 text-ink-secondary hover:bg-paper-cream">
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <div className="flex-1">
+        <div className="flex-1 min-w-[12rem]">
           <h1 className="font-display text-2xl font-bold text-ink">{wedding.name}</h1>
           {wedding.secondary_name && <p className="text-ink-secondary">&amp; {wedding.secondary_name}</p>}
         </div>
+        <Link to={`/admin/weddings/${wedding.id}/config/sections`} className="btn-outline">
+          <Settings className="h-4 w-4" />
+          Sections / Thème / Programme
+        </Link>
+        <Link to={`/admin/weddings/${wedding.id}/checkin`} className="btn-outline">
+          <ScanLine className="h-4 w-4" />
+          Pointage entrée
+        </Link>
         <Link to={`/admin/weddings/${wedding.id}/edit`} className="btn-outline">
           <Pencil className="h-4 w-4" />
           Modifier

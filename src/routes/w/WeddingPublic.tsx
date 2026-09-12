@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { useWeddingBySlug } from './useWeddingBySlug';
 import WeddingThemeShell from './WeddingThemeShell';
 import SectionRenderer from './sections';
+import SplashScreen from './SplashScreen';
 
 /**
  * Site public d'un mariage : /w/:slug.
@@ -20,6 +21,7 @@ export default function WeddingPublic() {
   const [events, setEvents] = useState<WeddingEvent[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
     if (!wedding) return;
@@ -54,10 +56,20 @@ export default function WeddingPublic() {
   }
 
   return (
-    <WeddingThemeShell wedding={wedding}>
-      {sections.map((section) => (
-        <SectionRenderer key={section.id} section={section} wedding={wedding} events={events} />
-      ))}
-    </WeddingThemeShell>
+    <>
+      {showSplash && wedding.splash_media_url &&
+        (wedding.splash_media_type === 'video' || wedding.splash_media_type === 'gif') && (
+        <SplashScreen
+          mediaPath={wedding.splash_media_url}
+          mediaType={wedding.splash_media_type}
+          onDone={() => setShowSplash(false)}
+        />
+      )}
+      <WeddingThemeShell wedding={wedding}>
+        {sections.map((section) => (
+          <SectionRenderer key={section.id} section={section} wedding={wedding} events={events} />
+        ))}
+      </WeddingThemeShell>
+    </>
   );
 }
