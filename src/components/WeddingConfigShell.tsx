@@ -74,13 +74,13 @@ export default function WeddingConfigShell({
 
       {wedding && (
         <>
-          <nav className="flex gap-1 border-b border-borderlight">
+          <nav className="-mx-4 flex gap-1 overflow-x-auto border-b border-borderlight px-4 sm:mx-0 sm:px-0">
             {tabs.map((tab) => (
               <NavLink
                 key={tab.to}
                 to={`${basePath}/${tab.to}`}
                 className={({ isActive }) =>
-                  `flex items-center gap-2 rounded-t-lg px-4 py-2 text-sm font-medium transition ${
+                  `flex shrink-0 items-center gap-2 whitespace-nowrap rounded-t-lg px-3 py-2 text-sm font-medium transition sm:px-4 ${
                     isActive
                       ? 'border-b-2 border-gold text-ink'
                       : 'text-ink-secondary hover:text-ink'

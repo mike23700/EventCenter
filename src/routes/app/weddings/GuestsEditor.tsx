@@ -415,8 +415,8 @@ export default function GuestsEditor() {
       )}
 
       {filteredGuests.length > 0 && !draft && (
-        <div className="overflow-hidden rounded-2xl border border-borderlight bg-white shadow-sm">
-          <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto rounded-2xl border border-borderlight bg-white shadow-sm">
+          <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="border-b border-borderlight bg-paper-cream text-xs uppercase tracking-wide text-ink-secondary">
               <tr>
                 <th className="px-4 py-3">Nom</th>

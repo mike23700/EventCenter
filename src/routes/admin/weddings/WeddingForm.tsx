@@ -56,6 +56,9 @@ export default function WeddingForm() {
   const [template, setTemplate] = useState('florale');
   const [contactPhone, setContactPhone] = useState('');
   const [primaryColor, setPrimaryColor] = useState('#C9A34A');
+  // Autres clés du thème (polices…) définies côté client dans l'onglet
+  // « Thème » : à préserver telles quelles, ce formulaire ne les édite pas.
+  const [themeRest, setThemeRest] = useState<Record<string, unknown>>({});
   const [accessStart, setAccessStart] = useState('');
   const [accessEnd, setAccessEnd] = useState('');
   const [isActive, setIsActive] = useState(true);
@@ -92,8 +95,12 @@ export default function WeddingForm() {
         setSplashPath(w.splash_media_url ?? '');
         setSplashType(w.splash_media_type === 'gif' ? 'gif' : w.splash_media_type === 'video' ? 'video' : null);
         setClientEmail(w.client_email ?? '');
-        const theme = w.theme as { primaryColor?: string } | null;
-        setPrimaryColor(theme?.primaryColor ?? '#C9A34A');
+        const theme = (w.theme && typeof w.theme === 'object' && !Array.isArray(w.theme))
+          ? (w.theme as Record<string, unknown>)
+          : {};
+        setPrimaryColor((theme.primaryColor as string) ?? '#C9A34A');
+        const { primaryColor: _pc, ...rest } = theme;
+        setThemeRest(rest);
       }
       setLoading(false);
     })();
@@ -140,7 +147,7 @@ export default function WeddingForm() {
       event_type: eventType,
       template,
       contact_phone: contactPhone.trim() || null,
-      theme: { primaryColor },
+      theme: { ...themeRest, primaryColor },
       logo: logoPath || null,
       splash_media_url: splashPath || null,
       splash_media_type: splashPath ? splashType : null,

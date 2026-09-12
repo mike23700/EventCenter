@@ -51,8 +51,8 @@ export default function WeddingsList() {
       )}
 
       {!loading && !error && weddings.length > 0 && (
-        <div className="overflow-hidden rounded-lg border border-borderlight bg-white shadow-sm">
-          <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto rounded-lg border border-borderlight bg-white shadow-sm">
+          <table className="w-full min-w-[640px] text-left text-sm">
             <thead className="border-b border-borderlight bg-paper-cream text-xs uppercase tracking-wide text-ink-secondary">
               <tr>
                 <th className="px-4 py-3">Mariage</th>

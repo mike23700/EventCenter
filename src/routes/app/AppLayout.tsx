@@ -30,14 +30,14 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-screen bg-paper-warm">
-      <header className="flex h-14 items-center justify-between border-b border-borderlight bg-white px-6">
-        <Link to="/app" className="flex items-center gap-2 font-display text-lg font-bold text-ink">
+      <header className="flex h-14 items-center justify-between gap-3 border-b border-borderlight bg-white px-4 sm:px-6">
+        <Link to="/app" className="flex shrink-0 items-center gap-2 font-display text-lg font-bold text-ink">
           <Heart className="h-5 w-5 text-gold" fill="currentColor" />
-          Espace client
+          <span className="hidden sm:inline">Espace client</span>
         </Link>
-        <span className="text-sm text-ink-secondary">{user.email}</span>
+        <span className="truncate text-sm text-ink-secondary">{user.email}</span>
       </header>
-      <main className="p-8">
+      <main className="p-4 sm:p-6 md:p-8">
         <Outlet />
       </main>
     </div>
