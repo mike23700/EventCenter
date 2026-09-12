@@ -20,7 +20,7 @@ export default function CheckInScanner({ weddingId }: { weddingId: string }) {
   const userId = useAuth((s) => s.user?.id ?? null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [cameraError, setCameraError] = useState('');
-  const [scanCount, setScanCount] = useState(0);
+  const [stats, setStats] = useState({ ok: 0, already: 0 });
 
   useEffect(() => {
     const scanner = new Html5Qrcode(elementId);
@@ -70,7 +70,8 @@ export default function CheckInScanner({ weddingId }: { weddingId: string }) {
     }
     const result = await scanGuestCheckIn(weddingId, parsed.qrToken, userId);
     setFeedback({ key: Date.now(), result });
-    if (result.status === 'ok') setScanCount((n) => n + 1);
+    if (result.status === 'ok') setStats((s) => ({ ...s, ok: s.ok + 1 }));
+    else if (result.status === 'already') setStats((s) => ({ ...s, already: s.already + 1 }));
   }
 
   return (
@@ -89,7 +90,9 @@ export default function CheckInScanner({ weddingId }: { weddingId: string }) {
 
       <p className="flex items-center gap-2 text-sm text-ink-secondary">
         <ScanLine className="h-4 w-4" />
-        {scanCount} entrée{scanCount > 1 ? 's' : ''} validée{scanCount > 1 ? 's' : ''} cette session.
+        {stats.ok} entrée{stats.ok > 1 ? 's' : ''} validée{stats.ok > 1 ? 's' : ''}
+        {stats.already > 0 && ` · ${stats.already} déjà pointé${stats.already > 1 ? 's' : ''} (ignoré${stats.already > 1 ? 's' : ''})`}
+        {' '}cette session.
       </p>
     </div>
   );
