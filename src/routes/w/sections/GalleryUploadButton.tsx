@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { UploadCloud, Loader2, Check } from 'lucide-react';
-import { supabase } from '../../../lib/supabase';
+import { db } from '../../../lib/db';
 import { uploadFile, validateGalleryFile } from '../../../lib/media';
 
 /**
@@ -33,7 +33,7 @@ export default function GalleryUploadButton({
     try {
       const type = file.type.startsWith('video') ? 'video' : 'image';
       const path = await uploadFile(file, { bucket: 'media', folder: `weddings/${weddingSlug}/galerie-invites` });
-      const { error } = await supabase.from('media').insert({
+      const { error } = await db.from('media').insert({
         wedding_id: weddingId,
         type,
         storage_path: path,

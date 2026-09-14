@@ -1,44 +1,36 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
-import { supabase } from '../../../lib/supabase';
+import { db } from '../../../lib/db';
 import { weddingSlugFromNames } from '../../../lib/slug';
 import { toIso, fromIsoForInput, EVENT_TYPES, TEMPLATES } from '../../../lib/format';
 import { logoImageHint } from '../../../lib/imageHints';
-import { validateSplashFile } from '../../../lib/media';
-import { FunctionsFetchError, FunctionsHttpError } from '@supabase/supabase-js';
+import { validateSplashFile, uploadFile, storageUrl } from '../../../lib/media';
 import type { Wedding, Database } from '../../../types/database';
 import MediaUploader from '../../../components/MediaUploader';
 
 /**
- * Crée le compte client via l'Edge Function serveur `create-client-account`.
- * La clé service_role y est gardée côté serveur (jamais exposée dans le front).
+ * Crée le compte client via `POST /api/admin/clients` (le super-admin est
+ * déjà vérifié côté serveur par `requireSuperAdmin`).
  * Retourne l'id du compte (créé ou déjà existant).
  */
 async function createClientUserViaEdge(
   email: string,
   password: string,
 ): Promise<{ id: string; error: string }> {
-  const { data, error } = await supabase.functions.invoke('create-client-account', {
-    body: { email, password },
+  const res = await fetch('/api/admin/clients', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify({ email, password }),
   });
+  const json = await res.json().catch(() => ({ error: `Erreur ${res.status}` }));
 
-  if (error) {
-    if (error instanceof FunctionsHttpError) {
-      const body = (await error.context.json().catch(() => ({}))) as { error?: string };
-      return { id: '', error: body.error || 'Erreur serveur lors de la création du compte.' };
-    }
-    if (error instanceof FunctionsFetchError) {
-      return {
-        id: '',
-        error:
-          "Impossible de joindre l'Edge Function 'create-client-account'. Déployez-la avec la CLI Supabase (voir instructions) puis réessayez.",
-      };
-    }
-    return { id: '', error: error.message || 'Erreur lors de la création du compte.' };
+  if (!res.ok) {
+    return { id: '', error: json.error || 'Erreur lors de la création du compte.' };
   }
 
-  const id = (data as { id?: string })?.id;
+  const id = (json as { id?: string })?.id;
   return id
     ? { id, error: '' }
     : { id: '', error: 'Réponse vide de la création du compte.' };
@@ -76,7 +68,7 @@ export default function WeddingForm() {
     if (!id) return;
     let active = true;
     (async () => {
-      const { data, error } = await supabase.from('weddings').select('*').eq('id', id).single();
+      const { data, error } = await db.from('weddings').select('*').eq('id', id).single();
       if (!active) return;
       if (error) {
         setError(error.message);
@@ -122,9 +114,7 @@ export default function WeddingForm() {
   async function handleUploadLogo(file: File) {
     setUploading(true);
     try {
-      const path = `weddings/${id ?? 'new'}/${Date.now()}-${file.name}`;
-      const { error } = await supabase.storage.from('logos').upload(path, file, { upsert: false });
-      if (error) throw error;
+      const path = await uploadFile(file, { bucket: 'logos', folder: `weddings/${id ?? 'new'}` });
       setLogoPath(path);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erreur upload du logo');
@@ -158,14 +148,14 @@ export default function WeddingForm() {
 
     try {
       if (isEdit && id) {
-        const { error } = await supabase.from('weddings').update(payload).eq('id', id);
+        const { error } = await db.from('weddings').update(payload).eq('id', id);
         if (error) throw error;
         navigate(`/admin/weddings/${id}`);
         return;
       }
 
-      // Création : c'est l'Edge Function serveur qui crée le compte client
-      // (la clé service_role est gardée côté serveur, jamais dans le front).
+      // Création : c'est le serveur qui crée le compte client
+      // (le mot de passe est haché côté serveur, jamais dans le front).
       const email = clientEmail.trim();
       const password = clientPassword;
       if (!email || !email.includes('@') || !password || password.length < 6) {
@@ -184,7 +174,7 @@ export default function WeddingForm() {
       payload.owner_user_id = ownerUserId;
       payload.client_email = email;
 
-      const { data, error } = await supabase.from('weddings').insert(payload).select('id').single();
+      const { data, error } = await db.from('weddings').insert(payload).select('id').single();
       if (error) throw error;
       navigate(`/admin/weddings/${data.id}`, {
         state: { clientCreated: { email, password } },
@@ -322,7 +312,7 @@ export default function WeddingForm() {
             <label className="label" htmlFor="logo">Photo des mariés (affichée sur le site, à côté du titre)</label>
             {logoPath ? (
               <div className="flex items-center gap-2">
-                <img src={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/logos/${logoPath}`} alt="logo" className="h-10 w-10 rounded object-cover" />
+                <img src={storageUrl('logos', logoPath) ?? ''} alt="logo" className="h-10 w-10 rounded object-cover" />
                 <button type="button" onClick={() => setLogoPath('')} className="text-sm text-red-500 hover:underline">Retirer</button>
               </div>
             ) : (

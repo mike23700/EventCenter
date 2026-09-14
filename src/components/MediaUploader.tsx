@@ -59,11 +59,7 @@ export default function MediaUploader({
       onChange(path);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Upload impossible';
-      setError(
-        /row-level security|violates row-level|not found|does not exist/i.test(msg)
-          ? `${msg} — Vérifiez que la migration SQL des policies de stockage a été appliquée (supabase/10_storage_policies.sql).`
-          : msg,
-      );
+      setError(msg);
     } finally {
       setUploading(false);
     }

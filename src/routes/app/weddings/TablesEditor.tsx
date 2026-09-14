@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Plus, Trash2, X, Users2, CheckCircle2 } from 'lucide-react';
-import { supabase } from '../../../lib/supabase';
+import { db } from '../../../lib/db';
 import type { Wedding, WeddingEvent, Guest, TablePlan, TableAssignment } from '../../../types/database';
 
 const GENERAL = '__general__';
@@ -32,16 +32,16 @@ export default function TablesEditor() {
   async function reload() {
     if (!wedding) return;
     const [{ data: evs }, { data: gs }, { data: tbl }] = await Promise.all([
-      supabase.from('wedding_events').select('*').eq('wedding_id', wedding.id).order('position'),
-      supabase.from('guests').select('*').eq('wedding_id', wedding.id).order('name'),
-      supabase.from('tables_plan').select('*').eq('wedding_id', wedding.id).order('position'),
+      db.from('wedding_events').select('*').eq('wedding_id', wedding.id).order('position'),
+      db.from('guests').select('*').eq('wedding_id', wedding.id).order('name'),
+      db.from<TablePlan>('tables_plan').select('*').eq('wedding_id', wedding.id).order('position'),
     ]);
     setEvents(evs ?? []);
     setGuests(gs ?? []);
     setTables(tbl ?? []);
     const tableIds = (tbl ?? []).map((t) => t.id);
     if (tableIds.length > 0) {
-      const { data: asg } = await supabase.from('table_assignments').select('*').in('table_id', tableIds);
+      const { data: asg } = await db.from('table_assignments').select('*').in('table_id', tableIds);
       setAssignments(asg ?? []);
     } else {
       setAssignments([]);
@@ -102,7 +102,7 @@ export default function TablesEditor() {
       return;
     }
     setError('');
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('tables_plan')
       .insert({
         wedding_id: wedding.id,
@@ -124,7 +124,7 @@ export default function TablesEditor() {
   }
 
   async function removeTable(id: string) {
-    const { error } = await supabase.from('tables_plan').delete().eq('id', id);
+    const { error } = await db.from('tables_plan').delete().eq('id', id);
     if (error) {
       setError(error.message);
       return;
@@ -134,7 +134,7 @@ export default function TablesEditor() {
   }
 
   async function assignGuest(tableId: string, guestId: string) {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('table_assignments')
       .insert({ table_id: tableId, guest_id: guestId })
       .select('*')
@@ -148,7 +148,7 @@ export default function TablesEditor() {
   }
 
   async function unassignGuest(assignmentId: string) {
-    const { error } = await supabase.from('table_assignments').delete().eq('id', assignmentId);
+    const { error } = await db.from('table_assignments').delete().eq('id', assignmentId);
     if (error) {
       setError(error.message);
       return;

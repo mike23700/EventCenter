@@ -1,6 +1,6 @@
 import { useOutletContext } from 'react-router-dom';
 import type { Wedding } from '../../../types/database';
-import { weddingPublicUrl } from '../../../lib/supabase';
+import { weddingPublicUrl } from '../../../lib/format';
 import WeddingMediaPanel from '../../../components/WeddingMediaPanel';
 
 /**

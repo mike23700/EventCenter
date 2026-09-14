@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useParams, Link } from 'react-router-dom';
 import { ArrowLeft, type LucideIcon } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { db } from '../lib/db';
 import type { Wedding } from '../types/database';
 
 export interface ConfigTab {
@@ -38,7 +38,7 @@ export default function WeddingConfigShell({
     if (!wid) return;
     let active = true;
     (async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('weddings')
         .select('*')
         .eq('id', wid)

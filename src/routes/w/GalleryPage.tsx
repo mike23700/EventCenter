@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Image as ImageIcon } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { db } from '../../lib/db';
 import { mediaUrl } from '../../lib/media';
 import type { Media } from '../../types/database';
 import { useWeddingBySlug } from './useWeddingBySlug';
@@ -25,7 +25,7 @@ export default function GalleryPage() {
     if (!wedding) return;
     let active = true;
     (async () => {
-      const { data } = await supabase
+      const { data } = await db
         .from('media')
         .select('*')
         .eq('wedding_id', wedding.id)

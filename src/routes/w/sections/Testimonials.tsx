@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MessageCircleHeart, ArrowRight } from 'lucide-react';
-import { supabase } from '../../../lib/supabase';
+import { db } from '../../../lib/db';
 import type { Testimonial } from '../../../types/database';
 import type { SectionProps } from './types';
 import { asRecord, str } from './types';
@@ -27,7 +27,7 @@ export default function Testimonials({ content, accent, tpl, wedding }: SectionP
   useEffect(() => {
     let active = true;
     (async () => {
-      const { data, count } = await supabase
+      const { data, count } = await db
         .from('testimonials')
         .select('*', { count: 'exact' })
         .eq('wedding_id', wedding.id)

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, MessageCircleHeart } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { db } from '../../lib/db';
 import type { Testimonial } from '../../types/database';
 import { useWeddingBySlug } from './useWeddingBySlug';
 import WeddingThemeShell from './WeddingThemeShell';
@@ -22,7 +22,7 @@ export default function TestimonialsPage() {
     if (!wedding) return;
     let active = true;
     (async () => {
-      const { data } = await supabase
+      const { data } = await db
         .from('testimonials')
         .select('*')
         .eq('wedding_id', wedding.id)

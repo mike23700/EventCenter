@@ -1,3 +1,9 @@
+/** Lien public vers le site d'un mariage : /w/{slug} */
+export function weddingPublicUrl(slug: string): string {
+  const base = (import.meta.env.VITE_SITE_URL as string | undefined) ?? window.location.origin;
+  return `${base}/w/${slug}`;
+}
+
 /** Formatage de date en local (fr-FR) avec fuseau local. */
 export function formatDate(value?: string | null): string {
   if (!value) return '—';

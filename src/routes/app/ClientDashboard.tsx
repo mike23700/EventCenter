@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, ArrowRight } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { db } from '../../lib/db';
 import { useAuth } from '../../lib/auth-context';
 import type { Wedding } from '../../types/database';
 
@@ -19,7 +19,7 @@ export default function ClientDashboard() {
   useEffect(() => {
     let active = true;
     (async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('weddings')
         .select('*')
         .eq('owner_user_id', user?.id ?? '')

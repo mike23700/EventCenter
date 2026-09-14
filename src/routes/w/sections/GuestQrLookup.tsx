@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Search } from 'lucide-react';
-import { supabase } from '../../../lib/supabase';
+import { db } from '../../../lib/db';
 import type { TemplateDef } from '../../../lib/templates';
 import GuestQrCard, { type QrGuest } from './GuestQrCard';
 
@@ -40,7 +40,7 @@ export default function GuestQrLookup({
     setError('');
     setFound(null);
     setMatches(null);
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('guests')
       .select('id, name, phone, qr_token')
       .eq('wedding_id', weddingId)

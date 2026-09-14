@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase } from '../../../lib/supabase';
+import { db } from '../../../lib/db';
 
 export interface GuestIdentity {
   id: string;
@@ -33,7 +33,7 @@ export function useGuestIdentity(weddingId: string) {
     if (name.length < 2) return;
     setError('');
     setStatus('searching');
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('guests')
       .select('id, name, phone, invited_events, qr_token')
       .eq('wedding_id', weddingId)
@@ -68,7 +68,7 @@ export function useGuestIdentity(weddingId: string) {
     if (!name) return;
     setError('');
     setRegistering(true);
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('guests')
       .insert({
         wedding_id: weddingId,

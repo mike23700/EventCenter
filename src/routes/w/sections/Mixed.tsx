@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Search, UserPlus } from 'lucide-react';
-import { supabase } from '../../../lib/supabase';
+import { db } from '../../../lib/db';
 import type { Json, WeddingEvent } from '../../../types/database';
 import { storageUrl } from '../../../lib/media';
 import type { SectionProps } from './types';
@@ -222,7 +222,7 @@ function QuestionnaireView({
       question_key: `${sectionId}:${block.id}:${q.id}`,
       answer: (answers[q.id] ?? (q.type === 'multiple' ? [] : '')) as Json,
     }));
-    const { error } = await supabase
+    const { error } = await db
       .from('guest_responses')
       .upsert(rows, { onConflict: 'guest_id,question_key' });
     setSubmitting(false);

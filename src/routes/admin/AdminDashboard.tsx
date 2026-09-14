@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, Users, CalendarClock, ArrowRight } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { db } from '../../lib/db';
 import type { Wedding } from '../../types/database';
 
 export default function AdminDashboard() {
@@ -12,7 +12,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     let active = true;
     (async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('weddings')
         .select('*')
         .order('created_at', { ascending: false });

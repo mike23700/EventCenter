@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { supabase } from '../../../lib/supabase';
+import { db } from '../../../lib/db';
 import type { Wedding } from '../../../types/database';
 
 const CheckInScanner = lazy(() => import('../../../components/CheckInScanner'));
@@ -17,7 +17,7 @@ export default function CheckIn() {
     if (!id) return;
     let active = true;
     (async () => {
-      const { data, error } = await supabase.from('weddings').select('*').eq('id', id).maybeSingle();
+      const { data, error } = await db.from('weddings').select('*').eq('id', id).maybeSingle();
       if (!active) return;
       if (error) setError(error.message);
       else setWedding(data);

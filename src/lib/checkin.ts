@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { db } from './db';
 
 export type CheckInResult =
   | { status: 'ok'; name: string }
@@ -16,7 +16,7 @@ export async function scanGuestCheckIn(
   qrToken: string,
   scannedBy: string | null,
 ): Promise<CheckInResult> {
-  const { data: existing, error: findError } = await supabase
+  const { data: existing, error: findError } = await db
     .from('guests')
     .select('id, name, checked_in_at')
     .eq('wedding_id', weddingId)
@@ -28,7 +28,7 @@ export async function scanGuestCheckIn(
     return { status: 'already', name: existing.name, at: existing.checked_in_at };
   }
 
-  const { data: updated } = await supabase
+  const { data: updated } = await db
     .from('guests')
     .update({ checked_in_at: new Date().toISOString(), checked_in_by: scannedBy })
     .eq('id', existing.id)

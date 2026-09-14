@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Send } from 'lucide-react';
-import { supabase } from '../../../lib/supabase';
+import { db } from '../../../lib/db';
 import type { TemplateDef } from '../../../lib/templates';
 
 /**
@@ -28,7 +28,7 @@ export default function TestimonialForm({
     if (!text.trim()) return;
     setSubmitting(true);
     setError('');
-    const { error } = await supabase.from('testimonials').insert({
+    const { error } = await db.from('testimonials').insert({
       wedding_id: weddingId,
       author: author.trim() || null,
       content: text.trim(),

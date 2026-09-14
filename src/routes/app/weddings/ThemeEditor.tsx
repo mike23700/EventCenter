@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Check, ExternalLink, Flower, Crown, Music, UploadCloud, X, Loader2 } from 'lucide-react';
-import { supabase } from '../../../lib/supabase';
+import { db } from '../../../lib/db';
 import type { Wedding, Json } from '../../../types/database';
 import { DISPLAY_FONTS, BODY_FONTS } from '../../../lib/format';
 import { TEMPLATE_DEFS, getTemplate } from '../../../lib/templates';
@@ -76,7 +76,7 @@ export default function ThemeEditor() {
     setSaving(true);
     setError('');
     setSaved(false);
-    const { error } = await supabase
+    const { error } = await db
       .from('weddings')
       .update({
         template,

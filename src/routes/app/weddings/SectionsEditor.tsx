@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
 import { Check, GripVertical, Pencil, Power, ArrowUp, ArrowDown, X, Trash2 } from 'lucide-react';
-import { supabase } from '../../../lib/supabase';
+import { db } from '../../../lib/db';
 import type { Wedding, Section, Json, SectionType } from '../../../types/database';
 import SectionContentEditor from './SectionContentEditor';
 
@@ -45,7 +45,7 @@ export default function SectionsEditor() {
     if (!wedding) return;
     let active = true;
     (async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('sections')
         .select('*')
         .eq('wedding_id', wedding.id)
@@ -66,7 +66,7 @@ export default function SectionsEditor() {
   async function toggleSection(section: Section) {
     const next = !section.enabled;
     setSections((prev) => prev.map((s) => (s.id === section.id ? { ...s, enabled: next } : s)));
-    const { error } = await supabase
+    const { error } = await db
       .from('sections')
       .update({ enabled: next })
       .eq('id', section.id);
@@ -85,7 +85,7 @@ export default function SectionsEditor() {
     setSections(withPos);
     // Met à jour les deux positions échangées (update partiel par ligne).
     for (const s of [withPos[idx], withPos[swapIdx]]) {
-      const { error } = await supabase.from('sections').update({ position: s.position }).eq('id', s.id);
+      const { error } = await db.from('sections').update({ position: s.position }).eq('id', s.id);
       if (error) setError(error.message);
     }
   }
@@ -98,7 +98,7 @@ export default function SectionsEditor() {
     const withPos = list.map((s, i) => ({ ...s, position: i }));
     setSections(withPos);
     for (const s of withPos) {
-      const { error } = await supabase.from('sections').update({ position: s.position }).eq('id', s.id);
+      const { error } = await db.from('sections').update({ position: s.position }).eq('id', s.id);
       if (error) setError(error.message);
     }
   }
@@ -106,7 +106,7 @@ export default function SectionsEditor() {
   async function saveContent(section: Section, content: Json) {
     setSaving(true);
     setError('');
-    const { error } = await supabase
+    const { error } = await db
       .from('sections')
       .update({ content })
       .eq('id', section.id);
@@ -124,7 +124,7 @@ export default function SectionsEditor() {
     const section = confirmingDelete;
     setDeleting(true);
     setError('');
-    const { error } = await supabase.from('sections').delete().eq('id', section.id);
+    const { error } = await db.from('sections').delete().eq('id', section.id);
     setDeleting(false);
     if (error) {
       setError(error.message);
@@ -144,7 +144,7 @@ export default function SectionsEditor() {
     if (!wedding) return;
     const position = sections.length;
     const defaultContent: Json = type === 'countdown' || type === 'save_the_date' ? { date: '' } : {};
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('sections')
       .insert({ wedding_id: wedding.id, type, position, enabled: true, content: defaultContent })
       .select('*')

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { ClipboardList } from 'lucide-react';
-import { supabase } from '../../../lib/supabase';
+import { db } from '../../../lib/db';
 import type { Wedding, Section, Guest, GuestResponse, Json } from '../../../types/database';
 
 interface QuestionMeta {
@@ -61,8 +61,8 @@ export default function ResponsesEditor() {
     let active = true;
     (async () => {
       const [{ data: secs, error: secErr }, { data: gs, error: gErr }] = await Promise.all([
-        supabase.from('sections').select('*').eq('wedding_id', wedding.id).eq('type', 'mixed'),
-        supabase.from('guests').select('*').eq('wedding_id', wedding.id),
+        db.from('sections').select('*').eq('wedding_id', wedding.id).eq('type', 'mixed'),
+        db.from<Guest>('guests').select('*').eq('wedding_id', wedding.id),
       ]);
       if (!active) return;
       if (secErr || gErr) {
@@ -80,7 +80,7 @@ export default function ResponsesEditor() {
         setLoading(false);
         return;
       }
-      const { data: resp, error: rErr } = await supabase
+      const { data: resp, error: rErr } = await db
         .from('guest_responses')
         .select('*')
         .in('guest_id', guestIds);

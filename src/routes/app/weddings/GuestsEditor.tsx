@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Plus, Pencil, Trash2, Check, X, Users, Filter, ClipboardList, QrCode } from 'lucide-react';
-import { supabase } from '../../../lib/supabase';
+import { db } from '../../../lib/db';
 import type { Wedding, WeddingEvent, Guest, Section, GuestResponse, Json } from '../../../types/database';
 import { formatDateTime } from '../../../lib/format';
 import { generateGuestQrDataUrl } from '../../../lib/guestQr';
@@ -120,9 +120,9 @@ export default function GuestsEditor() {
     let active = true;
     (async () => {
       const [{ data: g }, { data: evs }, { data: secs }] = await Promise.all([
-        supabase.from('guests').select('*').eq('wedding_id', wedding.id).order('created_at'),
-        supabase.from('wedding_events').select('*').eq('wedding_id', wedding.id).order('position'),
-        supabase.from('sections').select('*').eq('wedding_id', wedding.id).eq('type', 'mixed'),
+        db.from<Guest>('guests').select('*').eq('wedding_id', wedding.id).order('created_at'),
+        db.from('wedding_events').select('*').eq('wedding_id', wedding.id).order('position'),
+        db.from('sections').select('*').eq('wedding_id', wedding.id).eq('type', 'mixed'),
       ]);
       if (!active) return;
       setGuests(g ?? []);
@@ -132,7 +132,7 @@ export default function GuestsEditor() {
 
       const guestIds = (g ?? []).map((row) => row.id);
       if (guestIds.length > 0) {
-        const { data: resp } = await supabase.from('guest_responses').select('*').in('guest_id', guestIds);
+        const { data: resp } = await db.from('guest_responses').select('*').in('guest_id', guestIds);
         if (!active) return;
         setResponses(resp ?? []);
         const counts: Record<string, number> = {};
@@ -245,11 +245,11 @@ export default function GuestsEditor() {
       invited_events: draft.invited_events,
     };
     if (draft.id) {
-      const { error } = await supabase.from('guests').update(payload).eq('id', draft.id);
+      const { error } = await db.from('guests').update(payload).eq('id', draft.id);
       if (error) setError(error.message);
       else setGuests((prev) => prev.map((g) => (g.id === draft.id ? { ...g, ...payload } : g)));
     } else {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('guests')
         .insert({ wedding_id: wedding.id, ...payload })
         .select('*')
@@ -262,7 +262,7 @@ export default function GuestsEditor() {
   }
 
   async function remove(id: string) {
-    const { error } = await supabase.from('guests').delete().eq('id', id);
+    const { error } = await db.from('guests').delete().eq('id', id);
     if (error) setError(error.message);
     else setGuests((prev) => prev.filter((g) => g.id !== id));
   }

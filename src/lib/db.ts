@@ -14,13 +14,15 @@ export interface DbError {
 export interface DbResult<T> {
   data: T | null;
   error: DbError | null;
+  count?: number | null;
 }
 
 type Filter =
   | { type: 'eq'; col: string; value: string }
   | { type: 'in'; col: string; values: string[] }
   | { type: 'not_null'; col: string }
-  | { type: 'is_null'; col: string };
+  | { type: 'is_null'; col: string }
+  | { type: 'ilike'; col: string; value: string };
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
@@ -29,7 +31,8 @@ function toStr(v: unknown): string {
   return typeof v === 'string' ? v : String(v);
 }
 
-class QueryBuilder<T = any> implements PromiseLike<DbResult<T>> {
+/** `T` = type d'une ligne ; `Row` = forme du résultat (`T[]` par défaut, `T`/`T | null` après `.single()`/`.maybeSingle()`). */
+class QueryBuilder<T = any, Row = T[]> implements PromiseLike<DbResult<Row>> {
   private readonly table: string;
   private method: 'select' | 'insert' | 'update' | 'delete' = 'select';
   private selectCols = '*';
@@ -40,13 +43,15 @@ class QueryBuilder<T = any> implements PromiseLike<DbResult<T>> {
   private body: unknown;
   private onConflict: string | null = null;
   private singleMode: 'single' | 'maybe' | null = null;
+  private wantCount = false;
 
   constructor(table: string) {
     this.table = table;
   }
 
-  select(cols = '*'): this {
+  select(cols = '*', opts?: { count?: 'exact' }): this {
     this.selectCols = cols;
+    this.wantCount = opts?.count === 'exact';
     if (this.method !== 'insert' && this.method !== 'update' && this.method !== 'delete') {
       this.method = 'select';
     }
@@ -87,6 +92,11 @@ class QueryBuilder<T = any> implements PromiseLike<DbResult<T>> {
     return this;
   }
 
+  ilike(col: string, pattern: string): this {
+    this.filters.push({ type: 'ilike', col, value: pattern });
+    return this;
+  }
+
   /** Seul usage dans le code : `.not('date', 'is', null)`. */
   not(col: string, _op: 'is', _value: null): this {
     this.filters.push({ type: 'not_null', col });
@@ -110,18 +120,18 @@ class QueryBuilder<T = any> implements PromiseLike<DbResult<T>> {
     return this;
   }
 
-  single(): this {
+  single(): QueryBuilder<T, T> {
     this.singleMode = 'single';
-    return this;
+    return this as unknown as QueryBuilder<T, T>;
   }
 
-  maybeSingle(): this {
+  maybeSingle(): QueryBuilder<T, T | null> {
     this.singleMode = 'maybe';
-    return this;
+    return this as unknown as QueryBuilder<T, T | null>;
   }
 
-  then<TResult1 = DbResult<T>, TResult2 = never>(
-    onfulfilled?: ((value: DbResult<T>) => TResult1 | PromiseLike<TResult1>) | null,
+  then<TResult1 = DbResult<Row>, TResult2 = never>(
+    onfulfilled?: ((value: DbResult<Row>) => TResult1 | PromiseLike<TResult1>) | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): PromiseLike<TResult1 | TResult2> {
     return this.execute().then(onfulfilled, onrejected);
@@ -135,14 +145,16 @@ class QueryBuilder<T = any> implements PromiseLike<DbResult<T>> {
       else if (f.type === 'in') params.set(`in.${f.col}`, f.values.join(','));
       else if (f.type === 'not_null') params.set(`not.${f.col}`, 'is.null');
       else if (f.type === 'is_null') params.set(`is.${f.col}`, 'null');
+      else if (f.type === 'ilike') params.set(`ilike.${f.col}`, f.value);
     }
     if (this.orderCol) params.set('order', `${this.orderCol}.${this.orderDir}`);
     if (this.limitN != null) params.set('limit', String(this.limitN));
     if (this.onConflict) params.set('on_conflict', this.onConflict);
+    if (this.wantCount) params.set('count', 'exact');
     return params.toString();
   }
 
-  private async execute(): Promise<DbResult<T>> {
+  private async execute(): Promise<DbResult<Row>> {
     const qs = this.buildQuery();
     const url = `/api/db/${this.table}${qs ? `?${qs}` : ''}`;
 
@@ -191,12 +203,12 @@ class QueryBuilder<T = any> implements PromiseLike<DbResult<T>> {
         data = rows[0] ?? null;
       }
     }
-    return { data: data as T, error: null };
+    return { data: data as Row, error: null, count: json.count ?? null };
   }
 }
 
 export const db = {
-  from<T = any>(table: string): QueryBuilder<T> {
-    return new QueryBuilder<T>(table);
+  from<T = any>(table: string): QueryBuilder<T, T[]> {
+    return new QueryBuilder<T, T[]>(table);
   },
 };

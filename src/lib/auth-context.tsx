@@ -1,24 +1,33 @@
 import { useEffect, useContext, createContext } from 'react';
-import type { User } from '@supabase/supabase-js';
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
-import { supabase } from './supabase';
 
 /**
  * Contexte d'authentification basé sur une petite store Zustand (vanilla).
- * Synchronise l'état avec les événements de Supabase Auth.
+ * Synchronise l'état avec la session cookie de notre API (`/api/auth/*`).
  */
 
+/** Forme renvoyée par `/api/auth/*` — mêmes clés que l'ancien `User` Supabase
+ * (`user.email`, `user.app_metadata.role`) pour que les autres écrans (ex.
+ * AdminLayout.tsx) n'aient pas à changer. */
+export interface AppUser {
+  id: string;
+  email: string;
+  app_metadata: { role: string };
+}
+
 interface AuthState {
-  user: User | null;
+  user: AppUser | null;
   loading: boolean;
   loaded: boolean;
-  setUser: (user: User | null) => void;
-  signIn: (email: string, password: string) => Promise<{ error?: string; user?: User }>;
+  setUser: (user: AppUser | null) => void;
+  signIn: (email: string, password: string) => Promise<{ error?: string; user?: AppUser }>;
   signOut: () => Promise<void>;
 }
 
 export type { AuthState };
+
+const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
 export const authStore = createStore<AuthState>((set) => ({
   user: null,
@@ -27,15 +36,21 @@ export const authStore = createStore<AuthState>((set) => ({
   setUser: (user) => set({ user }),
   signIn: async (email, password) => {
     set({ loading: true });
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: JSON_HEADERS,
+      credentials: 'same-origin',
+      body: JSON.stringify({ email, password }),
+    });
+    const json = await res.json().catch(() => ({ error: `Erreur ${res.status}` }));
     set({ loading: false });
-    if (error) return { error: error.message };
-    const user = data.session?.user ?? null;
+    if (!res.ok) return { error: json.error ?? `Erreur ${res.status}` };
+    const user = (json.user as AppUser | null) ?? null;
     set({ user });
     return user ? { user } : {};
   },
   signOut: async () => {
-    await supabase.auth.signOut();
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
     set({ user: null });
   },
 }));
@@ -44,22 +59,19 @@ export type AuthStore = typeof authStore;
 
 const AuthContext = createContext<AuthStore>(authStore);
 
-/** Provider qui écoute le cycle de vie de la session Supabase. */
+/** Provider qui recharge la session au montage (cookie de session déjà posé par le navigateur). */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const store = authStore;
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      authStore.setState({ user: data.session?.user ?? null, loading: false, loaded: true });
-    });
-
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      authStore.setState({ user: session?.user ?? null, loading: false, loaded: true });
-    });
-
-    return () => {
-      sub.subscription.unsubscribe();
-    };
+    fetch('/api/auth/session', { credentials: 'same-origin' })
+      .then((res) => res.json())
+      .then((json) => {
+        authStore.setState({ user: (json.user as AppUser | null) ?? null, loading: false, loaded: true });
+      })
+      .catch(() => {
+        authStore.setState({ user: null, loading: false, loaded: true });
+      });
   }, []);
 
   return <AuthContext.Provider value={store}>{children}</AuthContext.Provider>;

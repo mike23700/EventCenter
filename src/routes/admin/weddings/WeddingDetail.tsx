@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { ArrowLeft, Pencil, ExternalLink, Copy, Check, Power, PowerOff, User, ShieldCheck, Settings, ScanLine } from 'lucide-react';
-import { supabase } from '../../../lib/supabase';
-import { weddingPublicUrl } from '../../../lib/supabase';
-import { formatDateTime, formatDate } from '../../../lib/format';
+import { db } from '../../../lib/db';
+import { formatDateTime, formatDate, weddingPublicUrl } from '../../../lib/format';
 import type { Wedding } from '../../../types/database';
 import WeddingMediaPanel from '../../../components/WeddingMediaPanel';
 
@@ -26,8 +25,8 @@ export default function WeddingDetail() {
     let active = true;
     (async () => {
       const [{ data, error }, { data: evs }] = await Promise.all([
-        supabase.from('weddings').select('*').eq('id', id).single(),
-        supabase.from('wedding_events').select('date').eq('wedding_id', id).not('date', 'is', null).order('date', { ascending: false }).limit(1),
+        db.from('weddings').select('*').eq('id', id).single(),
+        db.from('wedding_events').select('date').eq('wedding_id', id).not('date', 'is', null).order('date', { ascending: false }).limit(1),
       ]);
       if (active) {
         if (error) setError(error.message);
@@ -59,7 +58,7 @@ export default function WeddingDetail() {
     if (!wedding) return;
     setNotice('');
     setError('');
-    const { error } = await supabase.from('weddings').update({ is_active: next }).eq('id', wedding.id);
+    const { error } = await db.from('weddings').update({ is_active: next }).eq('id', wedding.id);
     if (error) {
       setError(error.message);
       return;

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Plus, Pencil, Trash2, Check, X, ExternalLink, ArrowUp, ArrowDown, CornerDownRight } from 'lucide-react';
-import { supabase } from '../../../lib/supabase';
+import { db } from '../../../lib/db';
 import type { Wedding, WeddingEvent } from '../../../types/database';
 import { toIso, fromIsoForInput } from '../../../lib/format';
 import MediaUploader from '../../../components/MediaUploader';
@@ -48,7 +48,7 @@ export default function ProgramEditor() {
     if (!wedding) return;
     let active = true;
     (async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('wedding_events')
         .select('*')
         .eq('wedding_id', wedding.id)
@@ -106,11 +106,11 @@ export default function ProgramEditor() {
       location_maps_url: draft.location_maps_url.trim() || null,
     };
     if (draft.id) {
-      const { error } = await supabase.from('wedding_events').update(payload).eq('id', draft.id);
+      const { error } = await db.from('wedding_events').update(payload).eq('id', draft.id);
       if (error) setError(error.message);
       else setEvents((prev) => prev.map((e) => (e.id === draft.id ? { ...e, ...payload } : e)));
     } else {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('wedding_events')
         .insert({ wedding_id: wedding.id, position: events.length, ...payload })
         .select('*')
@@ -123,7 +123,7 @@ export default function ProgramEditor() {
   }
 
   async function remove(id: string) {
-    const { error } = await supabase.from('wedding_events').delete().eq('id', id);
+    const { error } = await db.from('wedding_events').delete().eq('id', id);
     if (error) setError(error.message);
     else setEvents((prev) => prev.filter((e) => e.id !== id && e.parent_id !== id));
   }
@@ -143,8 +143,8 @@ export default function ProgramEditor() {
       return e;
     }));
     await Promise.all([
-      supabase.from('wedding_events').update({ position: b.position }).eq('id', a.id),
-      supabase.from('wedding_events').update({ position: a.position }).eq('id', b.id),
+      db.from('wedding_events').update({ position: b.position }).eq('id', a.id),
+      db.from('wedding_events').update({ position: a.position }).eq('id', b.id),
     ]);
   }
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
+import { db } from '../../lib/db';
 import type { Wedding } from '../../types/database';
 
 /**
@@ -17,7 +17,7 @@ export function useWeddingBySlug(): { wedding: Wedding | null; loading: boolean 
     if (!slug) return;
     let active = true;
     (async () => {
-      const { data } = await supabase.from('weddings').select('*').eq('slug', slug).maybeSingle();
+      const { data } = await db.from('weddings').select('*').eq('slug', slug).maybeSingle();
       if (!active) return;
       setWedding(data);
       setLoading(false);

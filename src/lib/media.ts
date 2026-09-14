@@ -1,15 +1,10 @@
-import { supabase } from './supabase';
-import { randomString } from './slug';
-
-/** URL publique d'un objet stocké dans un bucket Supabase Storage. */
+/** URL publique d'un objet stocké dans un bucket (servi par Express en statique). */
 export function storageUrl(
   bucket: 'media' | 'covers' | 'logos',
   path: string | null | undefined,
 ): string | null {
   if (!path) return null;
-  const base = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-  if (!base) return null;
-  return `${base}/storage/v1/object/public/${bucket}/${path}`;
+  return `/uploads/${bucket}/${path}`;
 }
 
 /** URL publique d'un média de la galerie (chemin ou URL directe). */
@@ -100,7 +95,8 @@ export type UploadOpts = {
 };
 
 /**
- * Upload d'un fichier vers Supabase Storage.
+ * Upload d'un fichier vers `/api/upload` (multipart). Le serveur choisit le
+ * nom de fichier final ; on lui passe juste le bucket et le dossier cible.
  * Retourne le chemin complet (`dossier/nom.ext`) une fois le fichier déposé,
  * prêt à être stocké dans un champ texte / du JSON.
  */
@@ -108,22 +104,32 @@ export async function uploadFile(
   file: File,
   { bucket, folder, onProgress }: UploadOpts,
 ): Promise<string> {
-  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'bin';
-  const path = [
-    folder ? folder.replace(/^\/+|\/+$/g, '') : 'uploads',
-    `${Date.now()}-${randomString(8)}.${ext}`,
-  ].filter(Boolean).join('/');
+  const form = new FormData();
+  form.set('bucket', bucket);
+  form.set('folder', folder ? folder.replace(/^\/+|\/+$/g, '') : 'uploads');
+  form.set('file', file);
 
-  const { error } = await supabase.storage
-    .from(bucket)
-    .upload(path, file, { upsert: false, cacheControl: '3600', contentType: file.type });
+  const res = await fetch('/api/upload', {
+    method: 'POST',
+    credentials: 'same-origin',
+    body: form,
+  });
+  const json = await res
+    .json()
+    .catch(() => ({ error: `Erreur ${res.status}` }));
 
-  if (error) throw new Error(error.message);
+  if (!res.ok) throw new Error(json.error?.message ?? json.error ?? `Erreur ${res.status}`);
   onProgress?.(100);
-  return path;
+  return json.path as string;
 }
 
 export async function deleteFile(bucket: UploadOpts['bucket'], path: string): Promise<void> {
-  const { error } = await supabase.storage.from(bucket).remove([path]);
-  if (error) throw new Error(error.message);
+  const res = await fetch(`/api/upload?bucket=${encodeURIComponent(bucket)}&path=${encodeURIComponent(path)}`, {
+    method: 'DELETE',
+    credentials: 'same-origin',
+  });
+  const json = await res
+    .json()
+    .catch(() => ({ error: `Erreur ${res.status}` }));
+  if (!res.ok) throw new Error(json.error?.message ?? json.error ?? `Erreur ${res.status}`);
 }

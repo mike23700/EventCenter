@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { Check, X, Trash2, QrCode, UploadCloud, Loader2 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { db } from '../lib/db';
 import { mediaUrl, uploadFile, validateGalleryFile } from '../lib/media';
 import type { Wedding, Media, Testimonial } from '../types/database';
 
@@ -64,8 +64,8 @@ export default function WeddingMediaPanel({ wedding, publicUrl }: { wedding: Wed
 
   async function reload() {
     const [{ data: m }, { data: t }] = await Promise.all([
-      supabase.from('media').select('*').eq('wedding_id', wedding.id).order('created_at', { ascending: false }),
-      supabase.from('testimonials').select('*').eq('wedding_id', wedding.id).order('created_at', { ascending: false }),
+      db.from('media').select('*').eq('wedding_id', wedding.id).order('created_at', { ascending: false }),
+      db.from('testimonials').select('*').eq('wedding_id', wedding.id).order('created_at', { ascending: false }),
     ]);
     setMedia((m ?? []) as Media[]);
     setTestimonials((t ?? []) as Testimonial[]);
@@ -85,25 +85,25 @@ export default function WeddingMediaPanel({ wedding, publicUrl }: { wedding: Wed
   }, [wedding.id]);
 
   async function setMediaStatus(id: string, status: Media['status']) {
-    const { error } = await supabase.from('media').update({ status }).eq('id', id);
+    const { error } = await db.from('media').update({ status }).eq('id', id);
     if (error) setError(error.message);
     else setMedia((prev) => prev.map((m) => (m.id === id ? { ...m, status } : m)));
   }
 
   async function removeMedia(id: string) {
-    const { error } = await supabase.from('media').delete().eq('id', id);
+    const { error } = await db.from('media').delete().eq('id', id);
     if (error) setError(error.message);
     else setMedia((prev) => prev.filter((m) => m.id !== id));
   }
 
   async function setTestimonialStatus(id: string, status: Testimonial['status']) {
-    const { error } = await supabase.from('testimonials').update({ status }).eq('id', id);
+    const { error } = await db.from('testimonials').update({ status }).eq('id', id);
     if (error) setError(error.message);
     else setTestimonials((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)));
   }
 
   async function removeTestimonial(id: string) {
-    const { error } = await supabase.from('testimonials').delete().eq('id', id);
+    const { error } = await db.from('testimonials').delete().eq('id', id);
     if (error) setError(error.message);
     else setTestimonials((prev) => prev.filter((t) => t.id !== id));
   }
@@ -120,7 +120,7 @@ export default function WeddingMediaPanel({ wedding, publicUrl }: { wedding: Wed
     try {
       const type = file.type.startsWith('video') ? 'video' : 'image';
       const path = await uploadFile(file, { bucket: 'media', folder: `weddings/${wedding.slug}/galerie` });
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('media')
         .insert({ wedding_id: wedding.id, type, storage_path: path, uploaded_by: 'admin', status: 'published' })
         .select('*')

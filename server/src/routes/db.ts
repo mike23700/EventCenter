@@ -18,6 +18,7 @@ interface Filters {
   inList: [string, string[]][];
   notNull: string[];
   isNull: string[];
+  ilike: [string, string][];
 }
 
 function parseFilters(query: Record<string, unknown>, allowedCols: string[]): Filters {
@@ -25,6 +26,7 @@ function parseFilters(query: Record<string, unknown>, allowedCols: string[]): Fi
   const inList: [string, string[]][] = [];
   const notNull: string[] = [];
   const isNull: string[] = [];
+  const ilike: [string, string][] = [];
 
   for (const [key, raw] of Object.entries(query)) {
     const value = Array.isArray(raw) ? raw[0] : raw;
@@ -34,6 +36,10 @@ function parseFilters(query: Record<string, unknown>, allowedCols: string[]): Fi
       const col = key.slice(3);
       assertColumn(col, allowedCols);
       eq.push([col, strValue]);
+    } else if (key.startsWith('ilike.')) {
+      const col = key.slice(6);
+      assertColumn(col, allowedCols);
+      ilike.push([col, strValue]);
     } else if (key.startsWith('in.')) {
       const col = key.slice(3);
       assertColumn(col, allowedCols);
@@ -48,7 +54,7 @@ function parseFilters(query: Record<string, unknown>, allowedCols: string[]): Fi
       if (strValue === 'null') isNull.push(col);
     }
   }
-  return { eq, inList, notNull, isNull };
+  return { eq, inList, notNull, isNull, ilike };
 }
 
 function assertColumn(col: string, allowed: string[]): void {
@@ -77,6 +83,11 @@ function buildWhere(filters: Filters, paramOffset: number): { sql: string; param
   }
   for (const col of filters.notNull) parts.push(`${col} is not null`);
   for (const col of filters.isNull) parts.push(`${col} is null`);
+  for (const [col, val] of filters.ilike) {
+    params.push(val);
+    parts.push(`${col} ilike $${n}`);
+    n += 1;
+  }
 
   return { sql: parts.join(' and '), params, nextOffset: n };
 }
@@ -142,7 +153,16 @@ router.get('/:table', async (req, res, next) => {
     }
 
     const { rows } = await pool.query(sql, params);
-    res.json({ data: rows, error: null });
+
+    let count: number | null = null;
+    if (req.query.count === 'exact') {
+      let countSql = `select count(*) from ${t}`;
+      if (parts.length > 0) countSql += ` where ${parts.join(' and ')}`;
+      const { rows: countRows } = await pool.query(countSql, params);
+      count = Number(countRows[0].count);
+    }
+
+    res.json({ data: rows, error: null, count });
   } catch (e) {
     next(e);
   }

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { WeddingEvent, Section } from '../../types/database';
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { db } from '../../lib/db';
 import { useWeddingBySlug } from './useWeddingBySlug';
 import WeddingThemeShell from './WeddingThemeShell';
 import SectionRenderer from './sections';
@@ -28,8 +28,8 @@ export default function WeddingPublic() {
     let active = true;
     (async () => {
       const [{ data: evs }, { data: secs }] = await Promise.all([
-        supabase.from('wedding_events').select('*').eq('wedding_id', wedding.id).order('position'),
-        supabase.from('sections').select('*').eq('wedding_id', wedding.id).order('position'),
+        db.from('wedding_events').select('*').eq('wedding_id', wedding.id).order('position'),
+        db.from<Section>('sections').select('*').eq('wedding_id', wedding.id).order('position'),
       ]);
       if (!active) return;
       setEvents(evs ?? []);
