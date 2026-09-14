@@ -63,7 +63,7 @@ export function useGuestIdentity(weddingId: string) {
     setStatus('found');
   }
 
-  async function registerSelf(payload: { name: string; phone: string }) {
+  async function registerSelf(payload: { name: string; phone: string; invitedEvents?: string[] }) {
     const name = payload.name.trim();
     if (!name) return;
     setError('');
@@ -74,6 +74,7 @@ export function useGuestIdentity(weddingId: string) {
         wedding_id: weddingId,
         name,
         phone: payload.phone.trim() || null,
+        invited_events: payload.invitedEvents ?? [],
       })
       .select('id, name, phone, invited_events, qr_token')
       .single();

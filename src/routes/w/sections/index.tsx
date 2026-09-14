@@ -49,7 +49,13 @@ export default function SectionRenderer({ section, wedding, events }: SectionRen
 
   if (!C) return null;
 
-  if (section.type === 'program' || section.type === 'countdown' || section.type === 'save_the_date') {
+  if (
+    section.type === 'program' ||
+    section.type === 'countdown' ||
+    section.type === 'save_the_date' ||
+    section.type === 'rsvp' ||
+    section.type === 'mixed'
+  ) {
     return <C {...shared} content={section.content} events={events} />;
   }
   return <C {...shared} content={section.content} />;

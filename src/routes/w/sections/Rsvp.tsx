@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { PartyPopper } from 'lucide-react';
+import type { WeddingEvent } from '../../../types/database';
 import type { SectionProps } from './types';
 import { asRecord, str } from './types';
 import { SectionShell } from './shell';
@@ -10,15 +11,20 @@ import GuestQrLookup from './GuestQrLookup';
 
 type Mode = 'register' | 'lookup';
 
+export interface RsvpProps extends SectionProps {
+  events: WeddingEvent[];
+}
+
 /**
  * Section RSVP (confirmation de présence) : recevoir le lien du site vaut
  * invitation. Deux parcours :
- *  - « Je m'inscris » : nom + téléphone → génère un QR d'invitation à
- *    présenter le jour J (scanné à l'entrée pour le pointage de présence).
+ *  - « Je m'inscris » : nom + téléphone (+ étapes si plusieurs) → génère un
+ *    QR d'invitation à présenter le jour J (scanné à l'entrée pour le
+ *    pointage de présence).
  *  - « Retrouver mon QR » : recherche par nom (désambiguïsation par
  *    téléphone en cas d'homonymes) pour réafficher un QR déjà généré.
  */
-export default function Rsvp({ content, accent, tpl, wedding }: SectionProps) {
+export default function Rsvp({ content, accent, tpl, wedding, events }: RsvpProps) {
   const c = asRecord(content);
   const title = str(c, 'title') || 'Confirmez votre invitation';
   const intro = str(c, 'intro') || "Inscrivez-vous pour recevoir votre QR d'invitation, à présenter le jour J.";
@@ -28,8 +34,8 @@ export default function Rsvp({ content, accent, tpl, wedding }: SectionProps) {
   const id = useGuestIdentity(wedding.id);
   const { status, guest } = id;
 
-  async function registerSelf(name: string, phone: string) {
-    await id.registerSelf({ name, phone });
+  async function registerSelf(name: string, phone: string, eventIds: string[]) {
+    await id.registerSelf({ name, phone, invitedEvents: eventIds });
   }
 
   return (
@@ -83,6 +89,7 @@ export default function Rsvp({ content, accent, tpl, wedding }: SectionProps) {
                   palette={palette}
                   submitting={id.registering}
                   error={id.error}
+                  events={events}
                   onSubmit={registerSelf}
                 />
               ) : (

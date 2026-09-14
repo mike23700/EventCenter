@@ -1,13 +1,17 @@
 import { useState } from 'react';
 import { Search, UserPlus } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
-import type { Json } from '../../../types/database';
+import type { Json, WeddingEvent } from '../../../types/database';
 import { storageUrl } from '../../../lib/media';
 import type { SectionProps } from './types';
 import { asRecord } from './types';
 import { SectionShell } from './shell';
 import { useGuestIdentity } from './useGuestIdentity';
 import GuestSelfRegister from './GuestSelfRegister';
+
+export interface MixedProps extends SectionProps {
+  events: WeddingEvent[];
+}
 
 type Question = {
   id: string;
@@ -45,7 +49,7 @@ function isBlock(b: unknown): b is Block {
  * Section "partie mixte" : blocs texte / image / vidéo / questionnaire
  * librement ordonnés, mise en page façon magazine selon le template.
  */
-export default function Mixed({ content, accent, tpl, wedding, sectionId }: SectionProps) {
+export default function Mixed({ content, accent, tpl, wedding, sectionId, events }: MixedProps) {
   const blocks = parseBlocks(content);
   if (blocks.length === 0) return null;
 
@@ -69,6 +73,7 @@ export default function Mixed({ content, accent, tpl, wedding, sectionId }: Sect
                   tpl={tpl}
                   weddingId={wedding.id}
                   sectionId={sectionId ?? ''}
+                  events={events}
                 />
               );
             default:
@@ -177,12 +182,14 @@ function QuestionnaireView({
   tpl,
   weddingId,
   sectionId,
+  events,
 }: {
   block: Block;
   accent: string;
   tpl: SectionProps['tpl'];
   weddingId: string;
   sectionId: string;
+  events: WeddingEvent[];
 }) {
   const { palette } = tpl;
   const questions = (block.questions ?? []).filter((q) => q.label);
@@ -201,8 +208,8 @@ function QuestionnaireView({
     setAnswers((a) => ({ ...a, [qid]: value }));
   }
 
-  async function registerSelf(name: string, phone: string) {
-    await id.registerSelf({ name, phone });
+  async function registerSelf(name: string, phone: string, eventIds: string[]) {
+    await id.registerSelf({ name, phone, invitedEvents: eventIds });
     setRegistering(false);
   }
 
@@ -273,6 +280,7 @@ function QuestionnaireView({
               palette={palette}
               submitting={id.registering}
               error={id.error}
+              events={events}
               onSubmit={registerSelf}
               onCancel={() => setRegistering(false)}
             />

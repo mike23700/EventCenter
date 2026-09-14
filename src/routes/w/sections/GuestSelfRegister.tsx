@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { UserPlus } from 'lucide-react';
 import type { TemplateDef } from '../../../lib/templates';
+import type { WeddingEvent } from '../../../types/database';
 
 /**
- * Formulaire d'auto-inscription : nom + téléphone uniquement. Recevoir le
- * lien du site vaut invitation à toutes les étapes — plus besoin de cocher
- * quoi que ce soit. Utilisé par la section RSVP et par les blocs
- * "questionnaire" de la partie mixte.
+ * Formulaire d'auto-inscription : nom + téléphone, et — quand le programme
+ * comporte plusieurs étapes (mairie, église, soirée…) — un choix des étapes
+ * auxquelles l'invité compte venir, pour que son QR corresponde vraiment à
+ * son invitation (sinon `invited_events` reste vide, donc conviée à rien).
+ * Une seule étape : pas de choix à faire, elle est retenue automatiquement.
+ * Utilisé par la section RSVP et par les blocs "questionnaire" de la partie mixte.
  */
 export default function GuestSelfRegister({
   initialName,
@@ -14,6 +17,7 @@ export default function GuestSelfRegister({
   palette,
   submitting,
   error,
+  events,
   onSubmit,
   onCancel,
 }: {
@@ -22,11 +26,20 @@ export default function GuestSelfRegister({
   palette: TemplateDef['palette'];
   submitting: boolean;
   error?: string;
-  onSubmit: (name: string, phone: string) => void;
+  events?: WeddingEvent[];
+  onSubmit: (name: string, phone: string, eventIds: string[]) => void;
   onCancel?: () => void;
 }) {
   const [name, setName] = useState(initialName);
   const [phone, setPhone] = useState('');
+  const selectable = (events ?? []).filter((e) => !e.parent_id);
+  const [selectedEvents, setSelectedEvents] = useState<string[]>(selectable.map((e) => e.id));
+
+  function toggleEvent(id: string) {
+    setSelectedEvents((prev) => (prev.includes(id) ? prev.filter((e) => e !== id) : [...prev, id]));
+  }
+
+  const needsChoice = selectable.length > 1;
 
   return (
     <div className="space-y-4">
@@ -59,13 +72,43 @@ export default function GuestSelfRegister({
         />
       </div>
 
+      {needsChoice && (
+        <div>
+          <label className="label">Vous serez présent(e) à</label>
+          <div className="flex flex-wrap gap-2">
+            {selectable.map((ev) => {
+              const checked = selectedEvents.includes(ev.id);
+              return (
+                <label
+                  key={ev.id}
+                  className="flex cursor-pointer items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition"
+                  style={{
+                    backgroundColor: checked ? accent : 'transparent',
+                    color: checked ? '#fff' : palette.muted,
+                    border: `1px solid ${checked ? accent : palette.border}`,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    className="hidden"
+                    checked={checked}
+                    onChange={() => toggleEvent(ev.id)}
+                  />
+                  {ev.name}
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <div className="flex justify-end gap-2">
         {onCancel && <button onClick={onCancel} className="btn-outline">Retour</button>}
         <button
-          onClick={() => onSubmit(name, phone)}
-          disabled={submitting || name.trim().length < 2}
+          onClick={() => onSubmit(name, phone, selectedEvents)}
+          disabled={submitting || name.trim().length < 2 || (needsChoice && selectedEvents.length === 0)}
           className="flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white disabled:opacity-40"
           style={{ backgroundColor: accent }}
         >
