@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Check, ExternalLink, Flower, Crown } from 'lucide-react';
+import { Check, ExternalLink, Flower, Crown, Music, UploadCloud, X, Loader2 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import type { Wedding, Json } from '../../../types/database';
 import { DISPLAY_FONTS, BODY_FONTS } from '../../../lib/format';
 import { TEMPLATE_DEFS, getTemplate } from '../../../lib/templates';
+import { storageUrl, uploadFile, deleteFile, validateAudioFile } from '../../../lib/media';
 
 function themeRecord(theme: Json): Record<string, unknown> {
   return theme && typeof theme === 'object' && !Array.isArray(theme)
@@ -55,6 +56,10 @@ export default function ThemeEditor() {
     (themeRecord(wedding.theme)['bodyFont'] as string) ?? '',
   );
   const [template, setTemplate] = useState<string>(wedding.template);
+  const [audioPath, setAudioPath] = useState<string>(wedding.audio_url ?? '');
+  const [audioUploading, setAudioUploading] = useState(false);
+  const [audioError, setAudioError] = useState('');
+  const audioInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
@@ -75,6 +80,7 @@ export default function ThemeEditor() {
       .from('weddings')
       .update({
         template,
+        audio_url: audioPath || null,
         theme: {
           ...themeRecord(wedding.theme),
           primaryColor,
@@ -89,6 +95,40 @@ export default function ThemeEditor() {
       return;
     }
     setSaved(true);
+  }
+
+  async function pickAudio(file: File | undefined) {
+    if (!file) return;
+    const validationError = validateAudioFile(file);
+    if (validationError) {
+      setAudioError(validationError);
+      return;
+    }
+    setAudioUploading(true);
+    setAudioError('');
+    try {
+      const path = await uploadFile(file, { bucket: 'media', folder: `weddings/${wedding.slug}/audio` });
+      if (audioPath) await deleteFile('media', audioPath).catch(() => {});
+      setAudioPath(path);
+    } catch (e) {
+      setAudioError(e instanceof Error ? e.message : 'Envoi impossible');
+    } finally {
+      setAudioUploading(false);
+    }
+  }
+
+  async function removeAudio() {
+    if (!audioPath) return;
+    setAudioUploading(true);
+    setAudioError('');
+    try {
+      await deleteFile('media', audioPath);
+    } catch {
+      // fichier déjà absent : on retire quand même la référence
+    } finally {
+      setAudioPath('');
+      setAudioUploading(false);
+    }
   }
 
   return (
@@ -202,6 +242,50 @@ export default function ThemeEditor() {
               Nous serions heureux de vous compter parmi nous.
             </p>
           </div>
+        </div>
+
+        <div>
+          <label className="label">Musique d'ambiance</label>
+          <p className="mb-2 text-xs text-ink-secondary">
+            Jouée en fond sur le site public (bouton pour l'activer/couper, visible par les invités).
+          </p>
+          <input
+            ref={audioInputRef}
+            type="file"
+            accept="audio/*,.mp3,.wav,.ogg,.m4a"
+            className="hidden"
+            onChange={(e) => pickAudio(e.target.files?.[0])}
+          />
+          {audioPath ? (
+            <div className="flex items-center gap-3 rounded-xl border border-borderlight p-3">
+              <Music className="h-5 w-5 shrink-0 text-gold" />
+              <audio src={storageUrl('media', audioPath) ?? ''} controls className="h-9 flex-1 min-w-0" />
+              <button
+                type="button"
+                onClick={removeAudio}
+                disabled={audioUploading}
+                className="btn-outline !px-2 !py-1.5 shrink-0 hover:!border-red-300 hover:!text-red-600"
+                title="Supprimer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : audioUploading ? (
+            <div className="flex h-16 items-center justify-center gap-2 rounded-xl border border-dashed border-borderlight bg-paper-warm text-ink-secondary">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span className="text-xs">Envoi…</span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => audioInputRef.current?.click()}
+              className="flex h-16 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-borderlight bg-paper-warm text-ink-secondary transition hover:border-gold hover:text-gold"
+            >
+              <UploadCloud className="h-5 w-5" />
+              <span className="text-xs font-medium">Importer un fichier audio (MP3, WAV, OGG…) — 15 Mo max</span>
+            </button>
+          )}
+          {audioError && <p className="mt-1 text-xs text-red-600">{audioError}</p>}
         </div>
 
         {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}

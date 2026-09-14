@@ -78,6 +78,20 @@ export async function validateSplashFile(file: File): Promise<string | null> {
   return null;
 }
 
+export const MAX_AUDIO_BYTES = 15 * 1024 * 1024; // 15 Mo
+const AUDIO_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/x-m4a', 'audio/mp4', 'audio/aac'];
+
+/** Valide la musique d'ambiance du site public : format et poids max avant upload. */
+export function validateAudioFile(file: File): string | null {
+  if (!AUDIO_TYPES.includes(file.type) && !/\.(mp3|wav|ogg|m4a|aac)$/i.test(file.name)) {
+    return 'Format non supporté. Utilisez un fichier audio MP3, WAV, OGG ou M4A.';
+  }
+  if (file.size > MAX_AUDIO_BYTES) {
+    return `Fichier trop volumineux (${formatMb(file.size)}). Limite : ${formatMb(MAX_AUDIO_BYTES)}.`;
+  }
+  return null;
+}
+
 export type UploadOpts = {
   bucket: 'media' | 'covers' | 'logos';
   /** Dossier cible, ex: `weddings/ma-chaine/cover` */

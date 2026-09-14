@@ -142,12 +142,20 @@ export default function Program({ events, accent, tpl }: ProgramProps) {
                 )}
               </span>
               <div
-                className="rounded-2xl p-5"
+                className="overflow-hidden rounded-2xl"
                 style={{
                   backgroundColor: palette.surface,
                   border: `1px solid ${palette.border}`,
                 }}
               >
+              {ev.location_image && (
+                <img
+                  src={storageUrl('media', ev.location_image) ?? ''}
+                  alt=""
+                  className="h-36 w-full object-cover"
+                />
+              )}
+              <div className="p-5">
                 <div className="text-[11px] tracking-[0.3em] uppercase" style={{ color: accent }}>
                   Étape {i + 1}
                 </div>
@@ -194,6 +202,7 @@ export default function Program({ events, accent, tpl }: ProgramProps) {
                     ))}
                   </ul>
                 )}
+              </div>
               </div>
             </li>
           ))}

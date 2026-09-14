@@ -1,14 +1,20 @@
 import { useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Heart } from 'lucide-react';
+import { Heart, LogOut } from 'lucide-react';
 import { useAuth } from '../../lib/auth-context';
 
 /** Layout du panel client (mariés). Garde d'authentification simple. */
 export default function AppLayout() {
   const user = useAuth((s) => s.user);
   const loaded = useAuth((s) => s.loaded);
+  const signOut = useAuth((s) => s.signOut);
   const navigate = useNavigate();
   const location = useLocation();
+
+  async function handleLogout() {
+    await signOut();
+    navigate('/login', { replace: true });
+  }
 
   useEffect(() => {
     if (!loaded) return;
@@ -35,7 +41,17 @@ export default function AppLayout() {
           <Heart className="h-5 w-5 text-gold" fill="currentColor" />
           <span className="hidden sm:inline">Espace client</span>
         </Link>
-        <span className="truncate text-sm text-ink-secondary">{user.email}</span>
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="hidden truncate text-sm text-ink-secondary sm:inline">{user.email}</span>
+          <button
+            onClick={handleLogout}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-borderlight px-3 py-1.5 text-sm text-ink-secondary transition hover:border-red-300 hover:text-red-600"
+            title="Se déconnecter"
+          >
+            <LogOut className="h-4 w-4" />
+            <span className="hidden sm:inline">Déconnexion</span>
+          </button>
+        </div>
       </header>
       <main className="p-4 sm:p-6 md:p-8">
         <Outlet />

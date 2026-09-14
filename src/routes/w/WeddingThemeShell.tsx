@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { Wedding } from '../../types/database';
 import { getTemplate } from '../../lib/templates';
 import { DISPLAY_FONTS, BODY_FONTS } from '../../lib/format';
+import AudioToggle from './AudioToggle';
 
 /**
  * Habillage commun à toutes les pages publiques d'un mariage (site principal,
@@ -71,6 +72,8 @@ export default function WeddingThemeShell({ wedding, children }: { wedding: Wedd
           }}
         />
       )}
+
+      {wedding.audio_url && <AudioToggle audioPath={wedding.audio_url} />}
 
       <div className="relative z-10">
         {children}

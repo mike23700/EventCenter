@@ -28,6 +28,7 @@ export interface Wedding {
   client_email: string | null;
   splash_media_url: string | null;
   splash_media_type: string | null;
+  audio_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -173,6 +174,7 @@ export type Database = {
           client_email: string | null;
           splash_media_url: string | null;
           splash_media_type: string | null;
+          audio_url: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -193,6 +195,7 @@ export type Database = {
           client_email?: string | null;
           splash_media_url?: string | null;
           splash_media_type?: string | null;
+          audio_url?: string | null;
         };
         Update: {
           slug?: string;
@@ -211,6 +214,7 @@ export type Database = {
           client_email?: string | null;
           splash_media_url?: string | null;
           splash_media_type?: string | null;
+          audio_url?: string | null;
         };
         Relationships: [];
       };

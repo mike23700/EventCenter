@@ -7,10 +7,13 @@ import { formatDateTime, formatDate } from '../../../lib/format';
 import type { Wedding } from '../../../types/database';
 import WeddingMediaPanel from '../../../components/WeddingMediaPanel';
 
+const LINK_EXPIRY_DAYS = 14;
+
 export default function WeddingDetail() {
   const { id } = useParams();
   const location = useLocation();
   const [wedding, setWedding] = useState<Wedding | null>(null);
+  const [lastEventDate, setLastEventDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -22,10 +25,14 @@ export default function WeddingDetail() {
     if (!id) return;
     let active = true;
     (async () => {
-      const { data, error } = await supabase.from('weddings').select('*').eq('id', id).single();
+      const [{ data, error }, { data: evs }] = await Promise.all([
+        supabase.from('weddings').select('*').eq('id', id).single(),
+        supabase.from('wedding_events').select('date').eq('wedding_id', id).not('date', 'is', null).order('date', { ascending: false }).limit(1),
+      ]);
       if (active) {
         if (error) setError(error.message);
         else setWedding(data);
+        setLastEventDate(evs?.[0]?.date ?? null);
         setLoading(false);
       }
     })();
@@ -39,10 +46,14 @@ export default function WeddingDetail() {
   if (!wedding) return <p className="text-ink-secondary">Mariage introuvable.</p>;
 
   const publicUrl = weddingPublicUrl(wedding.slug);
+  // Si `access_end` n'est pas défini manuellement, le lien expire tout seul
+  // 14 jours après le dernier évènement du programme (voir wedding_is_accessible en base).
+  const autoExpiry = lastEventDate ? new Date(new Date(lastEventDate).getTime() + LINK_EXPIRY_DAYS * 86400000) : null;
+  const effectiveEnd = wedding.access_end ? new Date(wedding.access_end) : autoExpiry;
   const canAccess =
     wedding.is_active &&
     (!wedding.access_start || new Date(wedding.access_start) <= new Date()) &&
-    (!wedding.access_end || new Date(wedding.access_end) >= new Date());
+    (!effectiveEnd || effectiveEnd >= new Date());
 
   async function toggleActive(next: boolean) {
     if (!wedding) return;
@@ -124,7 +135,12 @@ export default function WeddingDetail() {
               <dd className="font-mono text-sm">{wedding.client_email}</dd>
             </div>
           )}
-          <div><dt className="text-xs uppercase tracking-wide text-ink-secondary">Période d'accès</dt><dd>{formatDateTime(wedding.access_start)} → {formatDateTime(wedding.access_end)}</dd></div>
+          <div>
+            <dt className="text-xs uppercase tracking-wide text-ink-secondary">Période d'accès</dt>
+            <dd>
+              {formatDateTime(wedding.access_start)} → {wedding.access_end ? formatDateTime(wedding.access_end) : autoExpiry ? `${formatDateTime(autoExpiry.toISOString())} (auto, 14j après le dernier évènement)` : '—'}
+            </dd>
+          </div>
           <div><dt className="text-xs uppercase tracking-wide text-ink-secondary">Créé le</dt><dd>{formatDate(wedding.created_at)}</dd></div>
         </dl>
       </div>
