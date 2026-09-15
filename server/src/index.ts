@@ -58,6 +58,16 @@ app.use((err: unknown, req: express.Request, res: express.Response, _next: expre
   res.status(400).json({ data: null, error: { message } });
 });
 
+// Filet de sécurité : une erreur async échappée d'une route (bug futur,
+// bibliothèque tierce...) ne doit jamais faire planter le process pour tout
+// le monde sur de l'hébergement mutualisé — on log et on continue.
+process.on('unhandledRejection', (err) => {
+  console.error('[api] unhandledRejection', err);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[api] uncaughtException', err);
+});
+
 const port = Number(process.env.PORT ?? 4000);
 app.listen(port, () => {
   console.log(`[api] listening on :${port}`);
