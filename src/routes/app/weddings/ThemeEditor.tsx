@@ -55,6 +55,9 @@ export default function ThemeEditor() {
   const [bodyFont, setBodyFont] = useState<string>(
     (themeRecord(wedding.theme)['bodyFont'] as string) ?? '',
   );
+  const [footerText, setFooterText] = useState<string>(
+    (themeRecord(wedding.theme)['footerText'] as string) ?? '',
+  );
   const [template, setTemplate] = useState<string>(wedding.template);
   const [audioPath, setAudioPath] = useState<string>(wedding.audio_url ?? '');
   const [audioUploading, setAudioUploading] = useState(false);
@@ -86,6 +89,7 @@ export default function ThemeEditor() {
           primaryColor,
           displayFont,
           bodyFont,
+          footerText: footerText.trim(),
         },
       })
       .eq('id', wedding.id);
@@ -242,6 +246,21 @@ export default function ThemeEditor() {
               Nous serions heureux de vous compter parmi nous.
             </p>
           </div>
+        </div>
+
+        <div>
+          <label className="label" htmlFor="footerText">Texte du pied de page</label>
+          <p className="mb-2 text-xs text-ink-secondary">
+            Affiché en bas de chaque page du site public. Laissez vide pour garder le texte par
+            défaut (« &amp; {wedding.name}{wedding.secondary_name ? ` & ${wedding.secondary_name}` : ''} — bienvenue {new Date().getFullYear()} »).
+          </p>
+          <input
+            id="footerText"
+            className="input"
+            value={footerText}
+            onChange={(e) => setFooterText(e.target.value)}
+            placeholder={`& ${wedding.name}${wedding.secondary_name ? ` & ${wedding.secondary_name}` : ''} — bienvenue ${new Date().getFullYear()}`}
+          />
         </div>
 
         <div>

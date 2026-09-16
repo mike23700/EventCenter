@@ -17,6 +17,7 @@ export default function WeddingThemeShell({ wedding, children }: { wedding: Wedd
   const accent = (theme['primaryColor'] as string) ?? '#C9A34A';
   const displayFont = (theme['displayFont'] as string) ?? '';
   const bodyFont = (theme['bodyFont'] as string) ?? '';
+  const footerText = (theme['footerText'] as string) || '';
   const tpl = getTemplate(wedding.template);
   const overrideFont = DISPLAY_FONTS.find((f) => f.id === displayFont && !tpl.fonts.display.includes(f.id));
   const overrideBodyFont = BODY_FONTS.find((f) => f.id === bodyFont && !tpl.fonts.body.includes(f.id));
@@ -82,12 +83,18 @@ export default function WeddingThemeShell({ wedding, children }: { wedding: Wedd
           className="border-t py-10 text-center text-sm"
           style={{ borderColor: border, color: muted }}
         >
-          <span className="font-display tpl-display text-xl" style={{ color: accent }}>
-            &amp;
-          </span>
-          {' '}{wedding.name}
-          {wedding.secondary_name ? ` & ${wedding.secondary_name}` : ''} — bienvenue&nbsp;
-          <span className="inline-flex items-center gap-1">{new Date().getFullYear()}</span>
+          {footerText ? (
+            footerText
+          ) : (
+            <>
+              <span className="font-display tpl-display text-xl" style={{ color: accent }}>
+                &amp;
+              </span>
+              {' '}{wedding.name}
+              {wedding.secondary_name ? ` & ${wedding.secondary_name}` : ''} — bienvenue&nbsp;
+              <span className="inline-flex items-center gap-1">{new Date().getFullYear()}</span>
+            </>
+          )}
         </footer>
       </div>
     </div>

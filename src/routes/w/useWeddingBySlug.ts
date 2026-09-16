@@ -17,8 +17,12 @@ export function useWeddingBySlug(): { wedding: Wedding | null; loading: boolean 
     if (!slug) return;
     let active = true;
     (async () => {
-      const { data } = await db.from('weddings').select('*').eq('slug', slug).maybeSingle();
+      const { data, error } = await db.from('weddings').select('*').eq('slug', slug).maybeSingle();
       if (!active) return;
+      // Une erreur technique (droits DB, réseau…) ne doit pas se confondre
+      // silencieusement avec "mariage inactif / hors période" : elle reste
+      // visible en console pour le diagnostic.
+      if (error) console.error('[useWeddingBySlug]', error.message);
       setWedding(data);
       setLoading(false);
     })();

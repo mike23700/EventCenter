@@ -145,6 +145,33 @@ export default function GuestsEditor() {
     };
   }, [wedding]);
 
+  // Pointage à l'entrée : se fait souvent depuis un autre appareil (scanner),
+  // donc on ré-interroge périodiquement `checked_in_at` pour que la colonne
+  // « Présence » se mette à jour sans que la page ait besoin d'être rechargée.
+  useEffect(() => {
+    if (!wedding) return;
+    let active = true;
+    const interval = setInterval(async () => {
+      const { data } = await db
+        .from<Pick<Guest, 'id' | 'checked_in_at'>>('guests')
+        .select('id, checked_in_at')
+        .eq('wedding_id', wedding.id);
+      if (!active || !data) return;
+      const checkedInById = new Map(data.map((row) => [row.id, row.checked_in_at]));
+      setGuests((prev) =>
+        prev.map((g) =>
+          checkedInById.has(g.id) && checkedInById.get(g.id) !== g.checked_in_at
+            ? { ...g, checked_in_at: checkedInById.get(g.id) ?? null }
+            : g,
+        ),
+      );
+    }, 4000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [wedding]);
+
   const answersByGuestAndQuestion = useMemo(() => {
     const map = new Map<string, Json>();
     for (const r of responses) map.set(`${r.guest_id}::${r.question_key}`, r.answer);
@@ -376,7 +403,14 @@ export default function GuestsEditor() {
             </div>
             <div>
               <label className="label">Téléphone</label>
-              <input className="input" value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} placeholder="+237 6.." />
+              <input
+                className="input"
+                inputMode="numeric"
+                maxLength={9}
+                value={draft.phone}
+                onChange={(e) => setDraft({ ...draft, phone: e.target.value.replace(/\D/g, '').slice(0, 9) })}
+                placeholder="679..."
+              />
             </div>
           </div>
 

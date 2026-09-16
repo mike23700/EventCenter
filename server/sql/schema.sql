@@ -93,8 +93,13 @@ create index if not exists wedding_events_parent_idx on public.wedding_events (p
 -- Reprend exactement la règle publique côté Supabase (voir
 -- supabase/17_audio_et_expiration_lien.sql) : mariage actif, dans sa fenêtre
 -- d'accès, et — si `access_end` n'est pas fixé manuellement — pas plus de
--- 14 jours après la date du dernier évènement du programme. Utilisée par
--- server/src/policies.ts pour toute lecture/écriture anonyme.
+-- 14 jours après la date du dernier évènement du programme.
+-- server/src/policies.ts n'interroge PLUS cette vue (elle inline la même
+-- logique contre `weddings`/`wedding_events` directement, voir
+-- ACCESSIBLE_WEDDINGS_SQL) : une vue créée par une session différente de
+-- celle de l'application exige un GRANT séparé que certains outils SQL web
+-- (Adminer, phpPgAdmin) ne permettent pas d'exécuter facilement. Gardée ici
+-- pour inspection manuelle éventuelle (ex. requête ad hoc côté admin DB).
 create or replace view public.accessible_weddings as
 select w.id
 from public.weddings w
@@ -116,6 +121,11 @@ where w.is_active = true
       )
     )
   );
+
+-- Optionnel (le serveur ne dépend plus de cette vue) : à exécuter seulement
+-- si vous voulez pouvoir la requêter vous-même (Adminer/phpPgAdmin/psql)
+-- sans tomber sur « droit refusé pour la relation accessible_weddings ».
+grant select on public.accessible_weddings to public;
 
 create table if not exists public.sections (
   id         uuid primary key,

@@ -245,7 +245,15 @@ export default function WeddingForm() {
 
         <div>
           <label className="label" htmlFor="contactPhone">Téléphone de contact</label>
-          <input id="contactPhone" className="input" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="+237 ....." />
+          <input
+            id="contactPhone"
+            className="input"
+            inputMode="numeric"
+            maxLength={9}
+            value={contactPhone}
+            onChange={(e) => setContactPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
+            placeholder="679..."
+          />
         </div>
 
         <div className="rounded-lg border border-borderlight bg-paper-cream/50 p-4">

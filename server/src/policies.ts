@@ -7,15 +7,50 @@ import { pool } from './db';
  *  - super_admin : accès total, aucune restriction.
  *  - client (owner) : accès total sur SES mariages (weddings.owner_user_id).
  *  - anonyme (pas de session) : lecture/écriture limitées, uniquement sur un
- *    mariage "accessible" (voir la vue SQL `accessible_weddings`, qui
- *    reproduit exactement `wedding_is_accessible` : actif, fenêtre d'accès,
- *    et expiration auto 14 jours après le dernier évènement si `access_end`
- *    n'est pas fixé manuellement).
+ *    mariage "accessible" (actif, fenêtre d'accès, et expiration auto 14
+ *    jours après le dernier évènement si `access_end` n'est pas fixé
+ *    manuellement — voir `ACCESSIBLE_WEDDINGS_SQL` ci-dessous).
  *
  * Chaque table listée ici correspond à une table RLS de l'ancien schéma
  * Supabase. `users` et `sessions` ne sont PAS ici : elles ne passent jamais
  * par l'API générique (routes/db.ts les refuse explicitement).
  */
+
+/**
+ * Fragment SQL "mariage accessible publiquement", inliné directement contre
+ * `weddings`/`wedding_events` plutôt que via une vue séparée
+ * (`accessible_weddings`). Une vue est un objet distinct des tables qu'elle
+ * lit : sur de l'hébergement mutualisé, si elle est créée via une session
+ * différente de celle utilisée par l'application (ex. panneau d'admin SQL),
+ * Postgres exige un `GRANT SELECT` explicite dessus — que certains outils
+ * web (Adminer, phpPgAdmin) ne permettent pas d'exécuter facilement (ils
+ * enveloppent toute requête dans un `SELECT COUNT(*) FROM (...)`, qui ne
+ * fonctionne pas pour du DDL). En restant sur les tables elles-mêmes, on
+ * évite ce problème : l'application est toujours propriétaire des tables
+ * qu'elle a créées.
+ */
+const ACCESSIBLE_WEDDINGS_SQL = `
+  select w.id
+  from weddings w
+  where w.is_active = true
+    and (w.access_start is null or w.access_start <= now())
+    and (
+      (w.access_end is not null and w.access_end >= now())
+      or (
+        w.access_end is null
+        and (
+          not exists (
+            select 1 from wedding_events e
+            where e.wedding_id = w.id and e.date is not null
+          )
+          or now() <= (
+            select max(e.date) from wedding_events e
+            where e.wedding_id = w.id
+          ) + interval '14 days'
+        )
+      )
+    )
+`;
 
 export type Table =
   | 'weddings'
@@ -166,7 +201,7 @@ export function scopeClause(
   const def = TABLES[table];
   const ownedSubquery = user
     ? `select id from weddings where owner_user_id = $${paramOffset}`
-    : 'select id from accessible_weddings';
+    : ACCESSIBLE_WEDDINGS_SQL;
   const params = user ? [user.id] : [];
 
   if (def.location.kind === 'direct') {
@@ -204,7 +239,10 @@ export async function isOwnerOfWedding(userId: string, weddingId: string): Promi
 }
 
 export async function weddingIsAccessible(weddingId: string): Promise<boolean> {
-  const { rows } = await pool.query('select 1 from accessible_weddings where id = $1', [weddingId]);
+  const { rows } = await pool.query(
+    `select 1 from (${ACCESSIBLE_WEDDINGS_SQL}) accessible where id = $1`,
+    [weddingId],
+  );
   return rows.length > 0;
 }
 

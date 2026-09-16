@@ -65,9 +65,11 @@ export default function GuestSelfRegister({
         <label className="label">Votre téléphone</label>
         <input
           className="input"
-          placeholder="+237 6.."
+          placeholder="679..."
+          inputMode="numeric"
+          maxLength={9}
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
           style={{ backgroundColor: palette.background, borderColor: palette.border, color: palette.text }}
         />
       </div>
