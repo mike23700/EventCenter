@@ -93,7 +93,7 @@ export default function GuestQrLookup({
         <div className="flex gap-2">
           <input
             className="input"
-            placeholder="Ex : Michel Kengne"
+            placeholder="Ex : Anne Marie"
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && search()}

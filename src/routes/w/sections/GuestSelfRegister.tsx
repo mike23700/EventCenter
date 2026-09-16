@@ -54,7 +54,7 @@ export default function GuestSelfRegister({
         <label className="label">Votre nom</label>
         <input
           className="input"
-          placeholder="Ex : Michel Kengne"
+          placeholder="Ex : Anne Marie"
           value={name}
           onChange={(e) => setName(e.target.value)}
           style={{ backgroundColor: palette.background, borderColor: palette.border, color: palette.text }}
