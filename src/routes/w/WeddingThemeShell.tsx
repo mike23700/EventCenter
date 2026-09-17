@@ -18,6 +18,8 @@ export default function WeddingThemeShell({ wedding, children }: { wedding: Wedd
   const displayFont = (theme['displayFont'] as string) ?? '';
   const bodyFont = (theme['bodyFont'] as string) ?? '';
   const footerText = (theme['footerText'] as string) || '';
+  const displayFontScale = typeof theme['displayFontScale'] === 'number' ? (theme['displayFontScale'] as number) : 1;
+  const bodyFontScale = typeof theme['bodyFontScale'] === 'number' ? (theme['bodyFontScale'] as number) : 1;
   const tpl = getTemplate(wedding.template);
   const overrideFont = DISPLAY_FONTS.find((f) => f.id === displayFont && !tpl.fonts.display.includes(f.id));
   const overrideBodyFont = BODY_FONTS.find((f) => f.id === bodyFont && !tpl.fonts.body.includes(f.id));
@@ -33,6 +35,8 @@ export default function WeddingThemeShell({ wedding, children }: { wedding: Wedd
         color: text,
         ['--w-accent' as string]: accent,
         ['--w-font' as string]: overrideFont?.stack ?? tpl.fonts.display,
+        ['--w-display-scale' as string]: displayFontScale,
+        ['--w-body-scale' as string]: bodyFontScale,
         ['--tpl-bg' as string]: background,
         ['--tpl-surface' as string]: surface,
         ['--tpl-accent' as string]: tplAccent,
@@ -48,8 +52,8 @@ export default function WeddingThemeShell({ wedding, children }: { wedding: Wedd
       {overrideFont?.href && <link rel="stylesheet" href={overrideFont.href} />}
       {overrideBodyFont?.href && <link rel="stylesheet" href={overrideBodyFont.href} />}
       <style>{`
-        .font-display { font-family: var(--w-font), ${tpl.fonts.display}; }
-        .tpl-body { font-family: ${overrideBodyFont?.stack ?? tpl.fonts.body}; }
+        .font-display, .tpl-display { font-family: var(--w-font), ${tpl.fonts.display}; --w-text-scale: var(--w-display-scale, 1); }
+        .tpl-body { font-family: ${overrideBodyFont?.stack ?? tpl.fonts.body}; --w-text-scale: var(--w-body-scale, 1); }
       `}</style>
 
       {/* Fond ambiance selon le template (subtile) */}

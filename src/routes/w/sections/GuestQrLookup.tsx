@@ -3,6 +3,7 @@ import { Search } from 'lucide-react';
 import { db } from '../../../lib/db';
 import type { TemplateDef } from '../../../lib/templates';
 import GuestQrCard, { type QrGuest } from './GuestQrCard';
+import { clearKnownGuestId } from './guestSession';
 
 interface Row extends QrGuest {
   phone: string | null;
@@ -79,6 +80,7 @@ export default function GuestQrLookup({
   }
 
   function reset() {
+    clearKnownGuestId(weddingId);
     setFound(null);
     setMatches(null);
     setName('');

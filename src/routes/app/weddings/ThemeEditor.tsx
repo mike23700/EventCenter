@@ -58,6 +58,12 @@ export default function ThemeEditor() {
   const [footerText, setFooterText] = useState<string>(
     (themeRecord(wedding.theme)['footerText'] as string) ?? '',
   );
+  const [displayFontScale, setDisplayFontScale] = useState<number>(
+    (themeRecord(wedding.theme)['displayFontScale'] as number) ?? 1,
+  );
+  const [bodyFontScale, setBodyFontScale] = useState<number>(
+    (themeRecord(wedding.theme)['bodyFontScale'] as number) ?? 1,
+  );
   const [template, setTemplate] = useState<string>(wedding.template);
   const [audioPath, setAudioPath] = useState<string>(wedding.audio_url ?? '');
   const [audioUploading, setAudioUploading] = useState(false);
@@ -90,6 +96,8 @@ export default function ThemeEditor() {
           displayFont,
           bodyFont,
           footerText: footerText.trim(),
+          displayFontScale,
+          bodyFontScale,
         },
       })
       .eq('id', wedding.id);
@@ -225,9 +233,27 @@ export default function ThemeEditor() {
                 <option key={f.id} value={f.id}>{f.label}</option>
               ))}
             </select>
-            <p className="mt-2 text-lg" style={{ fontFamily: DISPLAY_FONTS.find((f) => f.id === displayFont)?.stack ?? activeTpl.fonts.display }}>
+            <p
+              className="mt-2"
+              style={{
+                fontFamily: DISPLAY_FONTS.find((f) => f.id === displayFont)?.stack ?? activeTpl.fonts.display,
+                fontSize: `${1.125 * displayFontScale}rem`,
+              }}
+            >
               Camille &amp; Jean
             </p>
+            <div className="mt-2 flex items-center gap-3">
+              <input
+                type="range"
+                min={0.7}
+                max={1.6}
+                step={0.05}
+                value={displayFontScale}
+                onChange={(e) => setDisplayFontScale(Number(e.target.value))}
+                className="flex-1 accent-gold"
+              />
+              <span className="w-12 shrink-0 text-right text-xs text-ink-secondary">{Math.round(displayFontScale * 100)}%</span>
+            </div>
           </div>
 
           <div>
@@ -242,9 +268,27 @@ export default function ThemeEditor() {
                 <option key={f.id} value={f.id}>{f.label}</option>
               ))}
             </select>
-            <p className="mt-2 text-sm text-ink-secondary" style={{ fontFamily: BODY_FONTS.find((f) => f.id === bodyFont)?.stack ?? activeTpl.fonts.body }}>
+            <p
+              className="mt-2 text-ink-secondary"
+              style={{
+                fontFamily: BODY_FONTS.find((f) => f.id === bodyFont)?.stack ?? activeTpl.fonts.body,
+                fontSize: `${0.875 * bodyFontScale}rem`,
+              }}
+            >
               Nous serions heureux de vous compter parmi nous.
             </p>
+            <div className="mt-2 flex items-center gap-3">
+              <input
+                type="range"
+                min={0.7}
+                max={1.6}
+                step={0.05}
+                value={bodyFontScale}
+                onChange={(e) => setBodyFontScale(Number(e.target.value))}
+                className="flex-1 accent-gold"
+              />
+              <span className="w-12 shrink-0 text-right text-xs text-ink-secondary">{Math.round(bodyFontScale * 100)}%</span>
+            </div>
           </div>
         </div>
 

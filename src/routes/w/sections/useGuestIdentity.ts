@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { db } from '../../../lib/db';
+import { clearKnownGuestId } from './guestSession';
 
 export interface GuestIdentity {
   id: string;
@@ -88,6 +89,7 @@ export function useGuestIdentity(weddingId: string) {
   }
 
   function reset() {
+    clearKnownGuestId(weddingId);
     setStatus('idle');
     setGuest(null);
     setMatches([]);

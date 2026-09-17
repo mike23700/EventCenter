@@ -6,7 +6,7 @@ import { asRecord, str } from './types';
 import { SectionShell, SectionTitle } from './shell';
 import { formatDateNoYear } from '../../../lib/format';
 import { db } from '../../../lib/db';
-import { getKnownGuestId } from './guestSession';
+import { getKnownGuestId, onKnownGuestChange } from './guestSession';
 
 export interface SaveTheDateProps extends SectionProps {
   events: WeddingEvent[];
@@ -44,18 +44,30 @@ export default function SaveTheDate({ content, accent, tpl, events, wedding }: S
   const [invitedEvents, setInvitedEvents] = useState<string[] | null>(null);
 
   useEffect(() => {
-    const guestId = getKnownGuestId(wedding.id);
-    if (!guestId) return;
     let active = true;
-    db.from('guests')
-      .select('invited_events')
-      .eq('id', guestId)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (active && data) setInvitedEvents((data as { invited_events: string[] }).invited_events ?? []);
-      });
+
+    function loadKnownGuest() {
+      const guestId = getKnownGuestId(wedding.id);
+      if (!guestId) {
+        setInvitedEvents(null);
+        return;
+      }
+      db.from('guests')
+        .select('invited_events')
+        .eq('id', guestId)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (active) setInvitedEvents(data ? (data as { invited_events: string[] }).invited_events ?? [] : null);
+        });
+    }
+
+    loadKnownGuest();
+    // L'invité peut s'identifier (inscription/QR retrouvé) via une autre
+    // section de la même page, une fois ce composant déjà monté.
+    const unsubscribe = onKnownGuestChange(wedding.id, loadKnownGuest);
     return () => {
       active = false;
+      unsubscribe();
     };
   }, [wedding.id]);
 
