@@ -12,27 +12,22 @@ function GuestQrDownload({ wedding, guest }: { wedding: Wedding; guest: Guest })
   const [loading, setLoading] = useState(false);
 
   async function download() {
-    if (dataUrl) return;
     setLoading(true);
-    const url = await generateGuestQrDataUrl(wedding.id, guest.qr_token);
-    setDataUrl(url);
+    const url = dataUrl || (await generateGuestQrDataUrl(wedding.id, guest.qr_token));
+    if (!dataUrl) setDataUrl(url);
     setLoading(false);
+    // Déclenche le téléchargement immédiatement (au lieu d'attendre un
+    // second clic sur un <a> qui n'apparaîtrait qu'après génération).
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `invitation-${guest.name.trim().toLowerCase().replace(/\s+/g, '-')}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   }
 
-  if (dataUrl) {
-    return (
-      <a
-        href={dataUrl}
-        download={`invitation-${guest.name.trim().toLowerCase().replace(/\s+/g, '-')}.png`}
-        className="btn-outline !px-2"
-        title="Télécharger le QR"
-      >
-        <QrCode className="h-4 w-4" />
-      </a>
-    );
-  }
   return (
-    <button onClick={download} disabled={loading} className="btn-outline !px-2" title="Générer / télécharger le QR">
+    <button onClick={download} disabled={loading} className="btn-outline !px-2" title="Télécharger le QR">
       <QrCode className="h-4 w-4" />
     </button>
   );
@@ -264,6 +259,10 @@ export default function GuestsEditor() {
 
   async function saveDraft() {
     if (!draft || !draft.name.trim()) return;
+    if (draft.phone && draft.phone.length !== 9) {
+      setError('Le numéro doit comporter exactement 9 chiffres (ex. 679...).');
+      return;
+    }
     setSaving(true);
     setError('');
     const payload = {
@@ -441,7 +440,11 @@ export default function GuestsEditor() {
             <button onClick={() => setDraft(null)} className="btn-outline">
               <X className="h-4 w-4" /> Annuler
             </button>
-            <button onClick={saveDraft} disabled={saving || !draft.name.trim()} className="btn-primary">
+            <button
+              onClick={saveDraft}
+              disabled={saving || !draft.name.trim() || (draft.phone.length > 0 && draft.phone.length !== 9)}
+              className="btn-primary"
+            >
               <Check className="h-4 w-4" /> {saving ? '…' : 'Enregistrer'}
             </button>
           </div>

@@ -70,11 +70,13 @@ export default function Program({ events, accent, tpl }: ProgramProps) {
                     {formatDateTime(ev.date)}
                   </p>
                   {ev.location_title && (
-                    <p className="mt-1 flex items-center gap-2 text-sm tpl-body" style={{ color: palette.muted }}>
-                      <MapPin className="h-4 w-4" style={{ color: accent }} />
-                      {ev.location_title}
-                      {ev.location_address && <span> — {ev.location_address}</span>}
-                    </p>
+                    <div className="mt-1 text-sm tpl-body" style={{ color: palette.muted }}>
+                      <p className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 shrink-0" style={{ color: accent }} />
+                        {ev.location_title}
+                      </p>
+                      {ev.location_address && <p className="pl-6">{ev.location_address}</p>}
+                    </div>
                   )}
                   {ev.description && (
                     <p className="mt-2 whitespace-pre-line text-sm tpl-body" style={{ color: palette.muted }}>
@@ -167,11 +169,13 @@ export default function Program({ events, accent, tpl }: ProgramProps) {
                   {formatDateTime(ev.date)}
                 </p>
                 {ev.location_title && (
-                  <p className="mt-1 flex items-center gap-2 text-sm" style={{ color: palette.muted }}>
-                    <MapPin className="h-4 w-4" style={{ color: accent }} />
-                    {ev.location_title}
-                    {ev.location_address && <span> — {ev.location_address}</span>}
-                  </p>
+                  <div className="mt-1 text-sm" style={{ color: palette.muted }}>
+                    <p className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 shrink-0" style={{ color: accent }} />
+                      {ev.location_title}
+                    </p>
+                    {ev.location_address && <p className="pl-6">{ev.location_address}</p>}
+                  </div>
                 )}
                 {ev.description && (
                   <p className="mt-2 whitespace-pre-line text-sm" style={{ color: palette.muted }}>

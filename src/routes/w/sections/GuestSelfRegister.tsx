@@ -32,6 +32,7 @@ export default function GuestSelfRegister({
 }) {
   const [name, setName] = useState(initialName);
   const [phone, setPhone] = useState('');
+  const phoneInvalid = phone.length > 0 && phone.length !== 9;
   const selectable = (events ?? []).filter((e) => !e.parent_id);
   const [selectedEvents, setSelectedEvents] = useState<string[]>(selectable.map((e) => e.id));
 
@@ -72,6 +73,9 @@ export default function GuestSelfRegister({
           onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
           style={{ backgroundColor: palette.background, borderColor: palette.border, color: palette.text }}
         />
+        {phoneInvalid && (
+          <p className="mt-1 text-xs text-red-600">Le numéro doit comporter exactement 9 chiffres (ex. 679...).</p>
+        )}
       </div>
 
       {needsChoice && (
@@ -110,7 +114,7 @@ export default function GuestSelfRegister({
         {onCancel && <button onClick={onCancel} className="btn-outline">Retour</button>}
         <button
           onClick={() => onSubmit(name, phone, selectedEvents)}
-          disabled={submitting || name.trim().length < 2 || (needsChoice && selectedEvents.length === 0)}
+          disabled={submitting || name.trim().length < 2 || phoneInvalid || (needsChoice && selectedEvents.length === 0)}
           className="flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white disabled:opacity-40"
           style={{ backgroundColor: accent }}
         >

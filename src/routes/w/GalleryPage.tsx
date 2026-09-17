@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Image as ImageIcon, Play } from 'lucide-react';
 import { db } from '../../lib/db';
 import { mediaUrl } from '../../lib/media';
 import type { Media } from '../../types/database';
@@ -8,6 +8,7 @@ import { useWeddingBySlug } from './useWeddingBySlug';
 import WeddingThemeShell from './WeddingThemeShell';
 import GalleryUploadButton from './sections/GalleryUploadButton';
 import { getTemplate } from '../../lib/templates';
+import Lightbox from './Lightbox';
 
 /**
  * Galerie publique dédiée : /w/:slug/galerie.
@@ -20,6 +21,7 @@ export default function GalleryPage() {
   const { wedding, loading: weddingLoading } = useWeddingBySlug();
   const [items, setItems] = useState<Media[]>([]);
   const [loading, setLoading] = useState(true);
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (!wedding) return;
@@ -88,22 +90,42 @@ export default function GalleryPage() {
           </p>
         ) : (
           <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-            {items.map((m) => {
+            {items.map((m, i) => {
               const src = mediaUrl(m);
               if (!src) return null;
               return (
-                <div key={m.id} className="aspect-square overflow-hidden rounded-xl" style={{ border: `1px solid ${palette.border}` }}>
+                <button
+                  key={m.id}
+                  onClick={() => setOpenIndex(i)}
+                  className="group relative aspect-square overflow-hidden rounded-xl"
+                  style={{ border: `1px solid ${palette.border}` }}
+                  aria-label="Agrandir le média"
+                >
                   {m.type === 'video' ? (
-                    <video src={src} controls className="h-full w-full object-cover" />
+                    <>
+                      <video src={src} className="h-full w-full object-cover" muted />
+                      <span className="absolute inset-0 flex items-center justify-center bg-black/20 transition group-hover:bg-black/30">
+                        <Play className="h-8 w-8 text-white" fill="white" />
+                      </span>
+                    </>
                   ) : (
-                    <img src={src} alt="" className="h-full w-full object-cover" />
+                    <img src={src} alt="" className="h-full w-full object-cover transition group-hover:opacity-90" />
                   )}
-                </div>
+                </button>
               );
             })}
           </div>
         )}
       </div>
+
+      {openIndex !== null && (
+        <Lightbox
+          items={items}
+          index={openIndex}
+          onClose={() => setOpenIndex(null)}
+          onNavigate={setOpenIndex}
+        />
+      )}
     </WeddingThemeShell>
   );
 }

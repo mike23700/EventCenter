@@ -22,3 +22,7 @@ export function logoImageHint(): string {
 export function galleryImageHint(): string {
   return 'Format libre — 1600 px de large conseillé pour un bon rendu sur grand écran';
 }
+
+export function splashMediaHint(): string {
+  return 'Format portrait plein écran — 1080×1920 px recommandé · GIF, WebP (animé ou non) ou vidéo MP4/WebM, 8 s max, 15 Mo max';
+}

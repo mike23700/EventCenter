@@ -81,7 +81,8 @@ export default function MediaUploader({
 
   return (
     <div>
-      <label className="label">{label}</label>
+      <label className="label !mb-0.5">{label}</label>
+      {hint && <p className="mb-1 text-xs text-ink-secondary/70">{hint}</p>}
       <input
         ref={inputRef}
         type="file"
@@ -132,7 +133,6 @@ export default function MediaUploader({
         >
           <UploadCloud className="h-7 w-7" />
           <span className="text-xs font-medium">{accept.includes('video') ? 'Importer une photo ou une vidéo' : 'Importer une photo'}</span>
-          {hint && <span className="max-w-[220px] text-center text-[11px] text-ink-secondary/70">{hint}</span>}
         </button>
       )}
 

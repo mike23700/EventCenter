@@ -4,7 +4,7 @@ import { ArrowLeft, Save } from 'lucide-react';
 import { db } from '../../../lib/db';
 import { weddingSlugFromNames } from '../../../lib/slug';
 import { toIso, fromIsoForInput, EVENT_TYPES, TEMPLATES } from '../../../lib/format';
-import { logoImageHint } from '../../../lib/imageHints';
+import { logoImageHint, splashMediaHint } from '../../../lib/imageHints';
 import { validateSplashFile, uploadFile, storageUrl } from '../../../lib/media';
 import type { Wedding, Database } from '../../../types/database';
 import MediaUploader from '../../../components/MediaUploader';
@@ -126,6 +126,10 @@ export default function WeddingForm() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
+    if (contactPhone && contactPhone.length !== 9) {
+      setError('Le téléphone de contact doit comporter exactement 9 chiffres (ex. 679...).');
+      return;
+    }
     setSaving(true);
 
     const finalSlug = slug.trim() || weddingSlugFromNames(name, secondaryName);
@@ -337,7 +341,7 @@ export default function WeddingForm() {
             folder={`weddings/${id ?? 'new'}/splash`}
             accept="video/mp4,video/webm,image/gif,image/webp"
             label="Splash d'accueil (GIF, WebP ou vidéo, avant le site public)"
-            hint={`GIF, WebP (animé ou non) ou vidéo MP4/WebM, ${8}s max, 15 Mo max`}
+            hint={splashMediaHint()}
             value={splashPath || null}
             validate={validateSplashFile}
             onChange={(path) => {

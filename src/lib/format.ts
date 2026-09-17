@@ -16,6 +16,17 @@ export function formatDate(value?: string | null): string {
   });
 }
 
+/** Formatage de date sans l'année (ex. section "Save the date"). */
+export function formatDateNoYear(value?: string | null): string {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: 'long',
+  });
+}
+
 export function formatDateTime(value?: string | null): string {
   if (!value) return '—';
   const d = new Date(value);
@@ -70,6 +81,16 @@ export const DISPLAY_FONTS: { id: string; label: string; stack: string; href: st
   { id: 'Alex Brush', label: 'Alex Brush (calligraphié fin)', stack: "'Alex Brush', cursive", href: 'https://fonts.googleapis.com/css2?family=Alex+Brush&display=swap' },
   { id: 'Marcellus', label: 'Marcellus (élégant, capitales)', stack: "'Marcellus', serif", href: 'https://fonts.googleapis.com/css2?family=Marcellus&display=swap' },
   { id: 'Cormorant Garamond', label: 'Cormorant Garamond (raffiné)', stack: "'Cormorant Garamond', Georgia, serif", href: 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap' },
+  // Polices importées manuellement (voir src/fonts.css) — pas de Google Fonts, href vide.
+  { id: 'Australia', label: 'Australia (signature)', stack: "'Australia', cursive", href: '' },
+  { id: 'Allura', label: 'Allura (calligraphié)', stack: "'Allura', cursive", href: '' },
+  { id: 'Edwardian Script ITC', label: 'Edwardian Script (raffiné)', stack: "'Edwardian Script ITC', cursive", href: '' },
+  { id: 'Script MT Bold', label: 'Script MT Bold (manuscrit)', stack: "'Script MT Bold', cursive", href: '' },
+  { id: 'Euphoria Script', label: 'Euphoria Script (romantique)', stack: "'Euphoria Script', cursive", href: '' },
+  { id: 'Freestyle Script', label: 'Freestyle Script (manuscrit libre)', stack: "'Freestyle Script', cursive", href: '' },
+  { id: 'Brush Script MT', label: 'Brush Script (pinceau)', stack: "'Brush Script MT', cursive", href: '' },
+  { id: 'Adelia', label: 'Adelia (décoratif)', stack: "'Adelia', cursive", href: '' },
+  { id: 'High Tower Text', label: 'High Tower Text (classique)', stack: "'High Tower Text', Georgia, serif", href: '' },
 ];
 
 /** Polices "texte courant" (paragraphes, descriptions) — lisibles, sobres. */
@@ -80,4 +101,9 @@ export const BODY_FONTS: { id: string; label: string; stack: string; href: strin
   { id: 'Inter', label: 'Inter (moderne)', stack: "'Inter', system-ui, sans-serif", href: 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap' },
   { id: 'Josefin Sans', label: 'Josefin Sans (épuré)', stack: "'Josefin Sans', system-ui, sans-serif", href: 'https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@300;400;500&display=swap' },
   { id: 'Montserrat', label: 'Montserrat (contemporain)', stack: "'Montserrat', system-ui, sans-serif", href: 'https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500&display=swap' },
+  // Polices importées manuellement (voir src/fonts.css) — pas de Google Fonts, href vide.
+  { id: 'Myriad Pro', label: 'Myriad Pro (moderne)', stack: "'Myriad Pro', system-ui, sans-serif", href: '' },
+  { id: 'Calisto MT', label: 'Calisto MT (classique)', stack: "'Calisto MT', Georgia, serif", href: '' },
+  { id: 'Maiandra GD', label: 'Maiandra GD (épuré)', stack: "'Maiandra GD', system-ui, sans-serif", href: '' },
+  { id: 'Courier New', label: 'Courier New (machine à écrire)', stack: "'Courier New', monospace", href: '' },
 ];

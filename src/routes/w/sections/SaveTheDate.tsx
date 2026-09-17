@@ -1,9 +1,12 @@
+import { useEffect, useState } from 'react';
 import { Heart } from 'lucide-react';
 import type { WeddingEvent } from '../../../types/database';
 import type { SectionProps } from './types';
 import { asRecord, str } from './types';
 import { SectionShell, SectionTitle } from './shell';
-import { formatDate } from '../../../lib/format';
+import { formatDateNoYear } from '../../../lib/format';
+import { db } from '../../../lib/db';
+import { getKnownGuestId } from './guestSession';
 
 export interface SaveTheDateProps extends SectionProps {
   events: WeddingEvent[];
@@ -27,17 +30,45 @@ function monthGrid(year: number, month: number): (number | null)[] {
  * seul cœur dans ce cas), sinon de tous les évènements du programme — si
  * ceux-ci tombent sur des mois différents (ex. mairie en septembre, église
  * le mois suivant), un calendrier est affiché par mois concerné.
- * Le style suit entièrement la palette du template actif.
+ * Le style suit entièrement la palette du template actif. Les cœurs des
+ * jours ne sont remplis qu'aux étapes auxquelles l'invité identifié dans ce
+ * navigateur (inscrit ou retrouvé via le QR) a confirmé sa venue ; les
+ * autres jours de programme restent en contour — voir `guestSession.ts`.
  */
-export default function SaveTheDate({ content, accent, tpl, events }: SaveTheDateProps) {
+export default function SaveTheDate({ content, accent, tpl, events, wedding }: SaveTheDateProps) {
   const c = asRecord(content);
   const title = str(c, 'title') || 'Réservez la date';
   const message = str(c, 'message');
   const manualDate = str(c, 'date');
 
+  const [invitedEvents, setInvitedEvents] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    const guestId = getKnownGuestId(wedding.id);
+    if (!guestId) return;
+    let active = true;
+    db.from('guests')
+      .select('invited_events')
+      .eq('id', guestId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (active && data) setInvitedEvents((data as { invited_events: string[] }).invited_events ?? []);
+      });
+    return () => {
+      active = false;
+    };
+  }, [wedding.id]);
+
+  // Sans date manuelle : un jour par évènement du programme, avec son
+  // identifiant "de rattachement" (celui d'une sous-étape est ramené à sa
+  // maman, ex. cocktail → soirée) pour vérifier si l'invité y est convié.
+  const programDays = (events ?? [])
+    .filter((e) => e.date)
+    .map((e) => ({ date: e.date as string, refId: e.parent_id ?? e.id }));
+
   const dateStrs = manualDate
     ? [manualDate]
-    : Array.from(new Set((events ?? []).map((e) => e.date).filter((d): d is string => Boolean(d))));
+    : Array.from(new Set(programDays.map((e) => e.date)));
 
   const validDates = dateStrs
     .map((d) => new Date(d))
@@ -50,13 +81,20 @@ export default function SaveTheDate({ content, accent, tpl, events }: SaveTheDat
   const onAccent = tpl.id === 'royal' ? palette.ink : '#fff';
 
   // Regroupe les dates par mois (une carte de calendrier par mois concerné).
-  const monthsMap = new Map<string, { year: number; month: number; days: Set<number> }>();
+  // `refIds === null` = date manuelle (pas d'étape précise à vérifier, cœur
+  // toujours plein) ; sinon, liste des étapes de ce jour à confronter à
+  // `invitedEvents`.
+  const monthsMap = new Map<string, { year: number; month: number; days: Map<number, string[] | null> }>();
   for (const d of validDates) {
     const year = d.getFullYear();
     const month = d.getMonth();
     const key = `${year}-${month}`;
-    if (!monthsMap.has(key)) monthsMap.set(key, { year, month, days: new Set() });
-    monthsMap.get(key)!.days.add(d.getDate());
+    if (!monthsMap.has(key)) monthsMap.set(key, { year, month, days: new Map() });
+    const day = d.getDate();
+    const refIds = manualDate
+      ? null
+      : programDays.filter((e) => new Date(e.date).toDateString() === d.toDateString()).map((e) => e.refId);
+    monthsMap.get(key)!.days.set(day, refIds);
   }
   const months = Array.from(monthsMap.values());
 
@@ -97,23 +135,27 @@ export default function SaveTheDate({ content, accent, tpl, events }: SaveTheDat
 
                 <div className="grid grid-cols-7 gap-y-2 px-4 pb-6 pt-2">
                   {cells.map((d, i) => {
-                    const isTarget = d !== null && days.has(d);
+                    const refIds = d !== null ? days.get(d) : undefined;
+                    const hasHeart = refIds !== undefined;
+                    // Plein : date manuelle (refIds === null), ou l'invité identifié
+                    // a confirmé au moins une des étapes de ce jour.
+                    const filled = hasHeart && (refIds === null || (invitedEvents?.some((id) => refIds.includes(id)) ?? false));
                     return (
                       <div key={i} className="relative flex h-9 items-center justify-center">
                         {d && (
                           <>
-                            {isTarget && (
+                            {hasHeart && (
                               <Heart
                                 className="absolute h-8 w-8"
                                 style={{ color: accent }}
-                                fill={accent}
+                                fill={filled ? accent : 'none'}
                                 strokeWidth={1.5}
                                 aria-hidden="true"
                               />
                             )}
                             <span
                               className="relative font-display tpl-display text-sm font-semibold"
-                              style={{ color: isTarget ? onAccent : palette.text }}
+                              style={{ color: filled ? onAccent : palette.text }}
                             >
                               {d}
                             </span>
@@ -128,8 +170,8 @@ export default function SaveTheDate({ content, accent, tpl, events }: SaveTheDat
           })}
         </div>
 
-        <p className="mt-6 font-display tpl-display text-xl font-semibold" style={{ color: palette.ink }}>
-          {validDates.map((d) => formatDate(d.toISOString())).join(' · ')}
+        <p className="mt-6 font-display tpl-display text-base font-semibold" style={{ color: palette.ink }}>
+          {validDates.map((d) => formatDateNoYear(d.toISOString())).join(' · ')}
         </p>
         {message && (
           <p className="mt-2 tpl-body" style={{ color: palette.muted }}>{message}</p>

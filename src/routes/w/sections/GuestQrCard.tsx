@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Download, RotateCcw, PartyPopper } from 'lucide-react';
 import { generateGuestQrDataUrl } from '../../../lib/guestQr';
 import type { TemplateDef } from '../../../lib/templates';
+import { saveKnownGuestId } from './guestSession';
 
 export interface QrGuest {
   id: string;
@@ -26,6 +27,7 @@ export default function GuestQrCard({
   const [dataUrl, setDataUrl] = useState('');
 
   useEffect(() => {
+    saveKnownGuestId(weddingId, guest.id);
     let active = true;
     generateGuestQrDataUrl(weddingId, guest.qr_token).then((url) => {
       if (active) setDataUrl(url);
@@ -33,7 +35,7 @@ export default function GuestQrCard({
     return () => {
       active = false;
     };
-  }, [weddingId, guest.qr_token]);
+  }, [weddingId, guest.id, guest.qr_token]);
 
   return (
     <div className="space-y-4 text-center">

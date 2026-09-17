@@ -60,6 +60,10 @@ export default function GuestQrLookup({
 
   function confirmWithPhone() {
     if (!matches) return;
+    if (phone.length !== 9) {
+      setError('Le numéro doit comporter exactement 9 chiffres (ex. 679...).');
+      return;
+    }
     const p = normalizePhone(phone);
     const hits = matches.filter((m) => m.phone && normalizePhone(m.phone) === p);
     if (hits.length === 1) {
