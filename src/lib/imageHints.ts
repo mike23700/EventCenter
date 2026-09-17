@@ -9,10 +9,12 @@ export function coverImageHint(mode: 'mobile' | 'desktop'): string {
     : 'Format paysage — 1920×1080 px recommandé (plein écran sur grand écran)';
 }
 
-export function programStepImageHint(templateId: string): string {
-  return templateId === 'africain'
-    ? 'Visible sur ce thème (carte en quinconce) — 800×450 px recommandé'
-    : "Non affichée sur ce thème actuellement — utile si vous passez au thème « Héritage africain »";
+export function programStepImageHint(): string {
+  return 'Format paysage — 800×450 px recommandé (photo recadrée en bandeau au-dessus de chaque étape, y compris sur mobile)';
+}
+
+export function locationImageHint(): string {
+  return 'Format paysage — 1600×600 px recommandé (photo recadrée en bandeau, aussi sur mobile)';
 }
 
 export function logoImageHint(): string {

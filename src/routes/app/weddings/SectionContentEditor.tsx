@@ -1,7 +1,7 @@
 import type { Json } from '../../../types/database';
 import MediaUploader from '../../../components/MediaUploader';
 import MixedEditor from './MixedEditor';
-import { coverImageHint, galleryImageHint } from '../../../lib/imageHints';
+import { coverImageHint, galleryImageHint, locationImageHint } from '../../../lib/imageHints';
 
 export interface SectionContentEditorProps {
   type: string;
@@ -142,6 +142,7 @@ export default function SectionContentEditor({ type, content, onChange, folder =
             label="Photo du lieu"
             value={str('image')}
             onChange={(v) => set('image', v)}
+            hint={locationImageHint()}
           />
           <Field label="Lien Google Maps (URL)">
             <input className="input" value={str('maps_url')} onChange={(e) => set('maps_url', e.target.value)} placeholder="https://maps.app.goo.gl/..." />

@@ -6,7 +6,6 @@ import type { Wedding, WeddingEvent } from '../../../types/database';
 import { toIso, fromIsoForInput } from '../../../lib/format';
 import MediaUploader from '../../../components/MediaUploader';
 import { storageUrl } from '../../../lib/media';
-import { getTemplate } from '../../../lib/templates';
 import { programStepImageHint } from '../../../lib/imageHints';
 
 interface Draft {
@@ -41,8 +40,7 @@ export default function ProgramEditor() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const tpl = getTemplate(wedding?.template);
-  const imageHint = programStepImageHint(tpl.id);
+  const imageHint = programStepImageHint();
 
   useEffect(() => {
     if (!wedding) return;
