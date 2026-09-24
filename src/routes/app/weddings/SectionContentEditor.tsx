@@ -95,6 +95,17 @@ export default function SectionContentEditor({ type, content, onChange, folder =
           <Field label="Date courte (affichée sous les noms)">
             <input className="input" value={str('date')} onChange={(e) => set('date', e.target.value)} placeholder="12 juin 2026 — Douala" />
           </Field>
+          <div>
+            <label className="label">Noms des mariés</label>
+            <label className="flex items-center gap-2 text-sm text-ink-secondary">
+              <input
+                type="checkbox"
+                checked={bool('show_names', true)}
+                onChange={(e) => set('show_names', e.target.checked)}
+              />
+              Afficher les noms des mariés sur la couverture
+            </label>
+          </div>
         </div>
       );
     case 'countdown':

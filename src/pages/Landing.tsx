@@ -48,15 +48,9 @@ function WeddingCardPreview({ t, className = '' }: { t: TemplateDef; className?:
     >
       <div className="flex flex-col items-center gap-2.5 px-6 py-9" style={{ backgroundColor: palette.ink }}>
         <TemplateOrnament id={id} color={badge} className="h-5 w-5" />
-        <p className="text-center text-xl font-bold leading-tight" style={{ fontFamily: t.fonts.display, color: palette.surface }}>
-          Camille <span style={{ color: badge }}>&amp; Jean</span>
+        <p className="text-center text-xl font-bold leading-tight" style={{ fontFamily: t.fonts.display, color: badge }}>
+          Camille &amp; Jean
         </p>
-        <span
-          className="rounded-full border px-3 py-1 text-[9px] tracking-[0.3em] uppercase"
-          style={{ borderColor: badge, color: badge }}
-        >
-          Nous nous marions
-        </span>
       </div>
       <div className="space-y-1.5 px-6 py-4">
         <div className="h-1.5 w-3/4 rounded-full" style={{ backgroundColor: palette.border }} />
