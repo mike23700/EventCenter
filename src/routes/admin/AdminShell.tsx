@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
-import { Heart, LayoutDashboard, Users, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '../../lib/auth-context';
 
 const nav = [
@@ -28,8 +28,8 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     <div className="min-h-screen bg-paper-warm">
       <header className="flex h-14 items-center justify-between border-b border-borderlight bg-ink px-4 text-white md:hidden">
         <Link to="/admin" className="flex items-center gap-2 font-display text-lg font-semibold">
-          <Heart className="h-5 w-5 text-gold" fill="currentColor" />
-          EventCenter
+          <img src="/logo-icon.png" alt="" className="h-6 w-6 invert" />
+          EVENTS ETAN
         </Link>
         <button
           onClick={() => setMobileOpen(true)}
@@ -59,8 +59,8 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             onClick={() => setMobileOpen(false)}
             className="flex items-center gap-2 font-display text-xl font-semibold"
           >
-            <Heart className="h-6 w-6 text-gold" fill="currentColor" />
-            <span>EventCenter</span>
+            <img src="/logo-icon.png" alt="" className="h-7 w-7 invert" />
+            <span>EVENTS ETAN</span>
           </Link>
           <button
             onClick={() => setMobileOpen(false)}

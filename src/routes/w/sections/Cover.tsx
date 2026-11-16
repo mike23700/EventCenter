@@ -1,7 +1,7 @@
 import { storageUrl } from '../../../lib/media';
 import type { SectionProps } from './types';
 import { asRecord, str, bool } from './types';
-import { Flower, Feather, WaxPattern } from '../../../lib/templates';
+import { Flower, Feather } from '../../../lib/templates';
 
 /**
  * Section "cover" : couverture (image mobile/desktop ou vidéo),
@@ -89,12 +89,6 @@ function CoverShell({
       )}
       {id === 'minimal' && (
         <div className="absolute inset-x-0 top-0 h-px bg-white/60" />
-      )}
-      {id === 'africain' && (
-        <>
-          <WaxPattern color={palette.accent} className="absolute left-4 top-4 h-28 w-28 opacity-60" />
-          <WaxPattern color={palette.accent} className="absolute bottom-4 right-4 h-28 w-28 rotate-90 opacity-60" />
-        </>
       )}
 
       <div className="relative z-10 mx-auto max-w-4xl px-6 py-20 text-center">

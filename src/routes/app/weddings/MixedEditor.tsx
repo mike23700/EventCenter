@@ -4,12 +4,15 @@ import type { Json } from '../../../types/database';
 import MediaUploader from '../../../components/MediaUploader';
 import { randomString } from '../../../lib/slug';
 import { galleryImageHint } from '../../../lib/imageHints';
+import { normalizeTextSize, TEXT_SIZE_SCALE } from '../../../lib/fontSize';
 
 export interface MixedBlock {
   id: string;
   type: 'text' | 'image' | 'video' | 'questionnaire';
   title?: string;
   text?: string;
+  titleSize?: number;
+  textSize?: number;
   src?: string;
   questions?: Question[];
 }
@@ -50,6 +53,10 @@ function cleanBlock(b: MixedBlock): MixedBlock {
   if (b.type === 'text') {
     base.title = b.title ?? '';
     base.text = b.text ?? '';
+    const titleSize = normalizeTextSize(b.titleSize);
+    if (titleSize) base.titleSize = titleSize;
+    const textSize = normalizeTextSize(b.textSize);
+    if (textSize) base.textSize = textSize;
   } else if (b.type === 'image' || b.type === 'video') {
     base.src = b.src ?? '';
     base.title = b.title ?? '';
@@ -229,6 +236,18 @@ function BlockForm({
             <label className="label">Texte</label>
             <textarea className="input min-h-24" value={block.text ?? ''} onChange={(e) => onChange({ text: e.target.value })} placeholder="Quelques mots sur vous, votre rencontre…" />
           </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <FontSizeSelect
+              label="Taille du titre"
+              value={block.titleSize}
+              onChange={(titleSize) => onChange({ titleSize })}
+            />
+            <FontSizeSelect
+              label="Taille du texte"
+              value={block.textSize}
+              onChange={(textSize) => onChange({ textSize })}
+            />
+          </div>
         </div>
       );
     case 'image':
@@ -272,6 +291,39 @@ function BlockForm({
     default:
       return null;
   }
+}
+
+/**
+ * Palier de taille de police (px) pour un bloc de texte : une liste de
+ * valeurs prédéfinies, la première étant la taille par défaut du template.
+ */
+function FontSizeSelect({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value?: number;
+  onChange: (value: number | undefined) => void;
+}) {
+  const current = normalizeTextSize(value);
+  return (
+    <div>
+      <label className="label">{label}</label>
+      <select
+        className="input"
+        value={current ?? ''}
+        onChange={(e) => onChange(normalizeTextSize(e.target.value))}
+      >
+        <option value="">Par défaut du template</option>
+        {TEXT_SIZE_SCALE.map((step) => (
+          <option key={step.px} value={step.px}>
+            {step.px} px — {step.hint}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
 }
 
 function QuestionnaireForm({

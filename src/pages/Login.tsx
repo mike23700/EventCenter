@@ -1,8 +1,9 @@
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Heart, LogIn } from 'lucide-react';
+import { LogIn } from 'lucide-react';
 import { authStore, useAuth } from '../lib/auth-context';
 import type { AuthState } from '../lib/auth-context';
+import FloatingCallButton from '../components/FloatingCallButton';
 
 /**
  * Portail de connexion UNIQUE : administrateurs (rôle super_admin) et
@@ -44,10 +45,8 @@ export default function Login() {
       <div className="m-auto w-full max-w-sm px-6">
         <div className="rounded-2xl border border-borderlight bg-white p-8 shadow-lg">
           <div className="mb-6 flex flex-col items-center text-center">
-            <div className="mb-3 inline-flex rounded-full bg-gold/10 p-3 text-gold">
-              <Heart className="h-8 w-8" fill="currentColor" />
-            </div>
-            <h1 className="font-display text-2xl font-bold text-ink">EventCenter</h1>
+            <img src="/logo-etan.png" alt="ETAN" className="mb-4 h-12 w-auto" />
+            <h1 className="font-display text-2xl font-bold text-ink">EVENTS ETAN</h1>
             <p className="mt-1 text-sm text-ink-secondary">
               Connectez-vous à votre espace
             </p>
@@ -105,6 +104,7 @@ export default function Login() {
           </Link>
         </p>
       </div>
+      <FloatingCallButton />
     </div>
   );
 }

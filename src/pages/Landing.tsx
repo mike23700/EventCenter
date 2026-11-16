@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
-import { Heart, LogIn, CalendarDays, Users, Image as ImageIcon, QrCode, ArrowRight } from 'lucide-react';
+import { LogIn, CalendarDays, Users, Image as ImageIcon, QrCode, ArrowRight } from 'lucide-react';
 import { TEMPLATE_DEFS, Flower, Crown, WaxPattern } from '../lib/templates';
 import type { TemplateDef } from '../lib/templates';
+import FloatingCallButton from '../components/FloatingCallButton';
 
 const FEATURES = [
   {
@@ -77,8 +78,8 @@ export default function Landing() {
 
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
         <div className="flex items-center gap-2 font-display text-xl font-semibold">
-          <Heart className="h-6 w-6 text-gold" fill="currentColor" />
-          <span className="text-ink">EventCenter</span>
+          <img src="/logo-icon.png" alt="" className="h-7 w-7" />
+          <span className="text-ink">EVENTS ETAN</span>
         </div>
         <Link
           to="/login"
@@ -183,8 +184,9 @@ export default function Landing() {
       </section>
 
       <footer className="border-t border-borderlight py-6 text-center text-sm text-ink-secondary">
-        EventCenter © {new Date().getFullYear()} — Gestion d'évènements de mariage
+        EVENTS ETAN © {new Date().getFullYear()} — Gestion d'évènements de mariage
       </footer>
+      <FloatingCallButton />
     </div>
   );
 }

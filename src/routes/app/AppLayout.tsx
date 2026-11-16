@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Heart, LogOut } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { useAuth } from '../../lib/auth-context';
 
 /** Layout du panel client (mariés). Garde d'authentification simple. */
@@ -38,7 +38,7 @@ export default function AppLayout() {
     <div className="min-h-screen bg-paper-warm">
       <header className="flex h-14 items-center justify-between gap-3 border-b border-borderlight bg-white px-4 sm:px-6">
         <Link to="/app" className="flex shrink-0 items-center gap-2 font-display text-lg font-bold text-ink">
-          <Heart className="h-5 w-5 text-gold" fill="currentColor" />
+          <img src="/logo-icon.png" alt="EVENTS ETAN" className="h-6 w-6" />
           <span className="hidden sm:inline">Espace client</span>
         </Link>
         <div className="flex min-w-0 items-center gap-3">
