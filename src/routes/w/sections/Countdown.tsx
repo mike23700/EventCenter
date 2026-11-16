@@ -57,20 +57,20 @@ export default function Countdown({ content, accent, tpl, events }: CountdownPro
         <div className="mt-10 inline-flex items-start justify-center">
           {units.map((unit, i) => (
             <div key={unit.label} className="flex items-start">
-              <div className="flex flex-col items-center px-1.5 sm:px-3">
+              <div className="flex flex-col items-center px-1 min-[380px]:px-1.5 sm:px-3">
                 <span
-                  className="font-display tpl-display text-4xl font-bold leading-none sm:text-6xl"
+                  className="font-display tpl-display text-[2rem] font-bold leading-none min-[380px]:text-4xl sm:text-6xl"
                   style={{ color: palette.ink, fontVariantNumeric: 'tabular-nums' }}
                 >
                   {pad(unit.value)}
                 </span>
-                <span className="mt-3 text-[10px] tracking-[0.25em] uppercase tpl-body sm:text-[11px]" style={{ color: palette.muted }}>
+                <span className="mt-3 text-[9px] tracking-[0.12em] uppercase tpl-body min-[380px]:text-[10px] min-[380px]:tracking-[0.25em] sm:text-[11px]" style={{ color: palette.muted }}>
                   {unit.label}
                 </span>
               </div>
               {i < units.length - 1 && (
                 <span
-                  className="font-display tpl-display text-4xl font-bold leading-none sm:text-6xl"
+                  className="font-display tpl-display text-[2rem] font-bold leading-none min-[380px]:text-4xl sm:text-6xl"
                   style={{ color: accent }}
                   aria-hidden="true"
                 >

@@ -149,7 +149,7 @@ export function DressCodeSection({ content, accent, tpl }: SectionProps) {
           </div>
         )}
         {photos.length > 0 && (
-          <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className={`mt-10 grid grid-cols-2 gap-3 ${photos.length === 4 ? 'sm:grid-cols-4' : photos.length === 2 ? '' : 'sm:grid-cols-3'}`}>
             {photos.map((p, i) => (
               <img key={i} src={storageUrl('media', p) ?? ''} alt="" loading="lazy" className="aspect-[3/4] w-full rounded-xl object-cover" />
             ))}

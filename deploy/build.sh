@@ -4,6 +4,7 @@
 # Usage (depuis la racine du projet) :   bash deploy/build.sh
 # ⚠ Arrêtez d'abord « npm run dev » : le script réinstalle node_modules
 #   (npm ci), ce qui casse un serveur Vite en cours (page blanche).
+#   Ou bien : SKIP_CI=1 bash deploy/build.sh  (garde les node_modules actuels)
 #
 # Produit, directement dans deploy/ :
 #   eventcenter-COMPLET.zip   tout ce qu'il faut (3 paquets + script maj-o2switch.sh + guide)
@@ -21,15 +22,18 @@ trap 'rm -rf "$WORK"' EXIT
 
 cd "$ROOT"
 echo "==> 1/5 Vérification TypeScript + build du site (front)"
-npm ci --no-audit --no-fund >/dev/null
+[ "${SKIP_CI:-0}" = "1" ] || npm ci --no-audit --no-fund >/dev/null
 npm run build
 
 echo "==> 2/5 Build de l'API (server)"
-( cd server && npm ci --no-audit --no-fund >/dev/null && npm run build )
+( cd server && { [ "${SKIP_CI:-0}" = "1" ] || npm ci --no-audit --no-fund >/dev/null; } && npm run build )
 
 echo "==> 3/5 Assemblage"
 mkdir -p "$WORK/site" "$WORK/api/server" "$WORK/sql"
 cp -r dist "$WORK/site/dist"
+# Vite recopie tout public/ dans dist/ : on retire les photos envoyées en
+# local (public/uploads), qui ne doivent jamais partir en production.
+rm -rf -- "${WORK:?}/site/dist/uploads"
 cp -r server/dist "$WORK/api/server/dist"
 cp server/app.js server/package.json server/package-lock.json server/.env.example "$WORK/api/server/"
 cp deploy/sql/*.sql "$WORK/sql/"

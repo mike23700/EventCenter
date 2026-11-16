@@ -129,6 +129,7 @@ export default function WeddingPublic() {
         </div>
       )}
       {welcomeVisible && guest && (
+        <div style={{ ['--w-font' as string]: tpl.fonts.display }}>
         <WelcomeModal
           guest={guest}
           weddingId={wedding.id}
@@ -138,6 +139,7 @@ export default function WeddingPublic() {
           hasPassSection={sections.some((x) => x.type === 'rsvp')}
           onClose={closeWelcome}
         />
+        </div>
       )}
       {invited.invalidLink && !guest && (
         <div className="fixed inset-x-0 top-0 z-40 bg-amber-50 px-4 py-2 text-center text-xs text-amber-800 shadow">

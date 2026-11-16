@@ -36,7 +36,13 @@ export default function EnvelopeIntro({
 }) {
   const [phase, setPhase] = useState<Phase>('closed');
   const { palette } = tpl;
-  const paper = color || palette.surface;
+  // Contraste garanti quel que soit le modèle (certains ont un « ink » clair,
+  // ex. Royal) : fond = la plus foncée des deux couleurs, texte = la plus
+  // claire ; l'enveloppe prend la teinte claire pour se détacher du fond.
+  const [bg, fg] = luminance(palette.ink) <= luminance(palette.background)
+    ? [palette.ink, palette.background]
+    : [palette.background, palette.ink];
+  const paper = color || (luminance(palette.surface) >= luminance(palette.ink) ? palette.surface : palette.ink);
 
   useEffect(() => {
     if (phase === 'opening') {
@@ -68,10 +74,10 @@ export default function EnvelopeIntro({
 
   return (
     <div
-      className={`etan-env-overlay fixed inset-0 z-[60] flex flex-col items-center justify-center px-6 ${phase === 'leaving' ? 'etan-env-leave' : ''}`}
+      className={`etan-env-overlay fixed inset-0 z-[60] flex flex-col items-center justify-center overflow-hidden px-6 ${phase === 'leaving' ? 'etan-env-leave' : ''}`}
       style={{
-        background: `radial-gradient(120% 80% at 50% 0%, ${accent}33 0%, transparent 60%), ${palette.ink}`,
-        color: palette.surface,
+        background: `radial-gradient(120% 80% at 50% 0%, ${accent}33 0%, transparent 60%), ${bg}`,
+        color: fg,
       }}
       onClick={open}
       role="button"
@@ -85,11 +91,11 @@ export default function EnvelopeIntro({
       <div aria-hidden className="etan-env-dust pointer-events-none absolute inset-0" style={{ ['--dust' as string]: accent }} />
 
       <div className={`relative z-10 mb-8 text-center transition-opacity duration-500 ${opening ? 'opacity-0' : 'opacity-100'}`}>
-        <p className="tpl-body text-[11px] uppercase tracking-[0.35em]" style={{ color: accent }}>
+        <p className="tpl-body text-[11px] font-semibold uppercase tracking-[0.35em] sm:text-xs" style={{ color: accent }}>
           {guestName ? 'Une invitation pour' : 'Vous êtes invité(e)'}
         </p>
         {guestName && (
-          <p className="mt-3 font-display tpl-display text-3xl sm:text-4xl" style={{ color: palette.surface }}>
+          <p className="mt-3 max-w-[90vw] break-words px-2 font-display tpl-display text-[1.65rem] leading-tight [overflow-wrap:anywhere] min-[380px]:text-3xl sm:text-5xl" style={{ color: fg }}>
             {guestName}
           </p>
         )}
@@ -118,12 +124,12 @@ export default function EnvelopeIntro({
       <div className={`relative z-10 mt-10 text-center transition-opacity duration-500 ${opening ? 'opacity-0' : 'opacity-100'}`}>
         <span
           className="etan-env-cta inline-flex items-center gap-2 rounded-full border px-6 py-2.5 text-xs font-medium uppercase tracking-[0.25em]"
-          style={{ borderColor: `${accent}99`, color: palette.surface }}
+          style={{ borderColor: `${accent}99`, color: fg }}
         >
           Ouvrir l'invitation
         </span>
         {tagline && (
-          <p className="tpl-body mt-4 text-xs italic" style={{ color: `${palette.surface}b3` }}>{tagline}</p>
+          <p className="tpl-body mt-4 text-xs italic sm:text-sm" style={{ color: fg, opacity: 0.75 }}>{tagline}</p>
         )}
       </div>
     </div>
@@ -150,6 +156,8 @@ const ENVELOPE_CSS = `
 @keyframes etanDust { to { background-position: 0 -220px } }
 
 .etan-env { width: min(84vw, 340px); aspect-ratio: 1.5; perspective: 1200px; }
+@media (min-width: 640px) { .etan-env { width: min(70vw, 440px); } .etan-env-medal { transform: scale(1.2); } .etan-env-medal-off { transform: scale(.4) rotate(-25deg); } }
+@media (max-height: 560px) { .etan-env { width: min(60vw, 300px); } }
 .etan-env-back, .etan-env-pocket, .etan-env-flap { position: absolute; inset: 0; border-radius: 6px; }
 .etan-env-back { background: var(--paper); filter: brightness(.88); box-shadow: 0 30px 60px -20px rgba(0,0,0,.6); }
 .etan-env-pocket {
@@ -205,3 +213,16 @@ const ENVELOPE_CSS = `
   .etan-env-flap, .etan-env-card, .etan-env-ribbon, .etan-env-medal { transition: none !important; }
 }
 `;
+
+/** Luminance relative (0 = noir, 1 = blanc) d'une couleur #rgb / #rrggbb. */
+function luminance(hex: string): number {
+  const h = hex.replace('#', '');
+  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h.slice(0, 6);
+  const n = parseInt(full, 16);
+  if (Number.isNaN(n)) return 0.5;
+  const ch = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
+}

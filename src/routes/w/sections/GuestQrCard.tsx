@@ -147,13 +147,13 @@ export default function GuestQrCard({
             </div>
           )}
         </div>
-        <div className="grid grid-cols-3 gap-2 px-4 pb-4 text-center">
+        <div className="grid grid-cols-2 gap-2 px-3 pb-4 text-center sm:grid-cols-3 sm:px-4">
           {[
-            ['Personnes', details ? String(details.persons) : '…'],
-            ['Table', details ? (details.tables.join(' · ') || '—') : '…'],
-            ['Réf.', details?.ref ?? '…'],
-          ].map(([label, value]) => (
-            <div key={label} className="flex flex-col justify-center rounded-xl px-1 py-2" style={cell}>
+            ['Personnes', details ? String(details.persons) : '…', ''],
+            ['Réf.', details?.ref ?? '…', 'sm:order-3'],
+            ['Table', details ? (details.tables.join(' · ') || '—') : '…', 'col-span-2 sm:order-2 sm:col-span-1'],
+          ].map(([label, value, extra]) => (
+            <div key={label} className={`flex flex-col justify-center rounded-xl px-1 py-2 ${extra}`} style={cell}>
               <p className="text-[9px] font-semibold uppercase tracking-widest" style={{ color: palette.muted }}>{label}</p>
               <p className="mt-0.5 break-words text-[13px] font-semibold leading-tight" style={{ color: palette.ink }}>{value}</p>
             </div>

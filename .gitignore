@@ -27,3 +27,6 @@ supabase/.temp/
 # Paquets de déploiement générés (bash deploy/build.sh)
 deploy/out/
 deploy/*.zip
+
+# Fichiers envoyés en local (photos de test)
+public/uploads/

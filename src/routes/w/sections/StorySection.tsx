@@ -59,12 +59,12 @@ function Avatar({ voice, accent, tpl }: { voice: Voice; accent: string; tpl: Sec
       decoding="async"
       src={voice.photo}
       alt={voice.name}
-      className="h-24 w-24 flex-none rounded-full object-cover sm:h-32 sm:w-32"
+      className="h-[72px] w-[72px] flex-none rounded-full object-cover min-[400px]:h-20 min-[400px]:w-20 sm:h-28 sm:w-28 md:h-32 md:w-32"
       style={ring}
     />
   ) : (
     <span
-      className="flex h-24 w-24 flex-none items-center justify-center rounded-full font-display tpl-display text-4xl sm:h-32 sm:w-32"
+      className="flex h-[72px] w-[72px] flex-none items-center justify-center rounded-full font-display tpl-display text-3xl min-[400px]:h-20 min-[400px]:w-20 sm:h-28 sm:w-28 sm:text-4xl md:h-32 md:w-32"
       style={{ ...ring, backgroundColor: palette.accentSoft, color: accent }}
     >
       {voice.name.charAt(0) || '♥'}
@@ -88,15 +88,15 @@ function VoiceRow({
   const { palette } = tpl;
   const { short, cut } = excerpt(voice.text);
   return (
-    <div className={`flex items-start gap-4 sm:gap-8 ${reversed ? 'flex-row-reverse' : ''}`}>
-      <div className="pt-3">
+    <div className={`flex items-start gap-3 sm:gap-6 md:gap-8 ${reversed ? 'flex-row-reverse' : ''}`}>
+      <div className="flex-none pt-2 sm:pt-3">
         <Avatar voice={voice} accent={accent} tpl={tpl} />
       </div>
       <article
-        className="min-w-0 flex-1 rounded-2xl px-5 py-5 sm:px-7 sm:py-6"
+        className="min-w-0 flex-1 rounded-2xl px-4 py-4 min-[400px]:px-5 min-[400px]:py-5 sm:px-7 sm:py-6"
         style={{ backgroundColor: palette.surface, border: `1px solid ${palette.border}`, boxShadow: '0 14px 34px -24px rgba(0,0,0,.35)' }}
       >
-        <p className="tpl-body text-[14.5px] italic leading-[1.75] sm:text-base" style={{ color: palette.text }}>
+        <p className="tpl-body text-[14px] italic leading-[1.7] min-[400px]:text-[14.5px] sm:text-base sm:leading-[1.75]" style={{ color: palette.text }}>
           {'«\u00a0'}{short}{cut ? '…' : ''}{'\u00a0»'}
           {cut && (
             <>
@@ -112,7 +112,7 @@ function VoiceRow({
           )}
         </p>
         {voice.name && (
-          <p className={`mt-4 font-display tpl-display text-2xl ${reversed ? 'text-left' : 'text-right'}`} style={{ color: accent }}>
+          <p className={`mt-3 break-words font-display tpl-display text-xl leading-tight sm:mt-4 sm:text-2xl ${reversed ? 'text-left' : 'text-right'}`} style={{ color: accent }}>
             — {voice.name}
           </p>
         )}
@@ -234,7 +234,7 @@ export default function StorySection({ content, accent, tpl }: SectionProps) {
 
   return (
     <SectionShell tpl={tpl} accent={accent}>
-      <div className="mx-auto max-w-3xl px-5 py-16 sm:px-8 sm:py-20">
+      <div className="mx-auto max-w-3xl px-4 py-14 min-[400px]:px-5 sm:px-8 sm:py-20">
         <SectionTitle tpl={tpl} accent={accent}>{str(c, 'title') || 'Notre histoire'}</SectionTitle>
         {str(c, 'subtitle') && (
           <p className="mt-3 text-center tpl-body italic" style={{ color: palette.muted }}>{str(c, 'subtitle')}</p>

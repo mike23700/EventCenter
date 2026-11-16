@@ -53,7 +53,7 @@ export default function Rsvp({ content, accent, tpl, wedding, events }: RsvpProp
 
   return (
     <SectionShell tpl={tpl} accent={accent}>
-      <div className="mx-auto max-w-2xl px-6 py-16">
+      <div className="mx-auto max-w-2xl px-4 py-14 sm:px-6 sm:py-16">
         <div className="text-center">
           <PartyPopper className="mx-auto h-6 w-6" style={{ color: accent }} />
           <h2 className="mt-2 font-display tpl-display text-3xl sm:text-4xl font-bold" style={{ color: palette.ink }}>
@@ -63,7 +63,7 @@ export default function Rsvp({ content, accent, tpl, wedding, events }: RsvpProp
         </div>
 
         <div
-          className="mt-8 rounded-2xl p-6"
+          className="mt-8 rounded-2xl p-4 sm:p-6"
           style={{ backgroundColor: palette.surface, border: `1px solid ${palette.border}` }}
         >
           {status === 'found' && guest ? (
