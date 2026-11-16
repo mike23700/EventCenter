@@ -20,7 +20,10 @@ export default function Login() {
   const navigate = useNavigate();
 
   function target(user?: AuthState['user']) {
-    const next = params.get('next') || '';
+    // Redirection après connexion : chemin interne strict uniquement (pas de
+    // « \ », « // » ni domaine externe — cf. failles de redirection ouverte).
+    const raw = params.get('next') || '';
+    const next = /^\/(admin|app)(\/[A-Za-z0-9_-]+)*\/?$/.test(raw) ? raw : '';
     const isAdmin = user?.app_metadata?.role === 'super_admin';
     if (next.startsWith('/admin') || next.startsWith('/app')) {
       if (isAdmin && next.startsWith('/admin')) return next;

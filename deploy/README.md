@@ -1,272 +1,209 @@
-# Mise à jour o2switch — Invitation personnalisée + Sécurité (novembre 2026)
+# Mise à jour o2switch — events.etan237.com
 
-Ce dossier contient **tout ce qu'il faut pour mettre en ligne** la nouvelle version
-d'EVENTS ETAN sur **o2switch** (cPanel + « Setup Node.js App » + PostgreSQL).
+Guide de mise en ligne de la version « Invitation personnalisée + Sécurité +
+Performances » (novembre 2026), **adapté à l'hébergement actuel** :
 
-| Fichier | Contenu | Destination sur le serveur |
-|---|---|---|
-| `eventcenter-COMPLET.zip` | Les 3 zips ci-dessous + `uploads.htaccess` + ce guide | — (à envoyer tel quel si vous préférez un seul fichier) |
-| `1-site.zip` | Le site compilé (`dist/`) | `~/eventcenter/dist/` |
-| `2-api.zip` | L'API compilée (`server/dist`, `app.js`, `package.json`, `package-lock.json`) | `~/eventcenter/server/` |
-| `3-sql.zip` | Migrations `18_…sql` et `19_…sql` (+ schéma complet pour une nouvelle installation) | À exécuter sur la base |
-| `uploads.htaccess` | Protection et cache du dossier des fichiers envoyés | `public_html/uploads/.htaccess` |
-| `build.sh` | Régénère tous les zips ci-dessus | (sur votre PC) |
-| `sql/` | Sources des migrations | — |
-| `Guide_de_test_invitation_personnalisee.pdf` | Plan de test **en local**, à dérouler AVANT la mise en ligne | — |
+| Élément | Valeur sur o2switch |
+|---|---|
+| Domaine | `events.etan237.com` (racine web : `~/events.etan237.com`) |
+| Dépôt de l'application | `~/eventcenter-repo` (clone git) |
+| Application Node (Setup Node.js App) | App Root `eventcenter-repo/server`, mode production, Node 20 |
+| Site compilé | `~/eventcenter-repo/dist` (servi par Node) |
+| Photos et vidéos envoyées | `~/eventcenter-repo/public/uploads` (`UPLOADS_DIR=../public/uploads`, servi par Node) |
+| Base PostgreSQL | `sc2biro3703_eventcenter` |
+| Variables (`DATABASE_URL`, `SESSION_SECRET`, `COOKIE_SECURE`, `UPLOADS_DIR`) | cPanel → **Setup Node.js App** → **Environment variables** |
 
-> Durée estimée : **30 minutes**. Coupure du site : **environ 1 minute** (redémarrage).
->
-> **Avant la mise en ligne**, déroulez le guide de test PDF en local.
+> **Avant la mise en ligne** : déroulez le guide `Guide_de_test_invitation_personnalisee.pdf` **en local**.
 
 ---
 
-## 1. Ce que contient cette version
+## Contenu du dossier
 
-### Fonctionnalités
-- **Lien personnel par invité** (`/w/<slug>?i=<jeton>`), **enveloppe d'ouverture**, **fenêtre d'accueil**
-  « Bonjour Daniel ! » et **pass** enrichi (places, table, référence, image PNG, partage).
-- **Aperçu WhatsApp/Facebook** (titre, date, photo ; prénom de l'invité pour un lien personnel).
-- **5 nouvelles sections** (Notre histoire, Citation, Informations pratiques, Remerciements, Code vestimentaire)
-  et **programme en « cartes photo »**.
-- Admin :
-  - copier le lien, envoyer sur WhatsApp, exporter les liens (CSV), champ « Accompagnant(s) » ;
-  - réglages de l'enveloppe et du message.
-
-### Sécurité (corrections importantes)
-| Problème corrigé | Avant | Maintenant |
-|---|---|---|
-| Liste des invités publique | N'importe qui lisait noms, téléphones et jetons QR de tous les invités d'un mariage | Un visiteur n'obtient qu'**un** invité, sur preuve : lien personnel, ou **nom + téléphone** |
-| Réponses aux questionnaires, tables | Lisibles et modifiables publiquement | Réservées aux comptes connectés ; l'invité n'écrit que ses propres réponses |
-| Envoi de fichiers | Tout type de fichier accepté (HTML/SVG piégés possibles → vol de session admin) | Liste blanche d'images, vidéos et sons ; dossiers contrôlés ; limites par type |
-| Suppression de fichiers | Un client pouvait supprimer les fichiers de n'importe quel mariage | Seulement ceux de ses mariages |
-| Modération | Un visiteur pouvait publier directement dans la galerie ou le livre d'or | Toujours « en attente » de validation |
-| Privilèges client | Un client pouvait réactiver ou prolonger son mariage, changer le propriétaire, modifier sections et programme, déplacer des lignes vers un autre mariage | Ces actions sont réservées au super-admin ; les liens entre mariages sont vérifiés |
-| Données du mariage | Email du client et compte propriétaire visibles publiquement | Masqués |
-| Connexion | Essais illimités | 10 essais par 15 min et par IP, 5 par compte ; temps de réponse constant |
-| CSRF / en-têtes | — | Contrôle de l'origine des requêtes + en-têtes de sécurité HTTP |
-| Secret de session | Valeur par défaut tolérée | **Obligatoire en production** (32 caractères minimum), sinon l'API refuse de démarrer |
-| Compte admin par défaut | `npm run seed` créait `admin@event.om / 12345678` | Email et mot de passe obligatoires (10 caractères minimum) |
-
-### Performances
-- **Compression gzip** des réponses : le JavaScript du site pèse environ 3 fois moins.
-- **Cache navigateur** : fichiers compilés 1 an (noms à empreinte), polices et logos 7 jours, photos et vidéos 30 jours. `index.html` est toujours revalidé, donc les mises à jour sont vues immédiatement.
-- **Chargement à la demande** : les invités ne téléchargent plus le code de l'administration (paquet initial : 457 → 313 Ko, 98 Ko compressé).
-- Images chargées seulement quand elles deviennent visibles ; connexion anticipée aux polices Google.
-- **Index de base de données** (migration 19) pour le pass, le pointage, la modération et les sessions.
-
-### Ce qui change pour les invités (à annoncer aux clients)
-- « Retrouver mon pass » demande maintenant **le nom ET le téléphone** utilisés à l'inscription.
-- Le téléphone devient **obligatoire** pour s'inscrire soi-même.
-- Un invité ajouté **sans téléphone** par l'admin retrouve son pass via son **lien personnel** (bouton 🔗 ou 💬 de l'onglet Invités).
-- Les QR déjà envoyés **restent valables** : les jetons n'ont pas changé.
+| Fichier | Rôle |
+|---|---|
+| **`eventcenter-COMPLET.zip`** | **Le seul fichier à envoyer** : contient tout ce qui suit |
+| `maj-o2switch.sh` | **Script de mise à jour automatique** (sauvegardes, migrations, fichiers, dépendances, redémarrage, vérifications) |
+| `1-site.zip` | Site compilé → `~/eventcenter-repo/dist` |
+| `2-api.zip` | API compilée → `~/eventcenter-repo/server` (`dist/`, `app.js`, `package.json`, `package-lock.json`) |
+| `3-sql.zip` | Migrations 18 et 19 (+ schéma complet pour une installation neuve) |
+| `uploads.htaccess` | Seulement si les photos étaient un jour servies par Apache (pas le cas actuellement) |
+| `build.sh` | Régénère tous les zips (sur le PC) |
+| `sql/` | Sources des migrations |
 
 ---
 
-## 2. Organisation attendue sur le serveur
+## 1. Ce qui change
 
-Le serveur Node sert **l'API et le site**, condition nécessaire pour l'aperçu WhatsApp :
+**Fonctionnalités**
+- Lien personnel par invité, enveloppe d'ouverture, accueil « Bonjour &lt;prénom&gt; ! », pass enrichi.
+- Aperçu WhatsApp, 5 nouvelles sections, programme en cartes photo.
+- Admin : 🔗 copier le lien, 💬 envoyer sur WhatsApp, export CSV, accompagnants.
 
-```
-/home/<compte>/
-├── eventcenter/
-│   ├── dist/                    ← site compilé               ← REMPLACÉ (1-site.zip)
-│   └── server/                  ← « Application root » (Setup Node.js App)
-│       ├── app.js               ← « Application startup file » ← REMPLACÉ (2-api.zip)
-│       ├── dist/                ← API compilée               ← REMPLACÉ (2-api.zip)
-│       ├── package.json         ←                            ← REMPLACÉ (2-api.zip)
-│       ├── package-lock.json    ←                            ← REMPLACÉ (2-api.zip)
-│       ├── .env                 ← secrets de prod            ← À COMPLÉTER (§ 5.4), ne pas écraser
-│       └── node_modules/        ← géré par cPanel            ← « Run NPM Install » (§ 5.5)
-└── public_html/
-    └── uploads/                 ← photos/vidéos envoyées     ← NE PAS TOUCHER (+ .htaccess § 5.6)
-```
+**Sécurité**
+- La liste des invités n'est plus publique.
+- Fichiers envoyés limités aux images, vidéos et sons.
+- Modération imposée pour la galerie et le livre d'or.
+- Privilèges des clients restreints.
+- Anti force brute sur la connexion, anti-CSRF, en-têtes de sécurité.
+- Dépendances serveur à jour : aucune faille connue (`npm audit`).
 
-> Vérifiez dans cPanel → *Setup Node.js App* l'« Application root » (ex. `eventcenter/server`).
-> Le dossier `dist/` du site doit se trouver **à côté**, dans `eventcenter/dist`.
+**Performances** : compression gzip, cache navigateur, admin chargée à la demande, images différées, index SQL.
 
----
+**Pour les invités (à annoncer aux clients)**
+- « Retrouver mon pass » demande maintenant **nom + téléphone**.
+- Le téléphone devient obligatoire pour s'inscrire soi-même.
+- Un invité ajouté sans téléphone utilise son **lien personnel**.
+- Les QR déjà envoyés restent valables.
 
-## 3. Régénérer les zips (facultatif)
-
-Les zips fournis dans ce dossier sont prêts. Pour les refaire après une modification du code :
-
-```bash
-bash deploy/build.sh
-```
+**Dépendances** : `compression` est ajoutée et `multer` passe en version 2 (failles corrigées). Le script les installe.
 
 ---
 
-## 4. Sauvegarder avant toute chose ⚠️
+## 2. Avant de commencer (2 minutes)
 
-1. **Base de données** : cPanel → *phpPgAdmin* → votre base → **Exporter** → « Structure et données ».
-   Par le terminal (cPanel → *Terminal*) :
+1. Dans cPanel → **Setup Node.js App** → votre application → **Environment variables**, vérifiez :
+   - `SESSION_SECRET` : **64 caractères** aléatoires. S'il fait moins de 32 caractères, l'API refuse de démarrer.
+   - `COOKIE_SECURE` = `true`.
+   - Ajoutez si possible `SITE_URL` = `https://events.etan237.com`.
+2. **Sécurité** : si le mot de passe de la base ou `SESSION_SECRET` ont été partagés (messages, captures…), changez-les :
+   - **Mot de passe de la base** : cPanel → *Bases de données PostgreSQL* → utilisateur `…_app` → nouveau mot de passe, puis mettez à jour `DATABASE_URL` dans les variables de l'application.
+   - **`SESSION_SECRET`** : générez-en un nouveau (Terminal : `openssl rand -hex 32`). Tout le monde devra se reconnecter une fois.
+
+   Choisissez un mot de passe long et unique (pas `…12345678`).
+
+---
+
+## 3. Mise à jour automatique (méthode recommandée)
+
+1. cPanel → **Gestionnaire de fichiers** → dossier personnel `/home/sc2biro3703/` → créez un dossier **`maj`**.
+2. Dans `maj/`, **Charger** `eventcenter-COMPLET.zip`, puis clic droit → **Extraire**.
+3. cPanel → **Terminal** :
    ```bash
-   cd ~/eventcenter/server
-   source <(grep DATABASE_URL .env | sed 's/^/export /')
-   pg_dump "$DATABASE_URL" > ~/sauvegarde-avant-maj-$(date +%F).sql
-   ```
-2. **Fichiers** :
-   ```bash
-   cd ~/eventcenter
-   zip -qr ~/sauvegarde-code-$(date +%F).zip dist server/dist server/app.js server/package.json server/package-lock.json
+   cd ~/maj && bash maj-o2switch.sh
    ```
 
+Le script affiche chaque étape :
+
+| Étape | Ce qu'il fait |
+|---|---|
+| 0 | Vérifie les paquets, l'environnement Node et la connexion à la base (lit `DATABASE_URL` dans les variables cPanel ; s'il n'y arrive pas, il vous la demande) |
+| 1 | **Sauvegarde** la base (`pg_dump`) et le code dans `~/sauvegardes-eventcenter/` |
+| 2 | Applique les migrations **18** et **19** (elles peuvent être relancées sans risque) |
+| 3 | Remplace `dist/` et `server/dist/` (+ `app.js`, `package*.json`) |
+| 4 | Contrôle `SESSION_SECRET`, `COOKIE_SECURE`, `SITE_URL`. S'il faut corriger, il s'arrête et vous laisse modifier dans cPanel |
+| 5 | Vérifie le dossier des photos (servi par Node : rien à faire) |
+| 6 | Installe les dépendances (`npm install` dans l'environnement Node de cPanel) |
+| 7 | Redémarre l'application |
+| 8 | Vérifie que le site répond et que la liste des invités est protégée |
+
+Si `pg_dump` échoue (versions de PostgreSQL différentes, par exemple) :
+1. Exportez la base via **phpPgAdmin** → `sc2biro3703_eventcenter` → **Exporter** → « Structure et données ».
+2. Relancez : `cd ~/maj && SKIP_DUMP=1 bash maj-o2switch.sh`
+
+Si l'étape 6 échoue : cPanel → *Setup Node.js App* → **Run NPM Install**, puis **Restart**.
+
 ---
 
-## 5. Mettre en ligne — méthode cPanel
-
-### 5.1 Envoyer les fichiers
-cPanel → **Gestionnaire de fichiers** → `/home/<compte>/` → **Charger** `eventcenter-COMPLET.zip`
-→ clic droit → **Extraire** dans un dossier `maj/`. On obtient `maj/1-site.zip`, `maj/2-api.zip`,
-`maj/3-sql.zip` et `maj/uploads.htaccess`.
-
-### 5.2 Migrer la base (migrations 18 puis 19)
-Extraire `3-sql.zip`, puis dans le **Terminal cPanel** :
+## 4. Mise à jour manuelle (si vous ne voulez pas du script)
 
 ```bash
+# 0. Variables : copiez DATABASE_URL depuis cPanel (Environment variables)
+export DATABASE_URL='postgres://…'
+
+# 1. Sauvegardes
+mkdir -p ~/sauvegardes-eventcenter
+pg_dump "$DATABASE_URL" > ~/sauvegardes-eventcenter/base-$(date +%F).sql
+cd ~/eventcenter-repo && zip -qr ~/sauvegardes-eventcenter/code-$(date +%F).zip dist server/dist server/app.js server/package*.json
+
+# 2. Migrations
 cd ~/maj && unzip -o -q 3-sql.zip -d sql
-cd ~/eventcenter/server
-source <(grep DATABASE_URL .env | sed 's/^/export /')
-psql "$DATABASE_URL" -f ~/maj/sql/18_invitation_personnalisee.sql
-psql "$DATABASE_URL" -f ~/maj/sql/19_securite_performances.sql
-```
-Résultat attendu : des `ALTER TABLE`, `CREATE INDEX`, `DROP INDEX` et `DELETE n`, sans `ERROR`.
-Les deux migrations peuvent être relancées sans risque.
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/18_invitation_personnalisee.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/19_securite_performances.sql
 
-Sans terminal : *phpPgAdmin* → **SQL** → collez le contenu de chaque fichier, dans l'ordre, puis **Exécuter**.
-
-### 5.3 Remplacer le site et l'API
-- **Site** : supprimez `eventcenter/dist`, puis extrayez `1-site.zip` **dans `eventcenter/`** (cela crée `eventcenter/dist`).
-- **API** : supprimez `eventcenter/server/dist`, puis extrayez `2-api.zip` **dans `eventcenter/`**.
-  Cela remplace `server/dist`, `server/app.js` et `server/package*.json`, et ajoute `server/.env.example`.
-  Votre `server/.env` n'est pas touché.
-
-### 5.4 Compléter `server/.env` ⚠️ obligatoire
-Ouvrez `eventcenter/server/.env` et vérifiez ou ajoutez :
-
-```ini
-# OBLIGATOIRE : au moins 32 caractères aléatoires. Sans cela, l'API refuse de démarrer.
-# Pour en générer un (Terminal) :  openssl rand -hex 32
-SESSION_SECRET=<collez ici le résultat de openssl rand -hex 32>
-
-# HTTPS : le cookie de session n'est envoyé qu'en HTTPS.
-COOKIE_SECURE=true
-
-# Recommandé : URL publique du site (aperçus WhatsApp, contrôle d'origine).
-SITE_URL=https://votre-domaine.com
+# 3. Fichiers
+rm -rf ~/eventcenter-repo/dist ~/eventcenter-repo/server/dist
+unzip -o -q ~/maj/1-site.zip -d ~/eventcenter-repo
+unzip -o -q ~/maj/2-api.zip  -d ~/eventcenter-repo
 ```
 
-> Changer `SESSION_SECRET` **déconnecte tout le monde une fois** : il suffit de se reconnecter.
+Ensuite, dans cPanel → *Setup Node.js App* : **Run NPM Install**, puis **Restart**.
 
-### 5.5 Installer la nouvelle dépendance et redémarrer
-Cette version ajoute une dépendance (`compression`, pour la compression gzip) :
-
-cPanel → **Setup Node.js App** → votre application → **Run NPM Install**, puis **Restart**.
-
-### 5.6 Protéger le dossier `uploads`
-Copiez `maj/uploads.htaccess` vers **`public_html/uploads/.htaccess`**. S'il existe déjà un
-`.htaccess` à cet endroit, ajoutez-y le contenu à la suite. Ce fichier :
-- n'autorise que les images, vidéos et sons ;
-- empêche toute exécution de script ;
-- active le cache navigateur de 30 jours.
+Sans terminal, les migrations peuvent se faire dans phpPgAdmin → `sc2biro3703_eventcenter` → **SQL** : collez le contenu de chaque fichier, dans l'ordre 18 puis 19.
 
 ---
 
-## 6. Mettre en ligne — méthode terminal (SSH)
-
-À utiliser à la place de la section 5. Depuis votre PC :
-```bash
-scp deploy/eventcenter-COMPLET.zip <compte>@<serveur>.o2switch.net:~/
-```
-Puis, sur le serveur :
-```bash
-set -e
-rm -rf ~/maj && mkdir ~/maj && cd ~/maj && unzip -q ~/eventcenter-COMPLET.zip
-unzip -q 3-sql.zip -d sql
-
-# 1. Base
-cd ~/eventcenter/server
-source <(grep DATABASE_URL .env | sed 's/^/export /')
-psql "$DATABASE_URL" -f ~/maj/sql/18_invitation_personnalisee.sql
-psql "$DATABASE_URL" -f ~/maj/sql/19_securite_performances.sql
-
-# 2. Fichiers
-rm -rf ~/eventcenter/dist ~/eventcenter/server/dist
-cd ~/eventcenter && unzip -o -q ~/maj/1-site.zip && unzip -o -q ~/maj/2-api.zip
-cp ~/maj/uploads.htaccess ~/public_html/uploads/.htaccess
-
-# 3. Secret de session (seulement s'il manque ou s'il est trop court)
-grep -qE '^SESSION_SECRET=.{32,}' server/.env || echo "SESSION_SECRET=$(openssl rand -hex 32)" >> server/.env
-
-# 4. Dépendances (environnement Node de cPanel) + redémarrage
-source ~/nodevenv/eventcenter/server/*/bin/activate && cd ~/eventcenter/server && npm ci --omit=dev
-mkdir -p ~/eventcenter/server/tmp && touch ~/eventcenter/server/tmp/restart.txt
-echo "OK — mise à jour installée"
-```
-> Le chemin `~/nodevenv/…` est celui qu'affiche cPanel en haut de la page *Setup Node.js App*
-> (« Enter to the virtual environment »). Adaptez-le si besoin.
-
----
-
-## 7. Vérifications après la mise en ligne (10 minutes)
+## 5. Vérifications après la mise en ligne (10 minutes)
 
 | # | Test | Résultat attendu |
 |---|---|---|
-| 1 | Ouvrir `https://<domaine>/` | La page d'accueil s'affiche |
-| 2 | Se connecter (admin) | Le tableau de bord s'affiche |
-| 3 | Invités → 🔗 sur un invité, ouvrir le lien sur un téléphone | Enveloppe (si activée), puis « Bonjour <prénom> ! » et le pass |
-| 4 | Onglet **Entrée** : scanner un ancien QR | L'invité est pointé (les jetons n'ont pas changé) |
-| 5 | Sections → Ajouter « Notre histoire » | Créée sans erreur (sinon, la migration 18 n'est pas passée) |
-| 6 | Sur le site public, RSVP → « Retrouver mon pass » avec nom + téléphone | Le pass s'affiche |
-| 7 | **Sécurité** : ouvrir `https://<domaine>/api/db/guests` dans un navigateur privé | `{"data":null,"error":{"message":"Accès refusé."}}` |
-| 8 | **Sécurité** : `https://<domaine>/uploads/` | Erreur 403 (pas de listing) |
-| 9 | **Cache** : outils de développement → onglet Réseau → un fichier `/assets/…js` | `Cache-Control: public, max-age=31536000, immutable` et `Content-Encoding: gzip` |
-| 10 | Aperçu : coller un lien sur https://developers.facebook.com/tools/debug/ | Le titre et la photo du mariage apparaissent |
+| 1 | https://events.etan237.com/ | La page d'accueil s'affiche |
+| 2 | Connexion admin | Le tableau de bord s'affiche (une seule reconnexion si `SESSION_SECRET` a changé) |
+| 3 | Invités → 🔗 sur un invité → ouvrir le lien sur un téléphone | Enveloppe (si activée), puis « Bonjour &lt;prénom&gt; ! » et le pass |
+| 4 | Pass → « Partager » (téléphone) | La feuille de partage s'ouvre (HTTPS requis, donc testable seulement en ligne) |
+| 5 | Onglet **Entrée** : scanner un ancien QR | L'invité est pointé |
+| 6 | RSVP → « Retrouver mon pass » (nom + téléphone) | Le pass s'affiche |
+| 7 | Navigation privée : https://events.etan237.com/api/db/guests | `{"data":null,"error":{"message":"Accès refusé."}}` |
+| 8 | Envoyer le lien personnel d'un invité de test à vous-même sur WhatsApp | Aperçu avec la photo, la date et « &lt;Prénom&gt;, vous êtes invité(e)… » |
+| 9 | Outils de développement → Réseau → un fichier `/assets/…js` | `Content-Encoding: gzip` et `Cache-Control: …max-age=31536000, immutable` |
 
-> WhatsApp garde les aperçus en cache plusieurs jours : pour retester, ajoutez `&v=2` au lien.
+> WhatsApp garde un aperçu en cache plusieurs jours : pour retester, ajoutez `&v=2` à la fin du lien.
 
 ---
 
-## 8. En cas de problème
+## 6. En cas de problème
+
+Le journal de l'application se trouve dans `~/eventcenter-repo/server/stderr.log`.
 
 | Symptôme | Cause probable | Solution |
 |---|---|---|
-| Le site affiche une erreur 503 ; `stderr.log` contient « SESSION_SECRET absent… Démarrage refusé » | Secret manquant ou trop court | § 5.4, puis Restart |
-| `Cannot find module 'compression'` dans `stderr.log` | Dépendances non installées | *Setup Node.js App* → **Run NPM Install** → Restart |
-| « violates check constraint sections_type_check » | Migration 18 non exécutée | § 5.2 |
-| Plus personne ne peut se connecter en HTTP | `COOKIE_SECURE=true` exige le HTTPS | Utiliser l'URL en `https://` |
-| « Origine de la requête refusée » | Accès par un domaine non reconnu (alias, ancien domaine) | Renseigner `SITE_URL` avec le domaine utilisé, Restart |
-| « Trop de tentatives de connexion » | Protection anti force brute | Attendre 15 minutes, ou faire Restart pour remettre les compteurs à zéro |
-| Un invité ne retrouve pas son pass | Téléphone absent ou différent dans la liste | Lui envoyer son lien personnel (🔗 / 💬) |
-| Photos invisibles après la copie de `uploads.htaccess` | Extension non autorisée ou `.htaccess` mal fusionné | Vérifier le fichier ; l'extension doit être jpg/png/webp/gif/heic/mp4/mov/webm/m4v/mp3/m4a/aac/wav/ogg |
-| Aperçu WhatsApp générique | Site servi par Apache (`public_html`) au lieu de Node | Remettre l'organisation du § 2 |
+| Erreur 503 ; `stderr.log` contient « SESSION_SECRET … Démarrage refusé » | Secret absent ou trop court | Corriger `SESSION_SECRET` dans cPanel (`openssl rand -hex 32`), puis **Restart** |
+| `Cannot find module 'compression'` | Dépendances non installées | **Run NPM Install**, puis **Restart** |
+| « violates check constraint sections_type_check » | Migration 18 non passée | Relancer le script, ou § 4 étape 2 |
+| Plus personne ne peut se connecter | Accès en `http://` alors que `COOKIE_SECURE=true` | Utiliser `https://events.etan237.com` |
+| « Origine de la requête refusée » | Accès par une autre adresse que le domaine | Ajouter `SITE_URL` = `https://events.etan237.com`, puis **Restart** |
+| « Trop de tentatives de connexion » | Protection anti force brute | Attendre 15 minutes, ou **Restart** |
+| Un invité ne retrouve pas son pass | Téléphone absent ou différent | Lui envoyer son lien personnel (🔗 / 💬) |
+| Aperçu WhatsApp générique | Ancien aperçu en cache | Ajouter `&v=2` au lien |
 
 ---
 
-## 9. Revenir en arrière
+## 7. Revenir en arrière
 
-1. Restaurer `eventcenter/dist`, `eventcenter/server/dist`, `app.js` et `package*.json` depuis la sauvegarde, puis **Run NPM Install** et **Restart**.
-2. La base de données n'a **pas besoin** d'être restaurée : les migrations 18 et 19 n'ajoutent que des types de section autorisés et des index, que l'ancienne version ignore.
-3. Retirer `public_html/uploads/.htaccess` si nécessaire.
+```bash
+cd ~/eventcenter-repo
+rm -rf dist server/dist
+unzip -o -q ~/sauvegardes-eventcenter/code-<DATE>.zip
+```
+
+Ensuite, dans cPanel : **Run NPM Install**, puis **Restart**.
+
+La base **n'a pas besoin** d'être restaurée : les migrations 18 et 19 n'ajoutent que des types de section autorisés et des index, que l'ancienne version ignore. En dernier recours : phpPgAdmin → **Importer** `base-<DATE>.sql` dans une base vide.
 
 ---
 
-## 10. Fichiers modifiés (pour la revue de code)
+## 8. Note sur le dépôt git du serveur
 
-**Serveur**
-- `src/index.ts` : compression, en-têtes, cache, contrôle d'origine, secret obligatoire, purge des sessions
-- `src/security.ts` *(nouveau)* : limitation de débit, en-têtes, anti-CSRF
-- `src/policies.ts` : droits par table et par rôle, colonnes visibles publiquement, colonnes non modifiables, références entre mariages vérifiées
-- `src/routes/db.ts` : application de ces droits
-- `src/routes/public.ts` *(nouveau)* : API invités (lien, nom + téléphone, inscription, pass, réponses)
-- `src/routes/upload.ts` : liste blanche, dossiers contrôlés, suppression restreinte
-- `src/routes/og.ts` *(nouveau)* : aperçus WhatsApp
-- `src/auth/routes.ts`, `src/auth/session.ts`, `src/routes/admin.ts`, `src/seed.ts`
-- `sql/migrations/18_…sql`, `19_…sql`, `sql/schema.sql`
+`~/eventcenter-repo` est un clone git. La mise à jour par zip remplace `server/package.json` et
+`server/package-lock.json`, qui sont suivis par git (`dist/` et `server/dist/` sont ignorés). Avant un futur
+`git pull` sur le serveur, rétablissez d'abord ces deux fichiers :
 
-**Front**
-- `src/lib/publicApi.ts` *(nouveau)* ; `src/lib/invitation.ts`, `src/lib/passImage.ts` *(nouveaux)*
-- `src/routes/w/` : `useInvitedGuest`, `EnvelopeIntro`, `WelcomeModal`, `publicContext` *(nouveaux)* ; `WeddingPublic`, `AudioToggle`, `WeddingThemeShell`
-- `src/routes/w/sections/` : `guestSession`, `useGuestIdentity`, `GuestQrCard`, `GuestQrLookup`, `GuestSelfRegister`, `Rsvp`, `Mixed`, `SaveTheDate`, `Program`, `storyBlocks` *(nouveau)*, `index`
-- `src/routes/app/weddings/` : `GuestsEditor`, `ThemeEditor`, `SectionsEditor`, `SectionContentEditor`
-- `src/App.tsx` (chargement à la demande), `index.html`, `vite.config.ts` (proxy de développement)
+```bash
+cd ~/eventcenter-repo && git checkout -- server/package.json server/package-lock.json && git pull
+```
+
+---
+
+## 9. Fichiers modifiés (revue de code)
+
+- **Serveur** :
+  - `src/index.ts`, `src/security.ts` *(nouveau)*, `src/policies.ts` ;
+  - `src/routes/db.ts`, `src/routes/public.ts` *(nouveau)*, `src/routes/upload.ts`, `src/routes/og.ts` *(nouveau)* ;
+  - `src/auth/*`, `src/routes/admin.ts`, `src/seed.ts` ;
+  - `sql/migrations/18_…`, `19_…`, `sql/schema.sql` ;
+  - `package.json` (ajout de compression ; multer en version 2).
+- **Front** :
+  - `src/lib/publicApi.ts`, `invitation.ts`, `passImage.ts` *(nouveaux)* ;
+  - `src/routes/w/` (enveloppe, accueil, identification, sections) ;
+  - `src/routes/app/weddings/` (Invités, Thème, Sections) ;
+  - `src/App.tsx` (chargement à la demande), `src/pages/Login.tsx` (redirection stricte) ;
+  - `index.html`, `vite.config.ts`.

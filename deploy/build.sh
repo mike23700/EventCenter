@@ -4,7 +4,7 @@
 # Usage (depuis la racine du projet) :   bash deploy/build.sh
 #
 # Produit, directement dans deploy/ :
-#   eventcenter-COMPLET.zip   tout ce qu'il faut (les 3 paquets ci-dessous + guides)
+#   eventcenter-COMPLET.zip   tout ce qu'il faut (3 paquets + script maj-o2switch.sh + guide)
 #   1-site.zip                le site compilé            → ~/eventcenter/dist/
 #   2-api.zip                 l'API compilée             → ~/eventcenter/server/
 #   3-sql.zip                 les migrations 18 et 19    → à exécuter sur la base
@@ -39,7 +39,7 @@ rm -f "$DEPLOY"/1-site.zip "$DEPLOY"/2-api.zip "$DEPLOY"/3-sql.zip "$DEPLOY"/eve
 ( cd "$WORK/api" && zip -qr "$DEPLOY/2-api.zip" server )
 ( cd "$WORK/sql" && zip -qr "$DEPLOY/3-sql.zip" . )
 mkdir -p "$WORK/complet"
-cp "$DEPLOY"/1-site.zip "$DEPLOY"/2-api.zip "$DEPLOY"/3-sql.zip "$DEPLOY"/uploads.htaccess "$WORK/complet/"
+cp "$DEPLOY"/1-site.zip "$DEPLOY"/2-api.zip "$DEPLOY"/3-sql.zip "$DEPLOY"/uploads.htaccess "$DEPLOY"/maj-o2switch.sh "$WORK/complet/"
 cp "$DEPLOY/README.md" "$WORK/complet/LISEZMOI.md"
 ( cd "$WORK/complet" && zip -qr "$DEPLOY/eventcenter-COMPLET.zip" . )
 
