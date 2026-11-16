@@ -2,6 +2,7 @@ import { Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import type { Json } from '../../../types/database';
 import MediaUploader from '../../../components/MediaUploader';
 import MixedEditor from './MixedEditor';
+import { isSnapchatUrl } from '../../w/sections/SnapchatSection';
 import { coverImageHint, galleryImageHint, locationImageHint } from '../../../lib/imageHints';
 
 export interface SectionContentEditorProps {
@@ -215,39 +216,130 @@ export default function SectionContentEditor({ type, content, onChange, folder =
       );
     case 'story': {
       const voices = list('voices');
-      const setVoices = (v: Record<string, unknown>[]) => set('voices', v);
+      const milestones = list('milestones');
       return (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Titre"><input className="input" value={str('title')} onChange={(e) => set('title', e.target.value)} placeholder="Notre histoire" /></Field>
-            <Field label="Sous-titre (optionnel)"><input className="input" value={str('subtitle')} onChange={(e) => set('subtitle', e.target.value)} placeholder="Comment tout a commencé…" /></Field>
+            <Field label="Sous-titre (optionnel)"><input className="input" value={str('subtitle')} onChange={(e) => set('subtitle', e.target.value)} placeholder="Deux regards, une même histoire" /></Field>
           </div>
-          <ListEditor
-            items={voices}
-            onChange={setVoices}
-            addLabel="Ajouter un récit"
-            newItem={() => ({ name: '', photo: '', text: '' })}
-            render={(v, update) => (
+
+          <div className="rounded-xl border border-borderlight p-4">
+            <p className="mb-3 text-sm font-semibold text-ink">Photo du couple et introduction <span className="font-normal text-ink-secondary">(facultatif)</span></p>
+            <div className="grid gap-4 sm:grid-cols-[200px,1fr]">
+              <MediaUploader
+                bucket="media"
+                folder={`${folder}/histoire`}
+                accept="image/*"
+                label="Photo du couple"
+                value={str('couple_photo')}
+                onChange={(p) => set('couple_photo', p ?? '')}
+                hint="Portrait 3:4, 900 × 1200 px — affichée dans un cadre en arche"
+              />
               <div className="space-y-3">
-                <Field label="Raconté par">
-                  <input className="input" value={(v.name as string) ?? ''} onChange={(e) => update({ ...v, name: e.target.value })} placeholder="Lyzette" />
-                </Field>
-                <MediaUploader
-                  bucket="media"
-                  folder={`${folder}/histoire`}
-                  accept="image/*"
-                  label="Photo (portrait, carrée de préférence)"
-                  value={(v.photo as string) ?? ''}
-                  onChange={(p) => update({ ...v, photo: p ?? '' })}
-                  hint="Carrée, 600 × 600 px minimum"
-                />
-                <Field label="Récit">
-                  <textarea className="input min-h-32" value={(v.text as string) ?? ''} onChange={(e) => update({ ...v, text: e.target.value })} placeholder="Tout commence pendant les vacances de…" />
+                <Field label="Légende de la photo"><input className="input" value={str('photo_caption')} onChange={(e) => set('photo_caption', e.target.value)} placeholder="Douala, 2013 — le début de tout" /></Field>
+                <Field label="Introduction">
+                  <textarea className="input min-h-24" value={str('intro')} onChange={(e) => set('intro', e.target.value)} placeholder="Une partie de PlayStation, un été à Douala… et douze ans plus tard, un « oui »." />
                 </Field>
               </div>
-            )}
-          />
-          <p className="text-xs text-ink-secondary">Les récits longs sont repliés avec un bouton « Lire la suite ». Deux récits = un par marié(e), affichés en alternance.</p>
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-2 text-sm font-semibold text-ink">Les récits <span className="font-normal text-ink-secondary">— idéalement deux, un par marié(e) : photo et extrait en alternance, « Voir plus » ouvre le récit complet</span></p>
+            <ListEditor
+              items={voices}
+              onChange={(v) => set('voices', v)}
+              addLabel="Ajouter un récit"
+              newItem={() => ({ name: '', label: '', photo: '', text: '' })}
+              render={(v, update) => (
+                <div className="grid gap-4 sm:grid-cols-[180px,1fr]">
+                  <MediaUploader
+                    bucket="media"
+                    folder={`${folder}/histoire`}
+                    accept="image/*"
+                    label="Portrait"
+                    value={(v.photo as string) ?? ''}
+                    onChange={(p) => update({ ...v, photo: p ?? '' })}
+                    hint="Carré, 600 × 600 px"
+                  />
+                  <div className="space-y-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Field label="Prénom">
+                        <input className="input" value={(v.name as string) ?? ''} onChange={(e) => update({ ...v, name: e.target.value })} placeholder="Lyzette" />
+                      </Field>
+                      <Field label="Petite mention (optionnel)">
+                        <input className="input" value={(v.label as string) ?? ''} onChange={(e) => update({ ...v, label: e.target.value })} placeholder="raconte · sa version · la mariée" />
+                      </Field>
+                    </div>
+                    <Field label="Récit">
+                      <textarea className="input min-h-40" value={(v.text as string) ?? ''} onChange={(e) => update({ ...v, text: e.target.value })} placeholder="Tout commence pendant les vacances de 2013…" />
+                    </Field>
+                    <p className="text-xs text-ink-secondary">{((v.text as string) ?? '').length} caractères — la carte affiche les ~200 premiers ; le reste s'ouvre avec « Voir plus ».</p>
+                  </div>
+                </div>
+              )}
+            />
+          </div>
+
+          <div>
+            <p className="mb-2 text-sm font-semibold text-ink">Les grandes dates <span className="font-normal text-ink-secondary">(facultatif) — frise affichée sous les récits</span></p>
+            <ListEditor
+              items={milestones}
+              onChange={(v) => set('milestones', v)}
+              addLabel="Ajouter une date"
+              newItem={() => ({ date: '', title: '', text: '' })}
+              render={(m, update) => (
+                <div className="grid gap-3 sm:grid-cols-[160px,1fr]">
+                  <Field label="Date">
+                    <input className="input" value={(m.date as string) ?? ''} onChange={(e) => update({ ...m, date: e.target.value })} placeholder="Été 2013" />
+                  </Field>
+                  <div className="space-y-3">
+                    <Field label="Titre">
+                      <input className="input" value={(m.title as string) ?? ''} onChange={(e) => update({ ...m, title: e.target.value })} placeholder="La rencontre" />
+                    </Field>
+                    <Field label="Texte (optionnel)">
+                      <textarea className="input min-h-16" value={(m.text as string) ?? ''} onChange={(e) => update({ ...m, text: e.target.value })} placeholder="Une manette de PlayStation et beaucoup de fous rires." />
+                    </Field>
+                  </div>
+                </div>
+              )}
+            />
+          </div>
+        </div>
+      );
+    }
+    case 'snapchat': {
+      const url = str('url').trim();
+      const urlOk = isSnapchatUrl(url);
+      return (
+        <div className="space-y-4">
+          <Field label="Lien du filtre Snapchat *">
+            <input
+              className="input font-mono text-sm"
+              value={str('url')}
+              onChange={(e) => set('url', e.target.value)}
+              placeholder="https://www.snapchat.com/unlock/?type=SNAPCODE&uuid=…"
+            />
+          </Field>
+          {url && !urlOk && (
+            <p className="rounded-md bg-red-50 px-3 py-2 text-xs text-red-600">
+              Ce lien n'est pas un lien Snapchat valide (il doit commencer par https:// et venir de snapchat.com).
+            </p>
+          )}
+          {urlOk && (
+            <p className="rounded-md bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+              Lien valide : le QR code et le bouton « Ouvrir le filtre » apparaîtront sur le site.
+            </p>
+          )}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Titre"><input className="input" value={str('title')} onChange={(e) => set('title', e.target.value)} placeholder="Filtre Snapchat" /></Field>
+            <Field label="Petit texte (optionnel)"><input className="input" value={str('text')} onChange={(e) => set('text', e.target.value)} placeholder="Partagez vos plus beaux moments avec notre filtre !" /></Field>
+          </div>
+          <p className="text-xs text-ink-secondary">
+            Où trouver le lien : dans Snapchat (ou Lens Studio / Lens Web Builder), ouvrez le filtre → bouton
+            « Partager » → « Copier le lien ». Tant qu'aucun lien valide n'est saisi, la section reste masquée sur le site.
+          </p>
         </div>
       );
     }

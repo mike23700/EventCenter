@@ -134,7 +134,7 @@ create table if not exists public.sections (
              check (type in ('cover','location','countdown','save_the_date','program',
                              'image_video','mixed','rsvp','gallery',
                              'tables','testimonials',
-                             'story','quote','info','thanks','dress_code')),
+                             'story','quote','info','thanks','dress_code','snapchat')),
   enabled    boolean not null default true,
   position   integer not null default 0,
   title      text,

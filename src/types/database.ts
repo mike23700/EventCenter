@@ -75,7 +75,8 @@ export type SectionType =
   | 'quote'
   | 'info'
   | 'thanks'
-  | 'dress_code';
+  | 'dress_code'
+  | 'snapchat';
 
 export interface Guest {
   id: string;

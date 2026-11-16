@@ -22,6 +22,7 @@ const SECTION_LABELS: Record<string, string> = {
   info: 'Informations pratiques',
   thanks: 'Remerciements',
   dress_code: 'Code vestimentaire',
+  snapchat: 'Filtre Snapchat',
 };
 
 export function sectionLabel(type: string): string {
@@ -33,7 +34,7 @@ export function sectionLabel(type: string): string {
 const ALL_TYPES: SectionType[] = [
   'cover', 'location', 'countdown', 'save_the_date', 'program', 'image_video',
   'mixed', 'rsvp', 'gallery', 'testimonials',
-  'story', 'quote', 'info', 'thanks', 'dress_code',
+  'story', 'quote', 'info', 'thanks', 'dress_code', 'snapchat',
 ];
 
 /** Liste des sections, activation, réordonnancement et édition de contenu. */

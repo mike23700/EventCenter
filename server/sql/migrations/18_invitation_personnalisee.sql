@@ -9,6 +9,7 @@
 --   info        → Informations pratiques
 --   thanks      → Remerciements
 --   dress_code  → Code vestimentaire (palette + photos d'inspiration)
+--   snapchat    → Filtre Snapchat (lien → QR code + bouton)
 --
 -- Aucune autre modification de structure : le lien personnel utilise la
 -- colonne existante guests.qr_token, le nombre de places guests.plus_ones,
@@ -23,7 +24,7 @@ alter table public.sections
   check (type in ('cover','location','countdown','save_the_date','program',
                   'image_video','mixed','rsvp','gallery',
                   'tables','testimonials',
-                  'story','quote','info','thanks','dress_code'));
+                  'story','quote','info','thanks','dress_code','snapchat'));
 
 -- (L'ouverture d'un lien personnel /w/slug?i=<qr_token> s'appuie sur l'index
 -- unique existant guests_qr_token_key : aucun index à ajouter.)

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Quote as QuoteIcon, Shirt } from 'lucide-react';
+import { Shirt } from 'lucide-react';
 import { storageUrl } from '../../../lib/media';
 import type { SectionProps } from './types';
 import { asRecord, str } from './types';
@@ -8,7 +8,7 @@ import { DividerByTemplate } from '../../../lib/templates';
 
 /*
  * Sections éditoriales ajoutées en novembre 2026 :
- *   story       « Notre histoire » racontée à deux voix
+ *   (story      « Notre histoire » : voir StorySection.tsx)
  *   quote       Citation / verset
  *   info        Informations pratiques (liste numérotée)
  *   thanks      Remerciements
@@ -42,47 +42,6 @@ function ReadMore({ text, limit = 260, color, accent }: { text: string; limit?: 
         </button>
       )}
     </>
-  );
-}
-
-export function Story({ content, accent, tpl }: SectionProps) {
-  const c = asRecord(content);
-  const { palette } = tpl;
-  const voices = records(c['voices']).filter((v) => typeof v.text === 'string' && v.text);
-  if (voices.length === 0) return null;
-  return (
-    <SectionShell tpl={tpl} accent={accent}>
-      <div className="mx-auto max-w-3xl px-6 py-16">
-        <SectionTitle tpl={tpl} accent={accent}>{str(c, 'title') || 'Notre histoire'}</SectionTitle>
-        {str(c, 'subtitle') && (
-          <p className="mt-3 text-center tpl-body" style={{ color: palette.muted }}>{str(c, 'subtitle')}</p>
-        )}
-        <div className="mt-12 space-y-10">
-          {voices.map((v, i) => {
-            const photo = storageUrl('media', typeof v.photo === 'string' ? v.photo : null);
-            const name = typeof v.name === 'string' ? v.name : '';
-            return (
-              <article key={i} className={`flex flex-col items-center gap-5 sm:items-start ${i % 2 ? 'sm:flex-row-reverse' : 'sm:flex-row'}`}>
-                {photo ? (
-                  <img loading="lazy" decoding="async" src={photo} alt={name} className="h-28 w-28 flex-none rounded-full object-cover shadow-md" style={{ boxShadow: `0 0 0 4px ${palette.background}, 0 0 0 5px ${accent}66` }} />
-                ) : (
-                  <span className="flex h-20 w-20 flex-none items-center justify-center rounded-full font-display tpl-display text-3xl" style={{ backgroundColor: palette.accentSoft, color: accent }}>
-                    {name.charAt(0)}
-                  </span>
-                )}
-                <div className="relative flex-1 rounded-2xl p-6" style={{ backgroundColor: palette.surface, border: `1px solid ${palette.border}` }}>
-                  <QuoteIcon className="absolute -top-3 left-6 h-6 w-6 rounded-full p-1" style={{ backgroundColor: palette.background, color: accent }} />
-                  <ReadMore text={v.text as string} color={palette.text} accent={accent} />
-                  {name && (
-                    <p className="mt-4 font-display tpl-display text-xl" style={{ color: accent }}>— {name}</p>
-                  )}
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      </div>
-    </SectionShell>
   );
 }
 
