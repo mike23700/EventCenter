@@ -2,6 +2,8 @@
 # =====================================================================
 # EVENTS ETAN — Préparation des paquets de mise à jour o2switch
 # Usage (depuis la racine du projet) :   bash deploy/build.sh
+# ⚠ Arrêtez d'abord « npm run dev » : le script réinstalle node_modules
+#   (npm ci), ce qui casse un serveur Vite en cours (page blanche).
 #
 # Produit, directement dans deploy/ :
 #   eventcenter-COMPLET.zip   tout ce qu'il faut (3 paquets + script maj-o2switch.sh + guide)

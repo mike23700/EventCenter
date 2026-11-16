@@ -10,9 +10,12 @@ export default defineConfig({
     host: true,
     // En développement, l'API Node (server/, port 4000) est jointe via Vite :
     // le front garde des URL relatives (/api, /uploads) comme en production.
+    // changeOrigin: false → l'en-tête Host reste celui du navigateur
+    // (localhost:5173 ou l'IP du PC), sinon le contrôle d'origine de l'API
+    // (anti-CSRF, server/src/security.ts) refuse connexion et envois.
     proxy: {
-      '/api': 'http://localhost:4000',
-      '/uploads': 'http://localhost:4000',
+      '/api': { target: 'http://localhost:4000', changeOrigin: false, xfwd: true },
+      '/uploads': { target: 'http://localhost:4000', changeOrigin: false },
     },
   },
 });
