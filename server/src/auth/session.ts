@@ -54,3 +54,8 @@ export async function findUserByEmail(
   );
   return rows[0] ?? null;
 }
+
+/** Supprime les sessions expirées (appelé périodiquement par le serveur). */
+export async function purgeExpiredSessions(): Promise<void> {
+  await pool.query('delete from sessions where expires_at < now()');
+}

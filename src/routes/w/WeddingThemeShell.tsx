@@ -3,6 +3,7 @@ import type { Wedding } from '../../types/database';
 import { getTemplate } from '../../lib/templates';
 import { DISPLAY_FONTS, BODY_FONTS } from '../../lib/format';
 import AudioToggle from './AudioToggle';
+import { storageUrl } from '../../lib/media';
 
 /**
  * Habillage commun à toutes les pages publiques d'un mariage (site principal,
@@ -78,7 +79,13 @@ export default function WeddingThemeShell({ wedding, children }: { wedding: Wedd
         />
       )}
 
-      {wedding.audio_url && <AudioToggle audioPath={wedding.audio_url} />}
+      {wedding.audio_url && (
+        <AudioToggle
+          audioPath={wedding.audio_url}
+          title={wedding.secondary_name ? `${wedding.name} & ${wedding.secondary_name}` : wedding.name}
+          artworkUrl={storageUrl('logos', wedding.logo)}
+        />
+      )}
 
       <div className="relative z-10">
         {children}

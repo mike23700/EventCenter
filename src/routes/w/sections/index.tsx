@@ -11,6 +11,7 @@ import ImageVideo from './ImageVideo';
 import Rsvp from './Rsvp';
 import Gallery from './Gallery';
 import Testimonials from './Testimonials';
+import { Story, QuoteSection, InfoSection, ThanksSection, DressCodeSection } from './storyBlocks';
 
 export interface SectionRendererProps {
   section: Section;
@@ -30,6 +31,11 @@ const registry: Record<string, ComponentType<any>> = {
   rsvp: Rsvp,
   gallery: Gallery,
   testimonials: Testimonials,
+  story: Story,
+  quote: QuoteSection,
+  info: InfoSection,
+  thanks: ThanksSection,
+  dress_code: DressCodeSection,
 };
 
 /**

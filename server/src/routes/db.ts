@@ -8,10 +8,16 @@ import {
   scopeClause,
   weddingIdOfRow,
   canWriteWedding,
+  refBelongsToWedding,
+  weddingSlug,
   type Table,
+  type TableDef,
 } from '../policies';
+import { hitRateLimit, clientKey } from '../security';
+import type { CurrentUser } from '../types';
 
 const router = Router();
+
 
 interface Filters {
   eq: [string, string][];
@@ -98,9 +104,29 @@ function table(req: { params: { table: string } }): Table {
   return name;
 }
 
+function isSuperAdmin(user: CurrentUser | null): boolean {
+  return user?.role === 'super_admin';
+}
+
+/** Colonnes lisibles par l'appelant (les anonymes ne voient qu'un sous-ensemble). */
+function readableColumns(def: TableDef, user: CurrentUser | null): string[] {
+  if (user) return def.columns;
+  return def.anonRead ? def.anonRead.columns : [];
+}
+
+/** Liste SELECT validée : `*` devient la liste explicite des colonnes autorisées. */
+function selectList(raw: unknown, allowed: string[]): string {
+  const selectRaw = typeof raw === 'string' && raw.trim() ? raw : '*';
+  if (selectRaw === '*') return allowed.join(', ');
+  const cols = selectRaw.split(',').map((s) => s.trim()).filter(Boolean);
+  for (const c of cols) assertColumn(c, allowed);
+  return cols.join(', ');
+}
+
 /** JSON.stringify les colonnes jsonb avant bind (pg ne le fait pas lui-même). */
 function prepareRowForWrite(t: Table, row: Record<string, unknown>): Record<string, unknown> {
   const def = TABLES[t];
+  if (!row || typeof row !== 'object' || Array.isArray(row)) throw new HttpError(400, 'Données invalides.');
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(row)) {
     if (!def.columns.includes(key)) throw new HttpError(400, `Colonne inconnue: ${key}`);
@@ -109,6 +135,47 @@ function prepareRowForWrite(t: Table, row: Record<string, unknown>): Record<stri
       : value;
   }
   return out;
+}
+
+/** Vérifie les références croisées (event_id, guest_id…) : même mariage obligatoire. */
+async function assertRefs(def: TableDef, row: Record<string, unknown>, weddingId: string): Promise<void> {
+  for (const ref of def.sameWeddingRefs) {
+    if (!(ref.column in row)) continue;
+    if (!(await refBelongsToWedding(ref.table, row[ref.column], weddingId))) {
+      throw new HttpError(403, 'Référence vers un autre mariage refusée.');
+    }
+  }
+}
+
+/** Ligne envoyée par un visiteur anonyme : colonnes autorisées, valeurs forcées, longueurs bornées. */
+async function prepareAnonRow(t: Table, def: TableDef, raw: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const rule = def.anonInsert;
+  if (!rule) throw new HttpError(403, 'Accès refusé.');
+  const row: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(raw ?? {})) {
+    if (!rule.columns.includes(key)) throw new HttpError(403, `Champ non autorisé : ${key}`);
+    if (typeof value === 'string' && value.length > rule.maxTextLength) {
+      throw new HttpError(400, 'Texte trop long.');
+    }
+    if (value !== null && typeof value === 'object') throw new HttpError(400, 'Données invalides.');
+    row[key] = value;
+  }
+  Object.assign(row, rule.force);
+
+  if (t === 'media') {
+    if (row.type !== 'image' && row.type !== 'video') throw new HttpError(400, 'Type de média invalide.');
+    // Le fichier doit avoir été déposé dans le dossier galerie de CE mariage.
+    const weddingId = typeof row.wedding_id === 'string' ? row.wedding_id : '';
+    const slug = weddingId ? await weddingSlug(weddingId) : null;
+    const path = typeof row.storage_path === 'string' ? row.storage_path : '';
+    if (!slug || !path.startsWith(`weddings/${slug}/galerie-invites/`) || path.includes('..')) {
+      throw new HttpError(400, 'Fichier invalide.');
+    }
+  }
+  if (t === 'testimonials') {
+    if (typeof row.content !== 'string' || !row.content.trim()) throw new HttpError(400, 'Message vide.');
+  }
+  return row;
 }
 
 // ---------------------------------------------------------------------
@@ -121,8 +188,9 @@ router.get('/:table', async (req, res, next) => {
     const user = req.currentUser;
 
     if (!user && !def.anonRead) throw new HttpError(403, 'Accès refusé.');
+    const allowed = readableColumns(def, user);
 
-    const filters = parseFilters(req.query as Record<string, unknown>, def.columns);
+    const filters = parseFilters(req.query as Record<string, unknown>, allowed);
     const where = buildWhere(filters, 1);
     const parts = where.sql ? [where.sql] : [];
     let params = where.params;
@@ -136,21 +204,21 @@ router.get('/:table', async (req, res, next) => {
       parts.push(def.anonRead.extraWhere);
     }
 
-    const selectRaw = typeof req.query.select === 'string' ? req.query.select : '*';
-    const selectCols = selectRaw === '*' ? ['*'] : selectRaw.split(',').map((s) => s.trim());
-    for (const c of selectCols) if (c !== '*') assertColumn(c, def.columns);
-
-    let sql = `select ${selectCols.join(', ')} from ${t}`;
+    let sql = `select ${selectList(req.query.select, allowed)} from ${t}`;
     if (parts.length > 0) sql += ` where ${parts.join(' and ')}`;
 
     if (typeof req.query.order === 'string') {
       const [col, dir] = req.query.order.split('.');
-      assertColumn(col, def.columns);
+      assertColumn(col, allowed);
       sql += ` order by ${col} ${dir === 'desc' ? 'desc' : 'asc'}`;
     }
-    if (typeof req.query.limit === 'string' && Number.isInteger(Number(req.query.limit))) {
-      sql += ` limit ${Math.max(0, Number(req.query.limit))}`;
-    }
+    const maxLimit = user ? 5000 : 500;
+    const reqLimit = typeof req.query.limit === 'string' && Number.isInteger(Number(req.query.limit))
+      ? Number(req.query.limit)
+      : null;
+    // Les anonymes sont toujours plafonnés (pas d'aspiration massive).
+    const limit = reqLimit !== null ? Math.min(Math.max(0, reqLimit), maxLimit) : (user ? null : maxLimit);
+    if (limit !== null) sql += ` limit ${limit}`;
 
     const { rows } = await pool.query(sql, params);
 
@@ -176,22 +244,30 @@ router.post('/:table', async (req, res, next) => {
     const t = table(req);
     const def = TABLES[t];
     const user = req.currentUser;
+    const admin = isSuperAdmin(user);
 
-    if (t === 'weddings' && user?.role !== 'super_admin') {
-      throw new HttpError(403, 'Accès refusé.');
+    if (t === 'weddings' && !admin) throw new HttpError(403, 'Accès refusé.');
+    if (user && !admin && !def.ownerWrite) throw new HttpError(403, 'Action réservée à l\'administrateur.');
+    if (!user && !def.anonInsert) throw new HttpError(403, 'Accès refusé.');
+    if (!user && !hitRateLimit('anon-write', clientKey(req), 10 * 60 * 1000, 30)) {
+      throw new HttpError(429, 'Trop d\'envois, réessayez dans quelques minutes.');
     }
 
     const bodyRows = Array.isArray(req.body) ? req.body : [req.body];
     if (bodyRows.length === 0) throw new HttpError(400, 'Aucune donnée.');
+    if (!user && bodyRows.length > 1) throw new HttpError(400, 'Une seule ligne à la fois.');
+    if (bodyRows.length > 1000) throw new HttpError(400, 'Trop de lignes.');
 
     const prepared: Record<string, unknown>[] = [];
     for (const raw of bodyRows) {
-      const row = prepareRowForWrite(t, raw as Record<string, unknown>);
+      const source = user ? (raw as Record<string, unknown>) : await prepareAnonRow(t, def, raw as Record<string, unknown>);
+      const row = prepareRowForWrite(t, source);
       if (t !== 'weddings') {
         const weddingId = await weddingIdOfRow(t, row);
         if (!weddingId) throw new HttpError(400, "Impossible de déterminer le mariage concerné.");
-        const allowed = await canWriteWedding(user, weddingId, def.anonInsert);
+        const allowed = await canWriteWedding(user, weddingId, !!def.anonInsert);
         if (!allowed) throw new HttpError(403, 'Accès refusé.');
+        if (!admin) await assertRefs(def, row, weddingId);
       }
       row.id = randomUUID();
       if (t === 'guests') {
@@ -202,12 +278,19 @@ router.post('/:table', async (req, res, next) => {
       prepared.push(row);
     }
 
+    // Upsert : la cible du conflit doit contenir la colonne de rattachement
+    // (déjà vérifiée ci-dessus), sinon un conflit pourrait écraser une ligne
+    // d'un autre mariage.
     const onConflictRaw = typeof req.query.on_conflict === 'string' ? req.query.on_conflict : null;
     const onConflict = onConflictRaw ? onConflictRaw.split(',').map((c) => c.trim()) : null;
-    if (onConflict) for (const c of onConflict) assertColumn(c, def.columns);
+    if (onConflict) {
+      if (!user) throw new HttpError(403, 'Accès refusé.');
+      for (const c of onConflict) assertColumn(c, def.columns);
+      const anchor = def.location.kind === 'direct' ? def.location.weddingIdColumn : def.location.via.fk;
+      if (!admin && !onConflict.includes(anchor)) throw new HttpError(400, 'Cible de conflit non autorisée.');
+    }
 
-    const selectRaw = typeof req.query.select === 'string' ? req.query.select : '*';
-    if (selectRaw !== '*') for (const c of selectRaw.split(',')) assertColumn(c.trim(), def.columns);
+    const returning = selectList(req.query.select, readableColumns(def, user).length ? readableColumns(def, user) : ['id']);
 
     const results: unknown[] = [];
     for (const row of prepared) {
@@ -216,12 +299,14 @@ router.post('/:table', async (req, res, next) => {
       const placeholders = cols.map((_, i) => `$${i + 1}`);
       let sql = `insert into ${t} (${cols.join(', ')}) values (${placeholders.join(', ')})`;
       if (onConflict) {
-        const updates = cols.filter((c) => !onConflict.includes(c)).map((c) => `${c} = excluded.${c}`);
+        const updates = cols
+          .filter((c) => !onConflict.includes(c) && c !== 'id' && (admin || !def.immutable.includes(c)))
+          .map((c) => `${c} = excluded.${c}`);
         sql += updates.length > 0
           ? ` on conflict (${onConflict.join(', ')}) do update set ${updates.join(', ')}`
           : ` on conflict (${onConflict.join(', ')}) do nothing`;
       }
-      sql += ` returning ${selectRaw}`;
+      sql += ` returning ${returning}`;
       const { rows } = await pool.query(sql, values);
       results.push(rows[0]);
     }
@@ -240,11 +325,20 @@ router.patch('/:table', async (req, res, next) => {
     const t = table(req);
     const def = TABLES[t];
     const user = req.currentUser;
+    const admin = isSuperAdmin(user);
 
-    if (!user && !def.anonUpdate) throw new HttpError(403, 'Accès refusé.');
+    if (!user) throw new HttpError(403, 'Accès refusé.');
+    if (!admin && !def.ownerWrite) throw new HttpError(403, 'Action réservée à l\'administrateur.');
 
     const row = prepareRowForWrite(t, req.body as Record<string, unknown>);
     delete row.id;
+    if (!admin) {
+      for (const c of def.immutable) {
+        if (c in row) throw new HttpError(403, `Champ non modifiable : ${c}`);
+      }
+      // Le pointage est toujours attribué au compte qui le fait.
+      if (t === 'guests' && 'checked_in_by' in row) row.checked_in_by = row.checked_in_by === null ? null : user.id;
+    }
     const cols = Object.keys(row);
     if (cols.length === 0) throw new HttpError(400, 'Aucune donnée à modifier.');
 
@@ -253,13 +347,26 @@ router.patch('/:table', async (req, res, next) => {
 
     const filters = parseFilters(req.query as Record<string, unknown>, def.columns);
     const where = buildWhere(filters, setValues.length + 1);
-    const parts = where.sql ? [where.sql] : ['false'];
+    if (!where.sql) throw new HttpError(400, 'Filtre requis pour une modification.');
+    const parts = [where.sql];
     let params = [...setValues, ...where.params];
 
     const scope = scopeClause(t, user, params.length + 1);
     if (scope.sql) {
       parts.push(scope.sql);
       params = [...params, ...scope.params];
+    }
+
+    // Références modifiées : elles doivent rester dans le mariage de chaque ligne visée.
+    if (!admin && def.sameWeddingRefs.some((r) => r.column in row)) {
+      const w2 = buildWhere(filters, 1);
+      const s2 = scopeClause(t, user, w2.params.length + 1);
+      const p2 = s2.sql ? [w2.sql, s2.sql] : [w2.sql];
+      const { rows: targets } = await pool.query(`select * from ${t} where ${p2.join(' and ')}`, [...w2.params, ...s2.params]);
+      for (const target of targets) {
+        const weddingId = await weddingIdOfRow(t, target);
+        if (weddingId) await assertRefs(def, row, weddingId);
+      }
     }
 
     const sql = `update ${t} set ${setSql} where ${parts.join(' and ')} returning *`;
@@ -280,6 +387,9 @@ router.delete('/:table', async (req, res, next) => {
     const user = req.currentUser;
 
     if (!user) throw new HttpError(403, 'Accès refusé.');
+    if (!isSuperAdmin(user) && (!def.ownerWrite || t === 'weddings')) {
+      throw new HttpError(403, 'Action réservée à l\'administrateur.');
+    }
 
     const filters = parseFilters(req.query as Record<string, unknown>, def.columns);
     const where = buildWhere(filters, 1);

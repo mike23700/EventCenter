@@ -1,4 +1,7 @@
-const KEY_PREFIX = 'wedqr_guest:';
+// v2 : on mémorise le JETON personnel de l'invité (preuve d'identité), plus
+// son identifiant — l'API publique ne résout un invité que sur son jeton.
+const KEY_PREFIX = 'wedqr_guest_token:';
+const LEGACY_PREFIX = 'wedqr_guest:';
 const EVENT_NAME = 'wedqr:known-guest-changed';
 
 interface KnownGuestChangedDetail {
@@ -6,34 +9,35 @@ interface KnownGuestChangedDetail {
 }
 
 /**
- * Mémorise, dans ce navigateur, quel invité vient d'être identifié pour ce
- * mariage (inscription ou "retrouver mon QR") — pas de session serveur ici,
- * juste de quoi permettre à d'autres sections publiques (ex. le calendrier
- * "Save the date") de savoir qui les consulte sans lui redemander son nom.
- * Un évènement custom est émis à chaque changement pour que ces sections,
- * déjà montées au moment de l'identification, puissent se mettre à jour
- * sans recharger la page.
+ * Mémorise, dans ce navigateur, l'invité identifié pour ce mariage (lien
+ * personnel, inscription ou « retrouver mon pass ») : pas de session
+ * serveur, juste de quoi permettre aux autres sections publiques (RSVP,
+ * Save the date…) de le reconnaître sans lui redemander qui il est. Un
+ * évènement custom est émis à chaque changement pour que ces sections, déjà
+ * montées, se mettent à jour sans recharger la page.
  */
-export function saveKnownGuestId(weddingId: string, guestId: string): void {
+export function saveKnownGuestToken(weddingId: string, qrToken: string): void {
   try {
-    localStorage.setItem(KEY_PREFIX + weddingId, guestId);
+    localStorage.setItem(KEY_PREFIX + weddingId, qrToken);
+    localStorage.removeItem(LEGACY_PREFIX + weddingId);
   } catch {
-    // stockage indisponible (navigation privée, quota…) : tant pis, pas bloquant
+    // stockage indisponible (navigation privée, quota…) : pas bloquant
   }
   window.dispatchEvent(new CustomEvent<KnownGuestChangedDetail>(EVENT_NAME, { detail: { weddingId } }));
 }
 
-/** À utiliser quand l'identification s'avère fausse (bouton "Ce n'est pas moi"). */
-export function clearKnownGuestId(weddingId: string): void {
+/** À utiliser quand l'identification s'avère fausse (bouton « Ce n'est pas moi »). */
+export function clearKnownGuest(weddingId: string): void {
   try {
     localStorage.removeItem(KEY_PREFIX + weddingId);
+    localStorage.removeItem(LEGACY_PREFIX + weddingId);
   } catch {
     // ignore
   }
   window.dispatchEvent(new CustomEvent<KnownGuestChangedDetail>(EVENT_NAME, { detail: { weddingId } }));
 }
 
-export function getKnownGuestId(weddingId: string): string | null {
+export function getKnownGuestToken(weddingId: string): string | null {
   try {
     return localStorage.getItem(KEY_PREFIX + weddingId);
   } catch {

@@ -1,22 +1,14 @@
 import { useState } from 'react';
 import { Search } from 'lucide-react';
-import { db } from '../../../lib/db';
+import { lookupGuest } from '../../../lib/publicApi';
 import type { TemplateDef } from '../../../lib/templates';
 import GuestQrCard, { type QrGuest } from './GuestQrCard';
-import { clearKnownGuestId } from './guestSession';
-
-interface Row extends QrGuest {
-  phone: string | null;
-}
-
-function normalizePhone(v: string): string {
-  return v.replace(/[\s.\-()]/g, '');
-}
+import { clearKnownGuest } from './guestSession';
 
 /**
- * Retrouver son QR déjà généré : recherche par nom parmi les invités, avec
- * désambiguïsation par téléphone en cas d'homonymes (le nom seul n'est pas
- * garanti unique).
+ * « Retrouver mon pass » : nom ET téléphone utilisé à l'inscription. La
+ * liste des invités n'est jamais exposée ; seul l'invité qui correspond aux
+ * deux informations est renvoyé (API publique, recherches limitées).
  */
 export default function GuestQrLookup({
   weddingId,
@@ -29,60 +21,28 @@ export default function GuestQrLookup({
 }) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [matches, setMatches] = useState<Row[] | null>(null);
-  const [found, setFound] = useState<Row | null>(null);
+  const [found, setFound] = useState<QrGuest | null>(null);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
 
+  const canSearch = name.trim().length >= 2 && phone.length === 9;
+
   async function search() {
-    const q = name.trim();
-    if (q.length < 2) return;
+    if (!canSearch) return;
     setSearching(true);
     setError('');
-    setFound(null);
-    setMatches(null);
-    const { data, error } = await db
-      .from('guests')
-      .select('id, name, phone, qr_token')
-      .eq('wedding_id', weddingId)
-      .ilike('name', `%${q}%`);
-    setSearching(false);
-    if (error) {
-      setError(error.message);
-      return;
-    }
-    const rows = (data ?? []) as Row[];
-    if (rows.length === 1) {
-      setFound(rows[0]);
-    } else {
-      setMatches(rows);
-    }
-  }
-
-  function confirmWithPhone() {
-    if (!matches) return;
-    if (phone.length !== 9) {
-      setError('Le numéro doit comporter exactement 9 chiffres (ex. 679...).');
-      return;
-    }
-    const p = normalizePhone(phone);
-    const hits = matches.filter((m) => m.phone && normalizePhone(m.phone) === p);
-    if (hits.length === 1) {
-      setFound(hits[0]);
-      setMatches(null);
-      setError('');
-    } else {
-      setError(
-        "Aucune correspondance avec ce numéro. Vérifiez l'orthographe de votre nom et le " +
-          'téléphone utilisé lors de votre inscription, ou contactez les mariés.',
-      );
+    try {
+      setFound(await lookupGuest(weddingId, name.trim(), phone));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Recherche impossible');
+    } finally {
+      setSearching(false);
     }
   }
 
   function reset() {
-    clearKnownGuestId(weddingId);
+    clearKnownGuest(weddingId);
     setFound(null);
-    setMatches(null);
     setName('');
     setPhone('');
     setError('');
@@ -92,65 +52,46 @@ export default function GuestQrLookup({
     return <GuestQrCard guest={found} weddingId={weddingId} accent={accent} palette={palette} onReset={reset} />;
   }
 
+  const field = { backgroundColor: palette.background, borderColor: palette.border, color: palette.text };
+
   return (
     <div className="space-y-4">
+      <p className="tpl-body text-sm" style={{ color: palette.muted }}>
+        Indiquez votre nom et le téléphone utilisé lors de votre inscription.
+      </p>
       <div>
         <label className="label">Votre nom</label>
-        <div className="flex gap-2">
-          <input
-            className="input"
-            placeholder="Ex : Anne Marie"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && search()}
-            style={{ backgroundColor: palette.background, borderColor: palette.border, color: palette.text }}
-          />
-          <button
-            onClick={search}
-            disabled={searching || name.trim().length < 2}
-            className="rounded-full px-6 text-sm font-medium text-white transition hover:opacity-85 disabled:opacity-40"
-            style={{ backgroundColor: accent }}
-          >
-            <Search className="h-4 w-4" />
-          </button>
-        </div>
-        {searching && <p className="mt-2 text-sm" style={{ color: palette.muted }}>Recherche…</p>}
+        <input
+          className="input"
+          placeholder="Ex : Anne Marie"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && search()}
+          style={field}
+        />
       </div>
-
-      {matches && matches.length === 0 && (
-        <p className="text-sm" style={{ color: palette.muted }}>
-          Aucune inscription trouvée avec ce nom. Vérifiez l'orthographe, ou inscrivez-vous si ce
-          n'est pas encore fait.
-        </p>
-      )}
-
-      {matches && matches.length > 1 && (
-        <div className="space-y-2">
-          <p className="text-sm" style={{ color: palette.muted }}>
-            Plusieurs invités portent ce nom. Confirmez avec le téléphone utilisé lors de
-            l'inscription :
-          </p>
-          <input
-            className="input"
-            placeholder="679..."
-            inputMode="numeric"
-            maxLength={9}
-            value={phone}
-            onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
-            onKeyDown={(e) => e.key === 'Enter' && confirmWithPhone()}
-            style={{ backgroundColor: palette.background, borderColor: palette.border, color: palette.text }}
-          />
-          <button
-            onClick={confirmWithPhone}
-            disabled={!phone.trim()}
-            className="rounded-full px-5 py-2 text-sm font-medium text-white disabled:opacity-40"
-            style={{ backgroundColor: accent }}
-          >
-            Valider
-          </button>
-        </div>
-      )}
-
+      <div>
+        <label className="label">Votre téléphone</label>
+        <input
+          className="input"
+          placeholder="679..."
+          inputMode="numeric"
+          maxLength={9}
+          value={phone}
+          onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
+          onKeyDown={(e) => e.key === 'Enter' && search()}
+          style={field}
+        />
+      </div>
+      <button
+        onClick={search}
+        disabled={searching || !canSearch}
+        className="inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-medium text-white transition hover:opacity-85 disabled:opacity-40"
+        style={{ backgroundColor: accent }}
+      >
+        <Search className="h-4 w-4" />
+        {searching ? 'Recherche…' : 'Retrouver mon pass'}
+      </button>
       {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
     </div>
   );

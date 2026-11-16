@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Search, UserPlus } from 'lucide-react';
-import { db } from '../../../lib/db';
+import { saveResponses } from '../../../lib/publicApi';
+import { usePublicWedding } from '../publicContext';
 import type { Json, WeddingEvent } from '../../../types/database';
 import { storageUrl } from '../../../lib/media';
+import { normalizeTextSize } from '../../../lib/fontSize';
 import type { SectionProps } from './types';
 import { asRecord } from './types';
 import { SectionShell } from './shell';
@@ -25,6 +27,8 @@ type Block = {
   type: 'text' | 'image' | 'video' | 'questionnaire';
   title?: string;
   text?: string;
+  titleSize?: number;
+  textSize?: number;
   src?: string;
   questions?: Question[];
 };
@@ -87,17 +91,22 @@ export default function Mixed({ content, accent, tpl, wedding, sectionId, events
 
 function TextView({ block, tpl }: { block: Block; tpl: SectionProps['tpl'] }) {
   const { palette, id } = tpl;
+  const titleSize = normalizeTextSize(block.titleSize);
+  const textSize = normalizeTextSize(block.textSize);
   return (
     <div style={id === 'minimal' ? { maxWidth: '42rem', marginLeft: 'auto', marginRight: 'auto', textAlign: 'center' } : undefined}>
       {block.title && (
-        <h3 className="font-display tpl-display text-2xl sm:text-3xl font-bold" style={{ color: palette.ink }}>
+        <h3
+          className="font-display tpl-display text-2xl sm:text-3xl font-bold"
+          style={{ color: palette.ink, fontSize: titleSize ? `${titleSize}px` : undefined }}
+        >
           {block.title}
         </h3>
       )}
       {block.text && (
         <p
           className={`mt-3 whitespace-pre-line leading-relaxed tpl-body ${id === 'royal' ? 'text-base' : 'text-lg'}`}
-          style={{ color: palette.muted }}
+          style={{ color: palette.muted, fontSize: textSize ? `${textSize}px` : undefined }}
         >
           {block.text}
         </p>
@@ -112,7 +121,7 @@ function ImageView({ block, tpl }: { block: Block; tpl: SectionProps['tpl'] }) {
   if (!src) return null;
   return (
     <figure className={id === 'florale' ? 'rounded-3xl p-3' : undefined} style={id === 'florale' ? { backgroundColor: palette.accentSoft } : undefined}>
-      <img
+      <img loading="lazy" decoding="async"
         src={src}
         alt=""
         className="w-full"
@@ -196,6 +205,13 @@ function QuestionnaireView({
   const id = useGuestIdentity(weddingId);
   const { guest } = id;
   const guestStatus = id.status;
+  const { invitedGuest } = usePublicWedding();
+
+  // Invité arrivé par son lien personnel : pas besoin de s'identifier.
+  useEffect(() => {
+    if (invitedGuest && guestStatus === 'idle') id.adopt(invitedGuest);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invitedGuest]);
   const [registering, setRegistering] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -218,19 +234,17 @@ function QuestionnaireView({
     setSubmitting(true);
     setError('');
     const rows = questions.map((q) => ({
-      guest_id: guest.id,
       question_key: `${sectionId}:${block.id}:${q.id}`,
       answer: (answers[q.id] ?? (q.type === 'multiple' ? [] : '')) as Json,
     }));
-    const { error } = await db
-      .from('guest_responses')
-      .upsert(rows, { onConflict: 'guest_id,question_key' });
-    setSubmitting(false);
-    if (error) {
-      setError(error.message);
-      return;
+    try {
+      await saveResponses(weddingId, guest.qr_token, rows);
+      setDone(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Envoi impossible');
+    } finally {
+      setSubmitting(false);
     }
-    setDone(true);
   }
 
   if (done) {
@@ -306,9 +320,9 @@ function QuestionnaireView({
       ) : guestStatus !== 'found' ? (
         <div className="mt-5 space-y-3">
           <p className="tpl-body text-sm" style={{ color: palette.muted }}>
-            Indiquez votre nom pour que vos réponses soient rattachées à votre invitation.
+            Indiquez votre nom et votre téléphone pour que vos réponses soient rattachées à votre invitation.
           </p>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <input
               className="input"
               placeholder="Votre nom"
@@ -317,37 +331,26 @@ function QuestionnaireView({
               onKeyDown={(e) => e.key === 'Enter' && id.search()}
               style={{ backgroundColor: palette.surface, borderColor: palette.border, color: palette.text }}
             />
+            <input
+              className="input sm:max-w-[10rem]"
+              placeholder="Téléphone (679...)"
+              inputMode="numeric"
+              maxLength={9}
+              value={id.phone}
+              onChange={(e) => id.setPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
+              onKeyDown={(e) => e.key === 'Enter' && id.search()}
+              style={{ backgroundColor: palette.surface, borderColor: palette.border, color: palette.text }}
+            />
             <button
               onClick={id.search}
-              disabled={id.query.trim().length < 2}
-              className="rounded-full px-5 text-sm font-medium text-white disabled:opacity-40"
+              disabled={id.query.trim().length < 2 || id.phone.length !== 9 || guestStatus === 'searching'}
+              className="rounded-full px-5 py-2.5 text-sm font-medium text-white disabled:opacity-40"
               style={{ backgroundColor: accent }}
             >
-              <Search className="h-4 w-4" />
+              <Search className="mx-auto h-4 w-4" />
             </button>
           </div>
-          {guestStatus === 'choosing' && (
-            <div className="space-y-2">
-              {id.matches.map((m) => (
-                <label
-                  key={m.id}
-                  className="flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-2.5"
-                  style={{ borderColor: id.chosenId === m.id ? accent : palette.border }}
-                >
-                  <input type="radio" name={`gp-${block.id}`} checked={id.chosenId === m.id} onChange={() => id.setChosenId(m.id)} />
-                  <span style={{ color: palette.ink }}>{m.name}</span>
-                </label>
-              ))}
-              <button
-                onClick={id.confirmGuess}
-                disabled={!id.chosenId}
-                className="rounded-full px-5 py-2 text-sm font-medium text-white disabled:opacity-40"
-                style={{ backgroundColor: accent }}
-              >
-                C'est moi
-              </button>
-            </div>
-          )}
+          {id.error && <p className="rounded-md bg-red-50 px-3 py-2 text-xs text-red-600">{id.error}</p>}
         </div>
       ) : (
       <>

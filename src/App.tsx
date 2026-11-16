@@ -1,28 +1,29 @@
+import { lazy, Suspense } from 'react';
 import { Route, Routes, Navigate } from 'react-router-dom';
 import Landing from './pages/Landing';
-import Login from './pages/Login';
-import AdminLayout from './routes/admin/AdminLayout';
-import AdminDashboard from './routes/admin/AdminDashboard';
-import WeddingsList from './routes/admin/weddings/WeddingsList';
-import WeddingForm from './routes/admin/weddings/WeddingForm';
-import WeddingDetail from './routes/admin/weddings/WeddingDetail';
-import AdminWeddingConfigLayout from './routes/admin/weddings/WeddingConfigLayout';
-import SectionsEditor from './routes/app/weddings/SectionsEditor';
-import ThemeEditor from './routes/app/weddings/ThemeEditor';
-import ProgramEditor from './routes/app/weddings/ProgramEditor';
-import CheckIn from './routes/admin/weddings/CheckIn';
-import AppLayout from './routes/app/AppLayout';
-import ClientDashboard from './routes/app/ClientDashboard';
-import WeddingConfigLayout from './routes/app/weddings/WeddingConfigLayout';
-import GuestsEditor from './routes/app/weddings/GuestsEditor';
-import TablesEditor from './routes/app/weddings/TablesEditor';
-import ResponsesEditor from './routes/app/weddings/ResponsesEditor';
-import GalleryModerationEditor from './routes/app/weddings/GalleryModerationEditor';
-import SitePreview from './routes/app/weddings/SitePreview';
-import AppCheckIn from './routes/app/weddings/CheckIn';
+const Login = lazy(() => import('./pages/Login'));
+const AdminLayout = lazy(() => import('./routes/admin/AdminLayout'));
+const AdminDashboard = lazy(() => import('./routes/admin/AdminDashboard'));
+const WeddingsList = lazy(() => import('./routes/admin/weddings/WeddingsList'));
+const WeddingForm = lazy(() => import('./routes/admin/weddings/WeddingForm'));
+const WeddingDetail = lazy(() => import('./routes/admin/weddings/WeddingDetail'));
+const AdminWeddingConfigLayout = lazy(() => import('./routes/admin/weddings/WeddingConfigLayout'));
+const SectionsEditor = lazy(() => import('./routes/app/weddings/SectionsEditor'));
+const ThemeEditor = lazy(() => import('./routes/app/weddings/ThemeEditor'));
+const ProgramEditor = lazy(() => import('./routes/app/weddings/ProgramEditor'));
+const CheckIn = lazy(() => import('./routes/admin/weddings/CheckIn'));
+const AppLayout = lazy(() => import('./routes/app/AppLayout'));
+const ClientDashboard = lazy(() => import('./routes/app/ClientDashboard'));
+const WeddingConfigLayout = lazy(() => import('./routes/app/weddings/WeddingConfigLayout'));
+const GuestsEditor = lazy(() => import('./routes/app/weddings/GuestsEditor'));
+const TablesEditor = lazy(() => import('./routes/app/weddings/TablesEditor'));
+const ResponsesEditor = lazy(() => import('./routes/app/weddings/ResponsesEditor'));
+const GalleryModerationEditor = lazy(() => import('./routes/app/weddings/GalleryModerationEditor'));
+const SitePreview = lazy(() => import('./routes/app/weddings/SitePreview'));
+const AppCheckIn = lazy(() => import('./routes/app/weddings/CheckIn'));
 import WeddingPublic from './routes/w/WeddingPublic';
-import GalleryPage from './routes/w/GalleryPage';
-import TestimonialsPage from './routes/w/TestimonialsPage';
+const GalleryPage = lazy(() => import('./routes/w/GalleryPage'));
+const TestimonialsPage = lazy(() => import('./routes/w/TestimonialsPage'));
 import NotFound from './pages/NotFound';
 
 /**
@@ -32,9 +33,23 @@ import NotFound from './pages/NotFound';
  *  /admin     → panel super-admin (auth requise)
  *  /app       → panel client (auth requise)
  *  /w/:slug   → site public du mariage
+ *
+ * Performance : seuls l'accueil et le site public d'un mariage sont dans le
+ * paquet initial ; l'administration, l'espace client, la galerie… sont
+ * chargés à la demande (les invités ne téléchargent jamais le code admin).
  */
+/** Écran d'attente pendant le chargement d'un module (admin, galerie…). */
+function PageLoader() {
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center">
+      <span className="h-8 w-8 animate-spin rounded-full border-2 border-gold/30 border-t-gold" aria-label="Chargement" />
+    </div>
+  );
+}
+
 export default function App() {
   return (
+    <Suspense fallback={<PageLoader />}>
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
@@ -78,5 +93,6 @@ export default function App() {
 
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </Suspense>
   );
 }

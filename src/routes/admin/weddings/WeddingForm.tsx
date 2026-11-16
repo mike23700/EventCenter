@@ -162,8 +162,8 @@ export default function WeddingForm() {
       // (le mot de passe est haché côté serveur, jamais dans le front).
       const email = clientEmail.trim();
       const password = clientPassword;
-      if (!email || !email.includes('@') || !password || password.length < 6) {
-        setError("Compte client : saisissez un email valide et un mot de passe d'au moins 6 caractères.");
+      if (!email || !email.includes('@') || !password || password.length < 8) {
+        setError("Compte client : saisissez un email valide et un mot de passe d'au moins 8 caractères.");
         setSaving(false);
         return;
       }
@@ -292,7 +292,7 @@ export default function WeddingForm() {
                   className="input font-mono"
                   value={clientPassword}
                   onChange={(e) => setClientPassword(e.target.value)}
-                  placeholder="au moins 6 caractères"
+                  placeholder="au moins 8 caractères"
                   required
                   autoComplete="off"
                 />

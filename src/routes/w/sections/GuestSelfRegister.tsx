@@ -32,7 +32,9 @@ export default function GuestSelfRegister({
 }) {
   const [name, setName] = useState(initialName);
   const [phone, setPhone] = useState('');
+  // Téléphone obligatoire : il sert ensuite à retrouver son pass (nom + téléphone).
   const phoneInvalid = phone.length > 0 && phone.length !== 9;
+  const phoneMissing = phone.length === 0;
   const selectable = (events ?? []).filter((e) => !e.parent_id);
   const [selectedEvents, setSelectedEvents] = useState<string[]>(selectable.map((e) => e.id));
 
@@ -63,7 +65,7 @@ export default function GuestSelfRegister({
       </div>
 
       <div>
-        <label className="label">Votre téléphone</label>
+        <label className="label">Votre téléphone *</label>
         <input
           className="input"
           placeholder="679..."
@@ -114,7 +116,7 @@ export default function GuestSelfRegister({
         {onCancel && <button onClick={onCancel} className="btn-outline">Retour</button>}
         <button
           onClick={() => onSubmit(name, phone, selectedEvents)}
-          disabled={submitting || name.trim().length < 2 || phoneInvalid || (needsChoice && selectedEvents.length === 0)}
+          disabled={submitting || name.trim().length < 2 || phoneInvalid || phoneMissing || (needsChoice && selectedEvents.length === 0)}
           className="flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white disabled:opacity-40"
           style={{ backgroundColor: accent }}
         >

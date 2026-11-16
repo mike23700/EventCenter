@@ -14,13 +14,18 @@ router.post('/clients', requireSuperAdmin, async (req, res, next) => {
   try {
     const email = String(req.body?.email ?? '').trim().toLowerCase();
     const password = String(req.body?.password ?? '');
-    if (!email.includes('@') || !password || password.length < 6) {
-      res.status(400).json({ error: 'Email valide et mot de passe (6+ caractères) requis.' });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200 || !password || password.length < 8 || password.length > 200) {
+      res.status(400).json({ error: 'Email valide et mot de passe (8 caractères minimum) requis.' });
       return;
     }
 
     const existing = await findUserByEmail(email);
     if (existing) {
+      // Un compte super-admin ne doit jamais être rattaché comme client.
+      if (existing.role !== 'client') {
+        res.status(409).json({ error: 'Cet email appartient à un compte administrateur.' });
+        return;
+      }
       res.json({ id: existing.id, reused: true });
       return;
     }

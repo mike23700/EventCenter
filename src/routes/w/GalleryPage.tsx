@@ -109,7 +109,7 @@ export default function GalleryPage() {
                       </span>
                     </>
                   ) : (
-                    <img src={src} alt="" className="h-full w-full object-cover transition group-hover:opacity-90" />
+                    <img loading="lazy" decoding="async" src={src} alt="" className="h-full w-full object-cover transition group-hover:opacity-90" />
                   )}
                 </button>
               );

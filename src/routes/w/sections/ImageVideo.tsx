@@ -50,7 +50,7 @@ export default function ImageVideo({ content, accent, tpl }: SectionProps) {
                 }}
               />
             ) : (
-              <img
+              <img loading="lazy" decoding="async"
                 src={imageSrc!}
                 alt={title || ''}
                 className="w-full"

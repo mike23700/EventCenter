@@ -6,6 +6,8 @@ import type { Wedding, Json } from '../../../types/database';
 import { DISPLAY_FONTS, BODY_FONTS } from '../../../lib/format';
 import { TEMPLATE_DEFS, getTemplate } from '../../../lib/templates';
 import { storageUrl, uploadFile, deleteFile, validateAudioFile } from '../../../lib/media';
+import MediaUploader from '../../../components/MediaUploader';
+import { DEFAULT_INVITE_MESSAGE, coupleInitials, invitationTheme } from '../../../lib/invitation';
 
 function themeRecord(theme: Json): Record<string, unknown> {
   return theme && typeof theme === 'object' && !Array.isArray(theme)
@@ -64,6 +66,13 @@ export default function ThemeEditor() {
   const [bodyFontScale, setBodyFontScale] = useState<number>(
     (themeRecord(wedding.theme)['bodyFontScale'] as number) ?? 1,
   );
+  const initialInv = invitationTheme(wedding.theme);
+  const [envelopeEnabled, setEnvelopeEnabled] = useState<boolean>(initialInv.envelopeEnabled);
+  const [envelopeMonogram, setEnvelopeMonogram] = useState<string>(initialInv.envelopeMonogram);
+  const [envelopeColor, setEnvelopeColor] = useState<string>(initialInv.envelopeColor);
+  const [envelopeTagline, setEnvelopeTagline] = useState<string>(initialInv.envelopeTagline);
+  const [inviteMessage, setInviteMessage] = useState<string>(initialInv.inviteMessage);
+  const [ogImage, setOgImage] = useState<string>((themeRecord(wedding.theme)['ogImage'] as string) ?? '');
   const [template, setTemplate] = useState<string>(wedding.template);
   const [audioPath, setAudioPath] = useState<string>(wedding.audio_url ?? '');
   const [audioUploading, setAudioUploading] = useState(false);
@@ -98,6 +107,12 @@ export default function ThemeEditor() {
           footerText: footerText.trim(),
           displayFontScale,
           bodyFontScale,
+          envelopeEnabled,
+          envelopeMonogram: envelopeMonogram.trim(),
+          envelopeColor,
+          envelopeTagline: envelopeTagline.trim(),
+          inviteMessage: inviteMessage.trim(),
+          ogImage,
         },
       })
       .eq('id', wedding.id);
@@ -349,6 +364,76 @@ export default function ThemeEditor() {
             </button>
           )}
           {audioError && <p className="mt-1 text-xs text-red-600">{audioError}</p>}
+        </div>
+
+        {/* Invitation personnalisée */}
+        <div className="space-y-4 rounded-xl border border-borderlight p-4">
+          <div>
+            <p className="font-medium text-ink">Invitation personnalisée</p>
+            <p className="text-xs text-ink-secondary">
+              Écran d'ouverture « enveloppe » et message envoyé avec le lien personnel de chaque
+              invité (onglet « Invités »).
+            </p>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-ink">
+            <input type="checkbox" checked={envelopeEnabled} onChange={(e) => setEnvelopeEnabled(e.target.checked)} />
+            Afficher l'enveloppe à l'ouverture du site (lance aussi la musique au toucher)
+          </label>
+          {envelopeEnabled && (
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <label className="label">Monogramme</label>
+                <input
+                  className="input"
+                  maxLength={4}
+                  value={envelopeMonogram}
+                  onChange={(e) => setEnvelopeMonogram(e.target.value)}
+                  placeholder={coupleInitials(wedding)}
+                />
+              </div>
+              <div>
+                <label className="label">Couleur de l'enveloppe</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={envelopeColor || activeTpl.palette.surface}
+                    onChange={(e) => setEnvelopeColor(e.target.value)}
+                    className="h-10 w-14 cursor-pointer rounded border border-borderlight"
+                  />
+                  {envelopeColor && (
+                    <button type="button" onClick={() => setEnvelopeColor('')} className="text-xs text-ink-secondary underline">
+                      Couleur du modèle
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div>
+                <label className="label">Petite phrase (optionnel)</label>
+                <input className="input" value={envelopeTagline} onChange={(e) => setEnvelopeTagline(e.target.value)} placeholder="Avec toute notre affection" />
+              </div>
+            </div>
+          )}
+          <div>
+            <label className="label">Message d'invitation (WhatsApp)</label>
+            <textarea
+              className="input min-h-28 font-mono text-xs"
+              value={inviteMessage}
+              onChange={(e) => setInviteMessage(e.target.value)}
+              placeholder={DEFAULT_INVITE_MESSAGE}
+            />
+            <p className="mt-1 text-xs text-ink-secondary">
+              Variables : <code>{'{nom}'}</code> (nom de l'invité), <code>{'{couple}'}</code>, <code>{'{lien}'}</code> (lien personnel). Laissez vide pour le message par défaut.
+            </p>
+          </div>
+          <MediaUploader
+            bucket="media"
+            folder={`weddings/${wedding.slug}/apercu`}
+            accept="image/jpeg,image/png,image/webp"
+            label="Image d'aperçu du lien (WhatsApp, Facebook)"
+            value={ogImage}
+            onChange={(v) => setOgImage(v ?? '')}
+            hint="Paysage 1200 × 630 px, JPG de moins de 300 Ko. Par défaut : la photo de couverture."
+          />
         </div>
 
         {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}

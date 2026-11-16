@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PartyPopper } from 'lucide-react';
 import type { WeddingEvent } from '../../../types/database';
 import type { SectionProps } from './types';
@@ -8,6 +8,7 @@ import { useGuestIdentity } from './useGuestIdentity';
 import GuestSelfRegister from './GuestSelfRegister';
 import GuestQrCard from './GuestQrCard';
 import GuestQrLookup from './GuestQrLookup';
+import { usePublicWedding } from '../publicContext';
 
 type Mode = 'register' | 'lookup';
 
@@ -21,8 +22,8 @@ export interface RsvpProps extends SectionProps {
  *  - « Je m'inscris » : nom + téléphone (+ étapes si plusieurs) → génère un
  *    QR d'invitation à présenter le jour J (scanné à l'entrée pour le
  *    pointage de présence).
- *  - « Retrouver mon QR » : recherche par nom (désambiguïsation par
- *    téléphone en cas d'homonymes) pour réafficher un QR déjà généré.
+ *  - « Retrouver mon pass » : nom + téléphone (preuve minimale, voir
+ *    server/src/routes/public.ts) pour réafficher un pass déjà généré.
  */
 export default function Rsvp({ content, accent, tpl, wedding, events }: RsvpProps) {
   const c = asRecord(content);
@@ -33,6 +34,18 @@ export default function Rsvp({ content, accent, tpl, wedding, events }: RsvpProp
   const [mode, setMode] = useState<Mode>('register');
   const id = useGuestIdentity(wedding.id);
   const { status, guest } = id;
+  const { invitedGuest } = usePublicWedding();
+  const adopted = useRef(false);
+
+  // Invité arrivé par son lien personnel (ou déjà identifié sur ce
+  // navigateur) : son pass s'affiche directement, sans formulaire.
+  useEffect(() => {
+    if (invitedGuest && !adopted.current && status === 'idle') {
+      adopted.current = true;
+      id.adopt(invitedGuest);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invitedGuest, status]);
 
   async function registerSelf(name: string, phone: string, eventIds: string[]) {
     await id.registerSelf({ name, phone, invitedEvents: eventIds });
@@ -78,7 +91,7 @@ export default function Rsvp({ content, accent, tpl, wedding, events }: RsvpProp
                     border: `1px solid ${mode === 'lookup' ? accent : palette.border}`,
                   }}
                 >
-                  Déjà inscrit(e) ? Retrouver mon QR
+                  Déjà inscrit(e) ? Retrouver mon pass
                 </button>
               </div>
 

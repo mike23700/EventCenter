@@ -1,10 +1,53 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Check, X, Users, Filter, ClipboardList, QrCode } from 'lucide-react';
+import { Plus, Pencil, Trash2, Check, X, Users, Filter, ClipboardList, QrCode, Link2, MessageCircle, Download } from 'lucide-react';
 import { db } from '../../../lib/db';
 import type { Wedding, WeddingEvent, Guest, Section, GuestResponse, Json } from '../../../types/database';
 import { formatDateTime } from '../../../lib/format';
 import { generateGuestQrDataUrl } from '../../../lib/guestQr';
+import { buildInviteMessage, coupleLabel, guestRef, invitationTheme, personalInviteUrl, whatsappLink } from '../../../lib/invitation';
+
+/** Copier le lien personnel / l'envoyer par WhatsApp. */
+function GuestInviteActions({ wedding, guest }: { wedding: Wedding; guest: Guest }) {
+  const [copied, setCopied] = useState(false);
+  const link = personalInviteUrl(wedding.slug, guest.qr_token);
+  const message = buildInviteMessage(invitationTheme(wedding.theme).inviteMessage, {
+    nom: guest.name,
+    couple: coupleLabel(wedding),
+    lien: link,
+  });
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(link);
+    } catch {
+      window.prompt('Copiez le lien :', link);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  }
+
+  return (
+    <>
+      <button onClick={copy} className="btn-outline !px-2" title={copied ? 'Lien copié !' : 'Copier le lien personnel'}>
+        {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Link2 className="h-4 w-4" />}
+      </button>
+      <a
+        href={whatsappLink(guest.phone, message)}
+        target="_blank"
+        rel="noreferrer"
+        className="btn-outline !px-2"
+        title={guest.phone ? 'Envoyer l\'invitation sur WhatsApp' : 'Envoyer sur WhatsApp (choisir le contact)'}
+      >
+        <MessageCircle className="h-4 w-4 text-emerald-600" />
+      </a>
+    </>
+  );
+}
+
+function csvCell(v: string): string {
+  return /[";\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+}
 
 /** Bouton de téléchargement du QR d'invitation d'un invité (pour impression/envoi). */
 function GuestQrDownload({ wedding, guest }: { wedding: Wedding; guest: Guest }) {
@@ -37,10 +80,11 @@ interface Draft {
   id?: string;
   name: string;
   phone: string;
+  plus_ones: number;
   invited_events: string[];
 }
 
-const empty: Draft = { name: '', phone: '', invited_events: [] };
+const empty: Draft = { name: '', phone: '', plus_ones: 0, invited_events: [] };
 
 interface QuestionMeta {
   key: string;
@@ -245,6 +289,7 @@ export default function GuestsEditor() {
       id: g.id,
       name: g.name,
       phone: g.phone ?? '',
+      plus_ones: g.plus_ones ?? 0,
       invited_events: g.invited_events ?? [],
     });
   }
@@ -268,6 +313,7 @@ export default function GuestsEditor() {
     const payload = {
       name: draft.name.trim(),
       phone: draft.phone.trim() || null,
+      plus_ones: Math.max(0, Math.min(20, Math.floor(draft.plus_ones || 0))),
       invited_events: draft.invited_events,
     };
     if (draft.id) {
@@ -287,6 +333,33 @@ export default function GuestsEditor() {
     setDraft(null);
   }
 
+  function exportLinks() {
+    const couple = coupleLabel(wedding);
+    const tpl = invitationTheme(wedding.theme).inviteMessage;
+    const rows = [['Nom', 'Téléphone', 'Places', 'Référence', 'Lien personnel', 'Message']];
+    for (const g of filteredGuests) {
+      const link = personalInviteUrl(wedding.slug, g.qr_token);
+      rows.push([
+        g.name,
+        g.phone ?? '',
+        String(1 + (g.plus_ones ?? 0)),
+        guestRef(g.qr_token),
+        link,
+        buildInviteMessage(tpl, { nom: g.name, couple, lien: link }),
+      ]);
+    }
+    // BOM UTF-8 + « ; » : s'ouvre correctement dans Excel en français.
+    const csv = '\uFEFF' + rows.map((r) => r.map(csvCell).join(';')).join('\r\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `liens-invitations-${wedding.slug}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+
   async function remove(id: string) {
     const { error } = await db.from('guests').delete().eq('id', id);
     if (error) setError(error.message);
@@ -304,10 +377,18 @@ export default function GuestsEditor() {
             (onglet « Entrée ») pour pointer sa présence le jour J.
           </p>
         </div>
-        <button onClick={openCreate} className="btn-primary">
-          <Plus className="h-4 w-4" />
-          Ajouter
-        </button>
+        <div className="flex flex-wrap gap-2">
+          {guests.length > 0 && (
+            <button onClick={exportLinks} className="btn-outline" title="Liens personnels de tous les invités affichés (CSV / Excel)">
+              <Download className="h-4 w-4" />
+              Exporter les liens
+            </button>
+          )}
+          <button onClick={openCreate} className="btn-primary">
+            <Plus className="h-4 w-4" />
+            Ajouter
+          </button>
+        </div>
       </div>
 
       {events.length === 0 && (
@@ -411,6 +492,20 @@ export default function GuestsEditor() {
                 placeholder="679..."
               />
             </div>
+            <div>
+              <label className="label">Accompagnant(s)</label>
+              <input
+                type="number"
+                min={0}
+                max={20}
+                className="input"
+                value={draft.plus_ones}
+                onChange={(e) => setDraft({ ...draft, plus_ones: Number(e.target.value) || 0 })}
+              />
+              <p className="mt-1 text-xs text-ink-secondary">
+                Le pass affichera {1 + (draft.plus_ones || 0)} personne{draft.plus_ones > 0 ? 's' : ''}.
+              </p>
+            </div>
           </div>
 
           {events.length > 0 && (
@@ -470,7 +565,7 @@ export default function GuestsEditor() {
               {filteredGuests.map((g) => (
                 <Fragment key={g.id}>
                   <tr className="border-b border-borderlight/60 last:border-0">
-                    <td className="px-4 py-3 font-medium text-ink">{g.name}</td>
+                    <td className="px-4 py-3 font-medium text-ink">{g.name}{(g.plus_ones ?? 0) > 0 && <span className="ml-1 rounded-full bg-paper-cream px-1.5 text-xs text-ink-secondary" title="Accompagnants">+{g.plus_ones}</span>}</td>
                     <td className="px-4 py-3 text-ink-secondary">{g.phone ?? '—'}</td>
                     <td className="px-4 py-3">
                       {(g.invited_events ?? []).length === 0 ? (
@@ -503,6 +598,7 @@ export default function GuestsEditor() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1">
+                        <GuestInviteActions wedding={wedding} guest={g} />
                         <GuestQrDownload wedding={wedding} guest={g} />
                         <button onClick={() => openEdit(g)} className="btn-outline !px-2" title="Modifier"><Pencil className="h-4 w-4" /></button>
                         <button onClick={() => remove(g.id)} className="btn-outline !px-2 hover:!border-red-300 hover:!text-red-600" title="Supprimer"><Trash2 className="h-4 w-4" /></button>

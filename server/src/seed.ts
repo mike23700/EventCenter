@@ -5,15 +5,15 @@ import { createUser, findUserByEmail } from './auth/session';
 
 /**
  * Crée (ou met à jour le mot de passe de) le compte super-admin.
- * Usage : npm run seed -- admin@event.om 12345678
- * À changer immédiatement après le premier déploiement en prod.
+ * Usage : npm run seed -- admin@exemple.com 'MotDePasseLongEtUnique'
+ * Email et mot de passe sont obligatoires (plus de valeurs par défaut).
  */
 async function main() {
-  const email = (process.argv[2] ?? 'admin@event.om').trim().toLowerCase();
-  const password = process.argv[3] ?? '12345678';
+  const email = (process.argv[2] ?? '').trim().toLowerCase();
+  const password = process.argv[3] ?? '';
 
-  if (password.length < 6) {
-    console.error('Mot de passe trop court (6 caractères minimum).');
+  if (!email.includes('@') || password.length < 10) {
+    console.error("Usage : npm run seed -- <email> <mot de passe de 10 caractères minimum>");
     process.exitCode = 1;
     return;
   }

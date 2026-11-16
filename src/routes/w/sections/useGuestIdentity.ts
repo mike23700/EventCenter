@@ -1,67 +1,48 @@
 import { useState } from 'react';
-import { db } from '../../../lib/db';
-import { clearKnownGuestId } from './guestSession';
+import { clearKnownGuest, saveKnownGuestToken } from './guestSession';
+import { lookupGuest, registerGuest, type PublicGuest } from '../../../lib/publicApi';
 
-export interface GuestIdentity {
-  id: string;
-  name: string;
-  phone: string | null;
-  invited_events: string[];
-  qr_token: string;
-}
+export type GuestIdentity = PublicGuest;
 
-export type GuestIdentityStatus = 'idle' | 'searching' | 'choosing' | 'found' | 'missing';
+export type GuestIdentityStatus = 'idle' | 'searching' | 'found' | 'missing';
 
 /**
  * Identification d'un invité côté site public, utilisée par les blocs
- * "questionnaire" de la partie mixte : recherche par nom parmi les invités
- * déjà saisis, ou — recevoir le lien du site vaut invitation —
- * auto-inscription (nom, téléphone) quand la personne ne s'y trouve pas.
- * (La section RSVP, elle, utilise son propre parcours inscription/retrouver
- * mon QR — voir Rsvp.tsx, GuestQrLookup.tsx.)
+ * « questionnaire » de la partie mixte : nom + téléphone (preuve minimale —
+ * la liste des invités n'est jamais exposée), ou — recevoir le lien du site
+ * vaut invitation — auto-inscription quand la personne n'y figure pas.
+ * Un invité arrivé par son lien personnel est repris directement (adopt).
  */
 export function useGuestIdentity(weddingId: string) {
   const [query, setQuery] = useState('');
+  const [phone, setPhone] = useState('');
   const [status, setStatus] = useState<GuestIdentityStatus>('idle');
   const [guest, setGuest] = useState<GuestIdentity | null>(null);
-  const [matches, setMatches] = useState<GuestIdentity[]>([]);
-  const [chosenId, setChosenId] = useState('');
   const [registering, setRegistering] = useState(false);
   const [error, setError] = useState('');
 
-  async function search() {
-    const name = query.trim();
-    if (name.length < 2) return;
-    setError('');
-    setStatus('searching');
-    const { data, error } = await db
-      .from('guests')
-      .select('id, name, phone, invited_events, qr_token')
-      .eq('wedding_id', weddingId)
-      .ilike('name', `%${name}%`);
-    if (error) {
-      setError(error.message);
-      setStatus('idle');
-      return;
-    }
-    const rows = (data ?? []) as GuestIdentity[];
-    setMatches(rows);
-    if (rows.length === 1) {
-      setGuest(rows[0]);
-      setStatus('found');
-    } else if (rows.length > 1) {
-      setChosenId('');
-      setStatus('choosing');
-    } else {
-      setStatus('missing');
-    }
-  }
-
-  function confirmGuess() {
-    const g = matches.find((m) => m.id === chosenId);
-    if (!g) return;
+  function found(g: GuestIdentity) {
     setGuest(g);
     setStatus('found');
+    saveKnownGuestToken(weddingId, g.qr_token);
+  }
+
+  async function search() {
+    const name = query.trim();
+    if (name.length < 2 || phone.length !== 9) return;
+    setError('');
+    setStatus('searching');
+    try {
+      found(await lookupGuest(weddingId, name, phone));
+    } catch (e) {
+      const status = (e as { status?: number }).status;
+      if (status === 404) {
+        setStatus('missing');
+      } else {
+        setError(e instanceof Error ? e.message : 'Recherche impossible');
+        setStatus('idle');
+      }
+    }
   }
 
   async function registerSelf(payload: { name: string; phone: string; invitedEvents?: string[] }) {
@@ -69,48 +50,42 @@ export function useGuestIdentity(weddingId: string) {
     if (!name) return;
     setError('');
     setRegistering(true);
-    const { data, error } = await db
-      .from('guests')
-      .insert({
-        wedding_id: weddingId,
-        name,
-        phone: payload.phone.trim() || null,
-        invited_events: payload.invitedEvents ?? [],
-      })
-      .select('id, name, phone, invited_events, qr_token')
-      .single();
-    setRegistering(false);
-    if (error) {
-      setError(error.message);
-      return;
+    try {
+      found(await registerGuest(weddingId, { name, phone: payload.phone, invitedEvents: payload.invitedEvents ?? [] }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Inscription impossible');
+    } finally {
+      setRegistering(false);
     }
-    setGuest(data as GuestIdentity);
+  }
+
+  /** Reprend un invité déjà identifié ailleurs (lien personnel, visite précédente). */
+  function adopt(g: GuestIdentity) {
+    setGuest(g);
     setStatus('found');
   }
 
   function reset() {
-    clearKnownGuestId(weddingId);
+    clearKnownGuest(weddingId);
     setStatus('idle');
     setGuest(null);
-    setMatches([]);
-    setChosenId('');
     setQuery('');
+    setPhone('');
     setError('');
   }
 
   return {
     query,
     setQuery,
+    phone,
+    setPhone,
     status,
     guest,
-    matches,
-    chosenId,
-    setChosenId,
     error,
     search,
-    confirmGuess,
     registerSelf,
     registering,
+    adopt,
     reset,
   };
 }

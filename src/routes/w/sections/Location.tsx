@@ -35,7 +35,7 @@ export default function Location({ content, accent, tpl }: SectionProps) {
           }}
         >
           {image && (
-            <img
+            <img loading="lazy" decoding="async"
               src={storageUrl('media', image) ?? image}
               alt=""
               className="h-56 w-full object-cover"

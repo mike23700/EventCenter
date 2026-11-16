@@ -5,8 +5,8 @@ import type { SectionProps } from './types';
 import { asRecord, str } from './types';
 import { SectionShell, SectionTitle } from './shell';
 import { formatDateNoYear } from '../../../lib/format';
-import { db } from '../../../lib/db';
-import { getKnownGuestId, onKnownGuestChange } from './guestSession';
+import { getKnownGuestToken, onKnownGuestChange } from './guestSession';
+import { resolveGuest } from '../../../lib/publicApi';
 
 export interface SaveTheDateProps extends SectionProps {
   events: WeddingEvent[];
@@ -47,17 +47,17 @@ export default function SaveTheDate({ content, accent, tpl, events, wedding }: S
     let active = true;
 
     function loadKnownGuest() {
-      const guestId = getKnownGuestId(wedding.id);
-      if (!guestId) {
+      const token = getKnownGuestToken(wedding.id);
+      if (!token) {
         setInvitedEvents(null);
         return;
       }
-      db.from('guests')
-        .select('invited_events')
-        .eq('id', guestId)
-        .maybeSingle()
-        .then(({ data }) => {
-          if (active) setInvitedEvents(data ? (data as { invited_events: string[] }).invited_events ?? [] : null);
+      resolveGuest(wedding.id, token)
+        .then((g) => {
+          if (active) setInvitedEvents(g ? g.invited_events ?? [] : null);
+        })
+        .catch(() => {
+          if (active) setInvitedEvents(null);
         });
     }
 

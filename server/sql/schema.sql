@@ -133,7 +133,8 @@ create table if not exists public.sections (
   type       text not null
              check (type in ('cover','location','countdown','save_the_date','program',
                              'image_video','mixed','rsvp','gallery',
-                             'tables','testimonials')),
+                             'tables','testimonials',
+                             'story','quote','info','thanks','dress_code')),
   enabled    boolean not null default true,
   position   integer not null default 0,
   title      text,
@@ -254,3 +255,12 @@ create table if not exists public.testimonials (
 );
 
 create index if not exists testimonials_wedding_idx on public.testimonials (wedding_id);
+
+-- Index de performance (migration 19)
+create index if not exists table_assignments_guest_idx on public.table_assignments (guest_id);
+create index if not exists tables_plan_wedding_idx      on public.tables_plan (wedding_id);
+create index if not exists guest_responses_guest_idx    on public.guest_responses (guest_id);
+create index if not exists media_wedding_status_idx     on public.media (wedding_id, status);
+create index if not exists testimonials_wedding_status_idx on public.testimonials (wedding_id, status);
+create index if not exists sessions_expires_idx         on public.sessions (expires_at);
+create index if not exists guests_wedding_phone_idx     on public.guests (wedding_id, phone);

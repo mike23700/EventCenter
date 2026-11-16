@@ -70,7 +70,12 @@ export type SectionType =
   | 'rsvp'
   | 'gallery'
   | 'tables'
-  | 'testimonials';
+  | 'testimonials'
+  | 'story'
+  | 'quote'
+  | 'info'
+  | 'thanks'
+  | 'dress_code';
 
 export interface Guest {
   id: string;

@@ -76,13 +76,39 @@ interface IndirectTableDef {
   via: { table: 'guests' | 'tables_plan'; fk: string };
 }
 
+/**
+ * Écriture anonyme (visiteur du site public) : seules `columns` sont
+ * acceptées, `force` écrase toujours ce que le client envoie (ex. statut
+ * « en attente de modération »), et les textes sont bornés en longueur.
+ */
+export interface AnonInsertDef {
+  columns: string[];
+  force: Record<string, unknown>;
+  maxTextLength: number;
+}
+
+/** Colonne qui référence une autre ligne : elle doit appartenir au même mariage. */
+export interface SameWeddingRef {
+  column: string;
+  table: 'wedding_events' | 'guests' | 'tables_plan';
+}
+
 export interface TableDef {
   columns: string[];
   /** Colonnes jsonb : leur valeur doit être JSON.stringify() avant le bind pg. */
   jsonColumns: string[];
-  anonRead: false | { extraWhere?: string };
-  anonInsert: boolean;
-  anonUpdate: boolean;
+  /** Lecture anonyme : false, ou colonnes visibles (+ filtre SQL supplémentaire). */
+  anonRead: false | { columns: string[]; extraWhere?: string };
+  anonInsert: false | AnonInsertDef;
+  /**
+   * Droits d'écriture (insert/update/delete) d'un compte client sur SES
+   * mariages. Le super-admin a toujours tous les droits.
+   */
+  ownerWrite: boolean;
+  /** Colonnes non modifiables via l'API (hors super-admin) : rattachement, jetons… */
+  immutable: string[];
+  /** Références à vérifier (même mariage) à l'insert et à l'update. */
+  sameWeddingRefs: SameWeddingRef[];
   location: DirectTableDef | IndirectTableDef;
 }
 
@@ -95,9 +121,19 @@ export const TABLES: Record<Table, TableDef> = {
       'splash_media_type', 'audio_url', 'created_at', 'updated_at',
     ],
     jsonColumns: ['theme'],
-    anonRead: {},
+    // Jamais l'email du client ni l'identifiant de son compte côté public.
+    anonRead: {
+      columns: [
+        'id', 'slug', 'name', 'secondary_name', 'event_type', 'template', 'theme',
+        'logo', 'cover_image', 'contact_phone', 'access_start', 'access_end',
+        'is_active', 'splash_media_url', 'splash_media_type', 'audio_url',
+      ],
+    },
     anonInsert: false,
-    anonUpdate: false,
+    // Activation, période d'accès, propriétaire, thème : réservés au super-admin.
+    ownerWrite: false,
+    immutable: ['id'],
+    sameWeddingRefs: [],
     location: { kind: 'direct', weddingIdColumn: 'id' },
   },
   wedding_events: {
@@ -107,17 +143,26 @@ export const TABLES: Record<Table, TableDef> = {
       'position', 'created_at',
     ],
     jsonColumns: [],
-    anonRead: {},
+    anonRead: {
+      columns: [
+        'id', 'wedding_id', 'parent_id', 'name', 'description', 'date',
+        'location_title', 'location_address', 'location_image', 'location_maps_url', 'position',
+      ],
+    },
     anonInsert: false,
-    anonUpdate: false,
+    ownerWrite: false, // programme géré par l'admin
+    immutable: ['id', 'wedding_id'],
+    sameWeddingRefs: [{ column: 'parent_id', table: 'wedding_events' }],
     location: { kind: 'direct', weddingIdColumn: 'wedding_id' },
   },
   sections: {
     columns: ['id', 'wedding_id', 'type', 'enabled', 'position', 'title', 'content', 'created_at'],
     jsonColumns: ['content'],
-    anonRead: { extraWhere: 'enabled = true' },
+    anonRead: { columns: ['id', 'wedding_id', 'type', 'enabled', 'position', 'title', 'content'], extraWhere: 'enabled = true' },
     anonInsert: false,
-    anonUpdate: false,
+    ownerWrite: false, // sections gérées par l'admin
+    immutable: ['id', 'wedding_id'],
+    sameWeddingRefs: [],
     location: { kind: 'direct', weddingIdColumn: 'wedding_id' },
   },
   guests: {
@@ -126,57 +171,84 @@ export const TABLES: Record<Table, TableDef> = {
       'response', 'qr_token', 'checked_in_at', 'checked_in_by', 'created_at',
     ],
     jsonColumns: ['response'],
-    anonRead: {},
-    anonInsert: true,
-    anonUpdate: false,
+    // Plus AUCUNE lecture/écriture anonyme : le site public passe par
+    // /api/public (routes/public.ts), qui n'expose qu'un invité à la fois et
+    // seulement sur preuve (jeton personnel, ou nom + téléphone).
+    anonRead: false,
+    anonInsert: false,
+    ownerWrite: true,
+    immutable: ['id', 'wedding_id', 'qr_token'],
+    sameWeddingRefs: [],
     location: { kind: 'direct', weddingIdColumn: 'wedding_id' },
   },
   attendance: {
     columns: ['id', 'guest_id', 'event_id', 'status', 'actual_plus_ones', 'updated_at'],
     jsonColumns: [],
-    anonRead: {},
-    anonInsert: true,
-    anonUpdate: true,
+    anonRead: false,
+    anonInsert: false,
+    ownerWrite: true,
+    immutable: ['id', 'guest_id'],
+    sameWeddingRefs: [{ column: 'event_id', table: 'wedding_events' }],
     location: { kind: 'indirect', via: { table: 'guests', fk: 'guest_id' } },
   },
   guest_responses: {
     columns: ['id', 'guest_id', 'question_key', 'answer', 'created_at'],
     jsonColumns: ['answer'],
-    anonRead: {},
-    anonInsert: true,
-    anonUpdate: false,
+    anonRead: false,
+    anonInsert: false, // via /api/public/responses (jeton de l'invité requis)
+    ownerWrite: true,
+    immutable: ['id', 'guest_id'],
+    sameWeddingRefs: [],
     location: { kind: 'indirect', via: { table: 'guests', fk: 'guest_id' } },
   },
   tables_plan: {
     columns: ['id', 'wedding_id', 'event_id', 'name', 'capacity', 'position', 'created_at'],
     jsonColumns: [],
-    anonRead: {},
+    anonRead: false,
     anonInsert: false,
-    anonUpdate: false,
+    ownerWrite: true,
+    immutable: ['id', 'wedding_id'],
+    sameWeddingRefs: [{ column: 'event_id', table: 'wedding_events' }],
     location: { kind: 'direct', weddingIdColumn: 'wedding_id' },
   },
   table_assignments: {
     columns: ['id', 'table_id', 'guest_id', 'created_at'],
     jsonColumns: [],
-    anonRead: {},
+    anonRead: false,
     anonInsert: false,
-    anonUpdate: false,
+    ownerWrite: true,
+    immutable: ['id', 'table_id'],
+    sameWeddingRefs: [{ column: 'guest_id', table: 'guests' }],
     location: { kind: 'indirect', via: { table: 'tables_plan', fk: 'table_id' } },
   },
   media: {
     columns: ['id', 'wedding_id', 'type', 'storage_path', 'url', 'uploaded_by', 'status', 'created_at'],
     jsonColumns: [],
-    anonRead: { extraWhere: "status = 'published'" },
-    anonInsert: true,
-    anonUpdate: false,
+    anonRead: { columns: ['id', 'wedding_id', 'type', 'storage_path', 'url', 'status', 'created_at'], extraWhere: "status = 'published'" },
+    // Dépôt d'une photo/vidéo par un invité : toujours « en attente ».
+    anonInsert: {
+      columns: ['wedding_id', 'type', 'storage_path'],
+      force: { status: 'pending', uploaded_by: 'invite', url: null },
+      maxTextLength: 400,
+    },
+    ownerWrite: true,
+    immutable: ['id', 'wedding_id'],
+    sameWeddingRefs: [],
     location: { kind: 'direct', weddingIdColumn: 'wedding_id' },
   },
   testimonials: {
     columns: ['id', 'wedding_id', 'guest_id', 'author', 'content', 'status', 'created_at'],
     jsonColumns: [],
-    anonRead: { extraWhere: "status = 'published'" },
-    anonInsert: true,
-    anonUpdate: false,
+    anonRead: { columns: ['id', 'wedding_id', 'author', 'content', 'status', 'created_at'], extraWhere: "status = 'published'" },
+    // Message du livre d'or : toujours « en attente » de modération.
+    anonInsert: {
+      columns: ['wedding_id', 'author', 'content'],
+      force: { status: 'pending', guest_id: null },
+      maxTextLength: 3000,
+    },
+    ownerWrite: true,
+    immutable: ['id', 'wedding_id'],
+    sameWeddingRefs: [{ column: 'guest_id', table: 'guests' }],
     location: { kind: 'direct', weddingIdColumn: 'wedding_id' },
   },
 };
@@ -256,4 +328,24 @@ export async function canWriteWedding(
   if (user) return isOwnerOfWedding(user.id, weddingId);
   if (!anonAllowed) return false;
   return weddingIsAccessible(weddingId);
+}
+
+/** Vérifie qu'une ligne référencée (ex. event_id) appartient bien au mariage `weddingId`. */
+export async function refBelongsToWedding(table: SameWeddingRef['table'], id: unknown, weddingId: string): Promise<boolean> {
+  if (id === null || id === undefined) return true;
+  if (typeof id !== 'string') return false;
+  const { rows } = await pool.query(`select 1 from ${table} where id = $1 and wedding_id = $2`, [id, weddingId]);
+  return rows.length > 0;
+}
+
+/** Slug d'un mariage (contrôle des dossiers d'upload). */
+export async function weddingSlug(weddingId: string): Promise<string | null> {
+  const { rows } = await pool.query('select slug from weddings where id = $1', [weddingId]);
+  return rows[0]?.slug ?? null;
+}
+
+/** Slugs des mariages d'un compte client. */
+export async function ownedSlugs(userId: string): Promise<string[]> {
+  const { rows } = await pool.query('select slug from weddings where owner_user_id = $1', [userId]);
+  return rows.map((r: { slug: string }) => r.slug);
 }
