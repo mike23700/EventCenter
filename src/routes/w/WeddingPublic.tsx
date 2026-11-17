@@ -115,7 +115,7 @@ export default function WeddingPublic() {
   return (
     <PublicWeddingContext.Provider value={{ invitedGuest: guest, couple, dateLabel, tpl }}>
       {envelopeVisible && (
-        <div style={{ ['--w-font' as string]: tpl.fonts.display }}>
+        <div style={{ ['--w-font' as string]: tpl.fonts.display, overflowWrap: 'anywhere' }}>
           <EnvelopeIntro
             tpl={tpl}
             accent={accent}
@@ -129,7 +129,7 @@ export default function WeddingPublic() {
         </div>
       )}
       {welcomeVisible && guest && (
-        <div style={{ ['--w-font' as string]: tpl.fonts.display }}>
+        <div style={{ ['--w-font' as string]: tpl.fonts.display, overflowWrap: 'anywhere' }}>
         <WelcomeModal
           guest={guest}
           weddingId={wedding.id}

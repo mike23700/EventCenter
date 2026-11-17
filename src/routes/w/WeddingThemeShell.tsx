@@ -32,6 +32,9 @@ export default function WeddingThemeShell({ wedding, children }: { wedding: Wedd
     <div
       className="min-h-screen font-display"
       style={{
+        // Un mot sans espace plus long que sa ligne (lien collé, texte de
+        // test…) est coupé au bord de son cadre au lieu de déborder.
+        overflowWrap: 'anywhere',
         backgroundColor: background,
         color: text,
         ['--w-accent' as string]: accent,

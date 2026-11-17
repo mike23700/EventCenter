@@ -96,7 +96,7 @@ function VoiceRow({
         className="min-w-0 flex-1 rounded-2xl px-4 py-4 min-[400px]:px-5 min-[400px]:py-5 sm:px-7 sm:py-6"
         style={{ backgroundColor: palette.surface, border: `1px solid ${palette.border}`, boxShadow: '0 14px 34px -24px rgba(0,0,0,.35)' }}
       >
-        <p className="tpl-body text-[14px] italic leading-[1.7] min-[400px]:text-[14.5px] sm:text-base sm:leading-[1.75]" style={{ color: palette.text }}>
+        <p className="tpl-body text-[14px] italic leading-[1.7] [overflow-wrap:anywhere] min-[400px]:text-[14.5px] sm:text-base sm:leading-[1.75]" style={{ color: palette.text }}>
           {'«\u00a0'}{short}{cut ? '…' : ''}{'\u00a0»'}
           {cut && (
             <>
@@ -171,7 +171,7 @@ function StoryReader({ voice, accent, tpl, onClose }: { voice: Voice; accent: st
         </header>
         <div className="overflow-y-auto overscroll-contain px-6 pb-10 pt-5">
           {voice.text.split(/\n{2,}/).map((para, i) => (
-            <p key={i} className="mb-5 whitespace-pre-line tpl-body text-[15.5px] leading-[1.8] last:mb-0" style={{ color: palette.text }}>
+            <p key={i} className="mb-5 whitespace-pre-line tpl-body text-[15.5px] leading-[1.8] [overflow-wrap:anywhere] last:mb-0" style={{ color: palette.text }}>
               {para}
             </p>
           ))}
