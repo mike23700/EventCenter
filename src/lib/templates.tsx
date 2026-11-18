@@ -29,7 +29,18 @@ export interface TemplateDef {
   /** URL(s) Google Fonts à charger */
   googleFonts: string[];
   preview: { bg: string; accent: string; name: string }[];
+  /**
+   * Éléments PROPRES au modèle (les réglages, eux, sont communs à tous) :
+   *  - ambient : animation d'ambiance par défaut (pétales, roses…) ;
+   *  - decor   : ornement dessiné (bouquets dans les coins…) ;
+   *  - script  : police manuscrite pour les noms / signatures.
+   */
+  ambient?: { kind: AmbientKind; colors: string[] };
+  decor?: 'floral-corners' | 'none';
+  script?: string;
 }
+
+export type AmbientKind = 'petals' | 'roses' | 'hearts' | 'gold' | 'none';
 
 export const TEMPLATE_DEFS: TemplateDef[] = [
   {
@@ -139,6 +150,66 @@ export const TEMPLATE_DEFS: TemplateDef[] = [
       { bg: '#EAD9C4', accent: '#8A5A2B', name: 'Wax' },
       { bg: '#F7EFE3', accent: '#2E6E4E', name: 'Kente' },
     ],
+  },
+  {
+    id: 'ivoire',
+    label: 'Ivoire & Rose',
+    tagline: 'Papier crème rosé, cartes élégantes & pétales qui tombent',
+    palette: {
+      background: '#F6EFE9',
+      surface: '#FFFCF9',
+      text: '#4A3A33',
+      muted: '#8C7B72',
+      accent: '#A0705A',
+      accentSoft: '#EFE1D8',
+      ink: '#2F2420',
+      border: '#E7D9CF',
+    },
+    fonts: {
+      display: "'Cormorant Garamond', Georgia, serif",
+      body: "'Jost', system-ui, sans-serif",
+    },
+    script: "'Pinyon Script', 'Great Vibes', cursive",
+    googleFonts: [
+      'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Jost:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Pinyon+Script&display=swap',
+    ],
+    preview: [
+      { bg: '#F6EFE9', accent: '#A0705A', name: 'Ivoire' },
+      { bg: '#FFFCF9', accent: '#C9938A', name: 'Rose' },
+      { bg: '#EFE1D8', accent: '#7A5444', name: 'Moka' },
+    ],
+    ambient: { kind: 'petals', colors: ['#E8B7B0', '#D99A92', '#F2D3CD', '#C98C84'] },
+    decor: 'none',
+  },
+  {
+    id: 'terracotta',
+    label: 'Terracotta fleuri',
+    tagline: 'Terracotta, rouille & crème, bouquets et roses qui tombent',
+    palette: {
+      background: '#FBF5EE',
+      surface: '#FFFFFF',
+      text: '#4B2A20',
+      muted: '#8E6A5C',
+      accent: '#A8432A',
+      accentSoft: '#F3E2D5',
+      ink: '#5A2416',
+      border: '#EBD8C8',
+    },
+    fonts: {
+      display: "'Pinyon Script', 'Great Vibes', cursive",
+      body: "'Cormorant Garamond', Georgia, serif",
+    },
+    script: "'Pinyon Script', 'Great Vibes', cursive",
+    googleFonts: [
+      'https://fonts.googleapis.com/css2?family=Pinyon+Script&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap',
+    ],
+    preview: [
+      { bg: '#FBF5EE', accent: '#A8432A', name: 'Terracotta' },
+      { bg: '#F3E2D5', accent: '#8E2F1D', name: 'Rouille' },
+      { bg: '#FFFFFF', accent: '#C9A34A', name: 'Doré' },
+    ],
+    ambient: { kind: 'roses', colors: ['#B8452C', '#D0613F', '#E9A07F', '#8E2F1D'] },
+    decor: 'floral-corners',
   },
 ];
 

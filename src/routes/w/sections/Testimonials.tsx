@@ -4,7 +4,7 @@ import { MessageCircleHeart, ArrowRight } from 'lucide-react';
 import { db } from '../../../lib/db';
 import type { Testimonial } from '../../../types/database';
 import type { SectionProps } from './types';
-import { asRecord, str } from './types';
+import { asRecord, str, bool } from './types';
 import { SectionShell } from './shell';
 import TestimonialForm from './TestimonialForm';
 
@@ -21,8 +21,10 @@ export default function Testimonials({ content, accent, tpl, wedding }: SectionP
   const intro = str(c, 'intro') || 'Laissez un petit mot aux mariés.';
   const { palette } = tpl;
 
+  const autoPublish = bool(c, 'auto_publish', false);
   const [items, setItems] = useState<Testimonial[]>([]);
   const [total, setTotal] = useState(0);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -41,7 +43,7 @@ export default function Testimonials({ content, accent, tpl, wedding }: SectionP
     return () => {
       active = false;
     };
-  }, [wedding.id]);
+  }, [wedding.id, reloadKey]);
 
   return (
     <SectionShell tpl={tpl} accent={accent}>
@@ -55,7 +57,13 @@ export default function Testimonials({ content, accent, tpl, wedding }: SectionP
         </div>
 
         <div className="mt-8">
-          <TestimonialForm weddingId={wedding.id} accent={accent} tpl={tpl} />
+          <TestimonialForm
+            weddingId={wedding.id}
+            accent={accent}
+            tpl={tpl}
+            autoPublish={autoPublish}
+            onSent={() => autoPublish && setReloadKey((k) => k + 1)}
+          />
         </div>
 
         {items.length > 0 && (

@@ -2,8 +2,11 @@ import { Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import type { Json } from '../../../types/database';
 import MediaUploader from '../../../components/MediaUploader';
 import MixedEditor from './MixedEditor';
+import RichTextarea from '../../../components/RichTextarea';
+import FrameOptions from '../../../components/FrameOptions';
+import { readFrame, frameHint, type FrameConfig } from '../../../lib/frames';
 import { isSnapchatUrl } from '../../w/sections/SnapchatSection';
-import { coverImageHint, galleryImageHint, locationImageHint } from '../../../lib/imageHints';
+import { coverImageHint, locationImageHint } from '../../../lib/imageHints';
 
 export interface SectionContentEditorProps {
   type: string;
@@ -57,6 +60,14 @@ export default function SectionContentEditor({ type, content, onChange, folder =
     return Array.isArray(v) ? v.filter((x): x is Record<string, unknown> => !!x && typeof x === 'object') : [];
   }
 
+  function frame(key: string, defaults: Partial<FrameConfig> = {}): FrameConfig {
+    return readFrame(record[key], defaults);
+  }
+
+  function newId(): string {
+    return Math.random().toString(36).slice(2, 9);
+  }
+
   function strList(key: string): string[] {
     const v = record[key];
     return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
@@ -107,6 +118,50 @@ export default function SectionContentEditor({ type, content, onChange, folder =
           <Field label="Date courte (affichée sous les noms)">
             <input className="input" value={str('date')} onChange={(e) => set('date', e.target.value)} placeholder="12 juin 2026 — Douala" />
           </Field>
+          <div className="rounded-xl border border-borderlight p-4 space-y-4">
+            <p className="text-sm font-semibold text-ink">Mise en page et contenu de l'accueil</p>
+            <Field label="Mise en page">
+              <select className="input" value={str('layout')} onChange={(e) => set('layout', e.target.value)}>
+                <option value="">Photo plein écran (noms par-dessus)</option>
+                <option value="paper">Faire-part : page claire, noms calligraphiés, photo encadrée dessous</option>
+              </select>
+            </Field>
+            {str('layout') === 'paper' && (
+              <>
+                <Field label="Petite ligne au-dessus des noms"><input className="input" value={str('kicker')} onChange={(e) => set('kicker', e.target.value)} placeholder="Invitation au mariage de" /></Field>
+                <div>
+                  <label className="label">Cadre de la photo (sous les noms)</label>
+                  <FrameOptions value={frame('photo_frame', { style: 'soft', ratio: '3:4', size: 'md' })} onChange={(v) => set('photo_frame', v)} />
+                </div>
+              </>
+            )}
+            <div>
+              <label className="label">Phrase des familles (facultatif)</label>
+              <RichTextarea value={str('tagline')} onChange={(v) => set('tagline', v)} placeholder="Avec leurs familles, ils ont la joie de vous inviter à célébrer leur union" className="min-h-16" />
+            </div>
+            <label className="flex items-center gap-2 text-sm text-ink-secondary">
+              <input type="checkbox" checked={bool('show_date_block')} onChange={(e) => set('show_date_block', e.target.checked)} />
+              Afficher le bloc date « Vendredi | 18 | Décembre — 2026 »
+            </label>
+            {bool('show_date_block') && (
+              <Field label="Date du bloc (vide = date de la première étape du programme)">
+                <input type="datetime-local" className="input" value={str('date_iso')} onChange={(e) => set('date_iso', e.target.value)} />
+              </Field>
+            )}
+            <div className="grid gap-3 sm:grid-cols-[1fr,auto] sm:items-end">
+              <Field label="Résumé des horaires (facultatif)">
+                <input className="input" value={str('schedule')} onChange={(e) => set('schedule', e.target.value)} placeholder="15H00 Mairie · 16H00 Table des Élites · Akwa, Douala" />
+              </Field>
+              <label className="flex items-center gap-2 pb-2 text-xs text-ink-secondary">
+                <input type="checkbox" checked={bool('auto_schedule')} onChange={(e) => set('auto_schedule', e.target.checked)} />
+                Générer depuis le programme
+              </label>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Bouton « réserver » (vide = masqué)"><input className="input" value={str('btn_rsvp')} onChange={(e) => set('btn_rsvp', e.target.value)} placeholder="Réserver ma place" /></Field>
+              <Field label="Bouton « programme » (vide = masqué)"><input className="input" value={str('btn_program')} onChange={(e) => set('btn_program', e.target.value)} placeholder="Le programme" /></Field>
+            </div>
+          </div>
           <div>
             <label className="label">Noms des mariés</label>
             <label className="flex items-center gap-2 text-sm text-ink-secondary">
@@ -175,9 +230,18 @@ export default function SectionContentEditor({ type, content, onChange, folder =
     case 'image_video':
       return (
         <div className="space-y-4">
-          <Field label="Titre de la section">
-            <input className="input" value={str('title')} onChange={(e) => set('title', e.target.value)} placeholder="Souvenirs" />
-          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Titre de la section">
+              <input className="input" value={str('title')} onChange={(e) => set('title', e.target.value)} placeholder="Souvenirs" />
+            </Field>
+            <Field label="Position du titre">
+              <select className="input" value={str('title_position')} onChange={(e) => set('title_position', e.target.value)}>
+                <option value="">Au-dessus de l'image</option>
+                <option value="over">Par-dessus l'image</option>
+                <option value="none">Masqué</option>
+              </select>
+            </Field>
+          </div>
           <MediaUploader
             bucket="media"
             folder={`${folder}/galerie`}
@@ -185,16 +249,26 @@ export default function SectionContentEditor({ type, content, onChange, folder =
             label="Photo"
             value={str('image')}
             onChange={(v) => set('image', v)}
-            hint={galleryImageHint()}
+            hint={frameHint(frame('image_frame'))}
           />
+          {str('image') && (
+            <div>
+              <label className="label">Cadre et dimensions de la photo</label>
+              <FrameOptions value={frame('image_frame')} onChange={(v) => set('image_frame', v)} />
+            </div>
+          )}
           <MediaUploader
             bucket="media"
             folder={`${folder}/galerie`}
             accept="video/*"
-            label="Vidéo (optionnel)"
+            label="Vidéo (optionnel, remplace la photo)"
             value={str('video')}
             onChange={(v) => set('video', v)}
           />
+          <div>
+            <label className="label">Légende (facultatif)</label>
+            <RichTextarea value={str('caption')} onChange={(v) => set('caption', v)} placeholder="Nos fiançailles, *décembre 2025*" className="min-h-14" />
+          </div>
         </div>
       );
     case 'program':
@@ -204,8 +278,12 @@ export default function SectionContentEditor({ type, content, onChange, folder =
             <select className="input" value={str('layout')} onChange={(e) => set('layout', e.target.value)}>
               <option value="">Selon le modèle de design (frise / cartes alternées)</option>
               <option value="photo">Cartes photo plein cadre + bouton « Itinéraire »</option>
+              <option value="hours">Frise des heures (heure en grand + photo ronde) + carte « Lieu »</option>
             </select>
           </Field>
+          {str('layout') === 'hours' && (
+            <Field label="Titre"><input className="input" value={str('title')} onChange={(e) => set('title', e.target.value)} placeholder="Le programme" /></Field>
+          )}
           <p className="text-sm text-ink-secondary">
             Le programme est alimenté par l'onglet « Programme » (sous-évènements :
             dot, mairie, église, soirée), chacun avec sa date, son lieu, sa photo et son lien Maps.
@@ -238,9 +316,10 @@ export default function SectionContentEditor({ type, content, onChange, folder =
               />
               <div className="space-y-3">
                 <Field label="Légende de la photo"><input className="input" value={str('photo_caption')} onChange={(e) => set('photo_caption', e.target.value)} placeholder="Douala, 2013 — le début de tout" /></Field>
-                <Field label="Introduction">
-                  <textarea className="input min-h-24" value={str('intro')} onChange={(e) => set('intro', e.target.value)} placeholder="Une partie de PlayStation, un été à Douala… et douze ans plus tard, un « oui »." />
-                </Field>
+                <div>
+                  <label className="label">Introduction</label>
+                  <RichTextarea value={str('intro')} onChange={(v) => set('intro', v)} placeholder="Une partie de PlayStation, un été à Douala… et douze ans plus tard, un « oui »." />
+                </div>
               </div>
             </div>
           </div>
@@ -272,9 +351,10 @@ export default function SectionContentEditor({ type, content, onChange, folder =
                         <input className="input" value={(v.label as string) ?? ''} onChange={(e) => update({ ...v, label: e.target.value })} placeholder="raconte · sa version · la mariée" />
                       </Field>
                     </div>
-                    <Field label="Récit">
-                      <textarea className="input min-h-40" value={(v.text as string) ?? ''} onChange={(e) => update({ ...v, text: e.target.value })} placeholder="Tout commence pendant les vacances de 2013…" />
-                    </Field>
+                    <div>
+                      <label className="label">Récit</label>
+                      <RichTextarea value={(v.text as string) ?? ''} onChange={(t) => update({ ...v, text: t })} placeholder="Tout commence pendant les vacances de 2013…" className="min-h-40" />
+                    </div>
                     <p className="text-xs text-ink-secondary">{((v.text as string) ?? '').length} caractères — la carte affiche les ~200 premiers ; le reste s'ouvre avec « Voir plus ».</p>
                   </div>
                 </div>
@@ -346,9 +426,10 @@ export default function SectionContentEditor({ type, content, onChange, folder =
     case 'quote':
       return (
         <div className="space-y-4">
-          <Field label="Citation / verset">
-            <textarea className="input min-h-24" value={str('text')} onChange={(e) => set('text', e.target.value)} placeholder="Ta femme sera comme une vigne féconde dans ta maison…" />
-          </Field>
+          <div>
+            <label className="label">Citation / verset</label>
+            <RichTextarea value={str('text')} onChange={(v) => set('text', v)} placeholder="Ta femme sera comme une vigne féconde dans ta maison…" />
+          </div>
           <Field label="Auteur / référence">
             <input className="input" value={str('author')} onChange={(e) => set('author', e.target.value)} placeholder="Psaume 128, 3" />
           </Field>
@@ -370,9 +451,10 @@ export default function SectionContentEditor({ type, content, onChange, folder =
                 <Field label="Intitulé (optionnel)">
                   <input className="input" value={(it.title as string) ?? ''} onChange={(e) => update({ ...it, title: e.target.value })} placeholder="Cadeaux" />
                 </Field>
-                <Field label="Texte">
-                  <textarea className="input min-h-20" value={(it.text as string) ?? ''} onChange={(e) => update({ ...it, text: e.target.value })} placeholder="Vos présents seront accueillis dès votre arrivée…" />
-                </Field>
+                <div>
+                  <label className="label">Texte</label>
+                  <RichTextarea value={(it.text as string) ?? ''} onChange={(v) => update({ ...it, text: v })} placeholder="Vos présents seront accueillis dès votre arrivée…" className="min-h-16" />
+                </div>
               </div>
             )}
           />
@@ -383,9 +465,10 @@ export default function SectionContentEditor({ type, content, onChange, folder =
       return (
         <div className="space-y-4">
           <Field label="Titre"><input className="input" value={str('title')} onChange={(e) => set('title', e.target.value)} placeholder="Remerciements" /></Field>
-          <Field label="Texte">
-            <textarea className="input min-h-32" value={str('text')} onChange={(e) => set('text', e.target.value)} placeholder="À nos parents, à nos grands-parents…" />
-          </Field>
+          <div>
+            <label className="label">Texte</label>
+            <RichTextarea value={str('text')} onChange={(v) => set('text', v)} placeholder="À nos parents, à nos grands-parents…" className="min-h-32" />
+          </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Citation de fin (optionnel)"><input className="input" value={str('quote')} onChange={(e) => set('quote', e.target.value)} placeholder="Une famille, ce n'est pas un lieu, c'est un lien" /></Field>
             <Field label="Auteur de la citation"><input className="input" value={str('quote_author')} onChange={(e) => set('quote_author', e.target.value)} placeholder="Proverbe africain" /></Field>
@@ -393,89 +476,150 @@ export default function SectionContentEditor({ type, content, onChange, folder =
         </div>
       );
     case 'dress_code': {
-      const colors = strList('colors');
-      const photos = strList('photos');
-      return (
-        <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Titre"><input className="input" value={str('title')} onChange={(e) => set('title', e.target.value)} placeholder="Code vestimentaire" /></Field>
-            <Field label="Thème"><input className="input" value={str('theme_name')} onChange={(e) => set('theme_name', e.target.value)} placeholder="Élégance champêtre" /></Field>
-          </div>
-          <Field label="Description">
-            <textarea className="input min-h-20" value={str('description')} onChange={(e) => set('description', e.target.value)} placeholder="Tenue de soirée — tons terre, beige et or." />
-          </Field>
+      // Couleurs : { hex, name } (ancien format : code seul, converti à la volée).
+      const colors = (Array.isArray(record['colors']) ? (record['colors'] as unknown[]) : [])
+        .map((x) => (typeof x === 'string' ? { hex: x, name: '' } : x && typeof x === 'object' ? { hex: String((x as Record<string, unknown>).hex ?? '#c9a34a'), name: String((x as Record<string, unknown>).name ?? '') } : null))
+        .filter((x): x is { hex: string; name: string } => !!x);
+      const setColors = (v: { hex: string; name: string }[]) => set('colors', v);
+      const photoGroup = (key: string, label: string) => {
+        const photos = strList(key);
+        return (
           <div>
-            <label className="label">Palette de couleurs</label>
-            <div className="flex flex-wrap items-center gap-3">
-              {colors.map((col, i) => (
-                <span key={i} className="flex items-center gap-1 rounded-full border border-borderlight py-1 pl-1 pr-2">
-                  <input
-                    type="color"
-                    value={/^#[0-9a-f]{6}$/i.test(col) ? col : '#c9a34a'}
-                    onChange={(e) => set('colors', colors.map((c, j) => (j === i ? e.target.value : c)))}
-                    className="h-7 w-7 cursor-pointer rounded-full border-0 bg-transparent"
-                  />
-                  <span className="font-mono text-xs text-ink-secondary">{col}</span>
-                  <button type="button" onClick={() => set('colors', colors.filter((_, j) => j !== i))} className="text-ink-secondary hover:text-red-600" title="Retirer">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </span>
-              ))}
-              {colors.length < 8 && (
-                <button type="button" onClick={() => set('colors', [...colors, '#c9a34a'])} className="btn-outline !py-1.5 text-xs">
-                  <Plus className="h-3.5 w-3.5" /> Couleur
-                </button>
-              )}
-            </div>
-          </div>
-          <div>
-            <label className="label">Photos d'inspiration (jusqu'à 6)</label>
+            <label className="label">{label} (jusqu'à 9)</label>
             <div className="grid gap-3 sm:grid-cols-3">
               {photos.map((p, i) => (
                 <MediaUploader
-                  key={`${i}-${p}`}
+                  key={`${key}-${i}-${p}`}
                   bucket="media"
                   folder={`${folder}/dresscode`}
                   accept="image/*"
                   label={`Photo ${i + 1}`}
                   value={p}
-                  onChange={(v) => set('photos', v ? photos.map((x, j) => (j === i ? v : x)) : photos.filter((_, j) => j !== i))}
+                  onChange={(v) => set(key, v ? photos.map((x, j) => (j === i ? v : x)) : photos.filter((_, j) => j !== i))}
                 />
               ))}
-              {photos.length < 6 && (
+              {photos.length < 9 && (
                 <MediaUploader
-                  key={`new-${photos.length}`}
+                  key={`${key}-new-${photos.length}`}
                   bucket="media"
                   folder={`${folder}/dresscode`}
                   accept="image/*"
                   label="Ajouter une photo"
                   value=""
-                  onChange={(v) => v && set('photos', [...photos, v])}
-                  hint="Portrait 3:4 recommandé"
+                  onChange={(v) => v && set(key, [...photos, v])}
+                  hint="Portrait 3:4 (1200 × 1600 px)"
                 />
               )}
             </div>
           </div>
+        );
+      };
+      return (
+        <div className="space-y-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Titre"><input className="input" value={str('title')} onChange={(e) => set('title', e.target.value)} placeholder="Code vestimentaire" /></Field>
+            <Field label="Thème"><input className="input" value={str('theme_name')} onChange={(e) => set('theme_name', e.target.value)} placeholder="Terracotta" /></Field>
+          </div>
+          <div>
+            <label className="label">Description</label>
+            <RichTextarea value={str('description')} onChange={(v) => set('description', v)} placeholder="Habillez-vous aux couleurs du thème" className="min-h-16" />
+          </div>
+          <div>
+            <label className="label">Palette de couleurs (le nom s'affiche sur le site, jamais le code)</label>
+            <div className="space-y-2">
+              {colors.map((col, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={/^#[0-9a-f]{6}$/i.test(col.hex) ? col.hex : '#c9a34a'}
+                    onChange={(e) => setColors(colors.map((c, j) => (j === i ? { ...c, hex: e.target.value } : c)))}
+                    className="h-9 w-12 cursor-pointer rounded border border-borderlight"
+                  />
+                  <input
+                    className="input"
+                    value={col.name}
+                    onChange={(e) => setColors(colors.map((c, j) => (j === i ? { ...c, name: e.target.value } : c)))}
+                    placeholder="Nom de la couleur (ex. Terracotta, Rouille, Crème…)"
+                  />
+                  <button type="button" onClick={() => setColors(colors.filter((_, j) => j !== i))} className="btn-outline !px-2 hover:!border-red-300 hover:!text-red-600" title="Retirer">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+              {colors.length < 8 && (
+                <button type="button" onClick={() => setColors([...colors, { hex: '#c9a34a', name: '' }])} className="btn-outline">
+                  <Plus className="h-4 w-4" /> Ajouter une couleur
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="rounded-xl border border-borderlight p-4 space-y-4">
+            <p className="text-sm font-semibold text-ink">Exemples de tenues — bouton « Voir des exemples » <span className="font-normal text-ink-secondary">(facultatif)</span></p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Field label="Texte du bouton"><input className="input" value={str('examples_label')} onChange={(e) => set('examples_label', e.target.value)} placeholder="Voir des exemples" /></Field>
+              <Field label="Onglet 1"><input className="input" value={str('label_women')} onChange={(e) => set('label_women', e.target.value)} placeholder="Pour elles" /></Field>
+              <Field label="Onglet 2"><input className="input" value={str('label_men')} onChange={(e) => set('label_men', e.target.value)} placeholder="Pour eux" /></Field>
+            </div>
+            {photoGroup('photos_women', str('label_women') || 'Photos « Pour elles »')}
+            {photoGroup('photos_men', str('label_men') || 'Photos « Pour eux »')}
+            <Field label="Petite phrase sous les exemples"><input className="input" value={str('examples_caption')} onChange={(e) => set('examples_caption', e.target.value)} placeholder="Terracotta, rouille, crème et touches dorées : laissez parler votre style !" /></Field>
+          </div>
+          {strList('photos').length > 0 && photoGroup('photos', "Photos d'inspiration affichées directement")}
         </div>
       );
     }
-    case 'rsvp':
+    case 'rsvp': {
+      const cats = list('categories');
       return (
-        <div className="space-y-4">
+        <div className="space-y-5">
           <Field label="Titre">
-            <input className="input" value={str('title')} onChange={(e) => set('title', e.target.value)} placeholder="Confirmez votre invitation" />
+            <input className="input" value={str('title')} onChange={(e) => set('title', e.target.value)} placeholder="Réserver ma place" />
           </Field>
           <Field label="Message d'introduction">
-            <textarea className="input min-h-20" value={str('intro')} onChange={(e) => set('intro', e.target.value)} placeholder="Inscrivez-vous pour recevoir votre QR d'invitation, à présenter le jour J." />
+            <textarea className="input min-h-20" value={str('intro')} onChange={(e) => set('intro', e.target.value)} placeholder="Places limitées — chaque place correspond à une personne." />
           </Field>
+          <div className="rounded-xl border border-borderlight p-4 space-y-4">
+            <p className="text-sm font-semibold text-ink">Catégories et places <span className="font-normal text-ink-secondary">(facultatif)</span></p>
+            <label className="flex items-center gap-2 text-sm text-ink">
+              <input type="checkbox" checked={bool('ask_category')} onChange={(e) => set('ask_category', e.target.checked)} />
+              Demander la catégorie à la réservation (Famille, Amis, Collègues…)
+            </label>
+            <label className="flex items-center gap-2 text-sm text-ink">
+              <input type="checkbox" checked={bool('show_gauge')} onChange={(e) => set('show_gauge', e.target.checked)} />
+              Afficher la jauge des places réservées sur le site
+            </label>
+            <Field label="Nombre total de places (vide = illimité)">
+              <input type="number" min={1} className="input" value={(record['total_quota'] as number | undefined) ?? ''} onChange={(e) => set('total_quota', e.target.value ? Number(e.target.value) : null)} placeholder="200" />
+            </Field>
+            <ListEditor
+              items={cats}
+              onChange={(v) => set('categories', v)}
+              addLabel="Ajouter une catégorie"
+              newItem={() => ({ id: newId(), label: '', quota: null })}
+              render={(cat, update) => (
+                <div className="grid gap-3 sm:grid-cols-[1fr,160px]">
+                  <Field label="Nom de la catégorie">
+                    <input className="input" value={(cat.label as string) ?? ''} onChange={(e) => update({ ...cat, label: e.target.value })} placeholder="Famille" />
+                  </Field>
+                  <Field label="Places (vide = illimité)">
+                    <input type="number" min={1} className="input" value={(cat.quota as number | null | undefined) ?? ''} onChange={(e) => update({ ...cat, quota: e.target.value ? Number(e.target.value) : null })} placeholder="60" />
+                  </Field>
+                </div>
+              )}
+            />
+            <p className="text-xs text-ink-secondary">
+              Chaque réservation compte 1 place, plus ses accompagnants. Quand une catégorie est pleine, elle
+              apparaît « complet » et n'est plus proposée. La catégorie de chaque invité se voit et se modifie
+              dans l'onglet « Invités ».
+            </p>
+          </div>
           <p className="text-xs text-ink-secondary">
-            Un visiteur s'inscrit avec juste son nom et son téléphone et reçoit un QR
-            d'invitation à télécharger (à présenter le jour J, scanné depuis l'onglet
-            « Entrée » pour pointer sa présence). Il peut aussi retrouver un QR déjà généré en
-            recherchant son nom.
+            Le visiteur réserve avec son nom, son numéro WhatsApp (et sa catégorie si activée) et reçoit un pass
+            avec QR à présenter le jour J. Il peut aussi retrouver son pass (nom + téléphone).
           </p>
         </div>
       );
+    }
     case 'mixed':
       return <MixedEditor content={content} onChange={onChange} folder={folder} />;
     case 'gallery':
@@ -498,10 +642,57 @@ export default function SectionContentEditor({ type, content, onChange, folder =
           <Field label="Message d'introduction">
             <textarea className="input min-h-16" value={str('intro')} onChange={(e) => set('intro', e.target.value)} placeholder="Laissez un petit mot aux mariés." />
           </Field>
+          <label className="flex items-center gap-2 text-sm text-ink">
+            <input type="checkbox" checked={bool('auto_publish')} onChange={(e) => set('auto_publish', e.target.checked)} />
+            Publication immédiate : les messages s'affichent tout de suite, sans validation
+          </label>
           <p className="text-xs text-ink-secondary">
-            Les messages sont mis en attente de validation depuis l'espace administrateur avant
-            publication.
+            {bool('auto_publish')
+              ? "Les invités écrivent directement dans le livre d'or dès qu'ils reçoivent l'invitation. Vous pouvez toujours retirer un message depuis l'onglet de modération."
+              : "Les messages sont mis en attente de validation depuis l'espace administrateur avant publication."}
           </p>
+        </div>
+      );
+    case 'gifts':
+      return (
+        <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Titre"><input className="input" value={str('title')} onChange={(e) => set('title', e.target.value)} placeholder="L'espace cadeaux" /></Field>
+            <Field label="Texte du bouton"><input className="input" value={str('button')} onChange={(e) => set('button', e.target.value)} placeholder="Voir la liste de cadeaux" /></Field>
+          </div>
+          <div>
+            <label className="label">Message</label>
+            <RichTextarea value={str('message')} onChange={(v) => set('message', v)} placeholder="Votre présence sera pour nous le plus beau des cadeaux. Toutefois, si vous souhaitez…" className="min-h-24" />
+          </div>
+          <Field label="Lien vers la liste de cadeaux (site externe)">
+            <input className="input font-mono text-sm" value={str('url')} onChange={(e) => set('url', e.target.value)} placeholder="https://…" />
+          </Field>
+          {str('url') && !/^https?:\/\//i.test(str('url').trim()) && (
+            <p className="rounded-md bg-red-50 px-3 py-2 text-xs text-red-600">Le lien doit commencer par https://</p>
+          )}
+          <MediaUploader bucket="media" folder={`${folder}/cadeaux`} accept="image/*" label="Image (facultatif)" value={str('image')} onChange={(v) => set('image', v)} hint={frameHint(frame('image_frame', { ratio: '4:3' }))} />
+          {str('image') && <FrameOptions value={frame('image_frame', { style: 'rounded', ratio: '4:3' })} onChange={(v) => set('image_frame', v)} />}
+          <p className="text-xs text-ink-secondary">Sans lien, seul le message s'affiche. Section commune à tous les modèles.</p>
+        </div>
+      );
+    case 'closing':
+      return (
+        <div className="space-y-4">
+          <MediaUploader bucket="media" folder={`${folder}/cloture`} accept="image/*" label="Photo du couple" value={str('photo')} onChange={(v) => set('photo', v)} hint={frameHint(frame('photo_frame', { style: 'soft', ratio: '3:4' }))} />
+          {str('photo') && (
+            <div>
+              <label className="label">Cadre de la photo</label>
+              <FrameOptions value={frame('photo_frame', { style: 'soft', ratio: '3:4', size: 'md' })} onChange={(v) => set('photo_frame', v)} />
+            </div>
+          )}
+          <Field label="Ligne de date (vide = date et ville du programme)">
+            <input className="input" value={str('date')} onChange={(e) => set('date', e.target.value)} placeholder="18  12  2026  —  Douala" />
+          </Field>
+          <div>
+            <label className="label">Mot de fin</label>
+            <RichTextarea value={str('signature')} onChange={(v) => set('signature', v)} placeholder="Avec toute l'affection de nos familles" className="min-h-14" />
+          </div>
+          <p className="text-xs text-ink-secondary">Les noms du couple s'affichent automatiquement. Placez cette section en dernier.</p>
         </div>
       );
     case 'tables':

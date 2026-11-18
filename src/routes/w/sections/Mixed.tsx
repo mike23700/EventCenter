@@ -2,9 +2,13 @@ import { useEffect, useState } from 'react';
 import { Search, UserPlus } from 'lucide-react';
 import { saveResponses } from '../../../lib/publicApi';
 import { usePublicWedding } from '../publicContext';
+import { useRsvpConfig } from './CapacityGauge';
 import type { Json, WeddingEvent } from '../../../types/database';
 import { storageUrl } from '../../../lib/media';
 import { normalizeTextSize } from '../../../lib/fontSize';
+import { readFrame } from '../../../lib/frames';
+import { renderRich } from '../../../lib/richText';
+import FramedImage from '../FramedImage';
 import type { SectionProps } from './types';
 import { asRecord } from './types';
 import { SectionShell } from './shell';
@@ -30,6 +34,8 @@ type Block = {
   titleSize?: number;
   textSize?: number;
   src?: string;
+  frame?: unknown;
+  titlePosition?: 'below' | 'above' | 'over';
   questions?: Question[];
 };
 
@@ -108,7 +114,7 @@ function TextView({ block, tpl }: { block: Block; tpl: SectionProps['tpl'] }) {
           className={`mt-3 whitespace-pre-line leading-relaxed tpl-body ${id === 'royal' ? 'text-base' : 'text-lg'}`}
           style={{ color: palette.muted, fontSize: textSize ? `${textSize}px` : undefined }}
         >
-          {block.text}
+          {renderRich(block.text, palette.accent)}
         </p>
       )}
     </div>
@@ -119,25 +125,30 @@ function ImageView({ block, tpl }: { block: Block; tpl: SectionProps['tpl'] }) {
   const { palette, id } = tpl;
   const src = storageUrl('media', block.src) ?? block.src;
   if (!src) return null;
+  const pos = block.titlePosition ?? 'below';
+  const frame = readFrame(block.frame, { style: id === 'minimal' ? 'square' : 'rounded' });
   return (
-    <figure className={id === 'florale' ? 'rounded-3xl p-3' : undefined} style={id === 'florale' ? { backgroundColor: palette.accentSoft } : undefined}>
-      <img loading="lazy" decoding="async"
+    <div>
+      {block.title && pos === 'above' && (
+        <h3 className="mb-4 text-center font-display tpl-display text-2xl font-bold sm:text-3xl" style={{ color: palette.ink }}>{block.title}</h3>
+      )}
+      <FramedImage
         src={src}
-        alt=""
-        className="w-full"
-        style={{
-          borderRadius: id === 'minimal' ? '0.25rem' : '1rem',
-          border: id === 'minimal' ? `1px solid ${palette.border}` : 'none',
-          boxShadow: id === 'florale' ? '0 14px 34px rgba(201,138,158,0.25)' : '0 14px 40px rgba(0,0,0,0.1)',
-        }}
+        alt={block.title ?? ''}
+        frame={frame}
+        tpl={tpl}
+        accent={palette.accent}
+        overlay={block.title && pos === 'over' ? (
+          <div className="absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/70 via-black/15 to-transparent p-5 text-center">
+            <p className="font-display tpl-display text-2xl font-bold text-white drop-shadow sm:text-4xl">{block.title}</p>
+          </div>
+        ) : undefined}
       />
-      {block.title && (
-        <figcaption className="mt-3 text-center text-sm tracking-wide tpl-body italic" style={{ color: palette.muted }}>
-          {block.title}
-        </figcaption>
+      {block.title && pos === 'below' && (
+        <p className="mt-3 text-center text-sm tracking-wide tpl-body italic" style={{ color: palette.muted }}>{block.title}</p>
       )}
       {accentMarker(tpl)}
-    </figure>
+    </div>
   );
 }
 
@@ -206,6 +217,7 @@ function QuestionnaireView({
   const { guest } = id;
   const guestStatus = id.status;
   const { invitedGuest } = usePublicWedding();
+  const rsvpCfg = useRsvpConfig(weddingId);
 
   // Invité arrivé par son lien personnel : pas besoin de s'identifier.
   useEffect(() => {
@@ -224,8 +236,8 @@ function QuestionnaireView({
     setAnswers((a) => ({ ...a, [qid]: value }));
   }
 
-  async function registerSelf(name: string, phone: string, eventIds: string[]) {
-    await id.registerSelf({ name, phone, invitedEvents: eventIds });
+  async function registerSelf(name: string, phone: string, eventIds: string[], category?: string) {
+    await id.registerSelf({ name, phone, invitedEvents: eventIds, category });
     setRegistering(false);
   }
 
@@ -295,6 +307,7 @@ function QuestionnaireView({
               submitting={id.registering}
               error={id.error}
               events={events}
+              rsvp={rsvpCfg.config}
               onSubmit={registerSelf}
               onCancel={() => setRegistering(false)}
             />

@@ -81,10 +81,28 @@ interface Draft {
   name: string;
   phone: string;
   plus_ones: number;
+  category: string;
   invited_events: string[];
 }
 
-const empty: Draft = { name: '', phone: '', plus_ones: 0, invited_events: [] };
+const empty: Draft = { name: '', phone: '', plus_ones: 0, category: '', invited_events: [] };
+
+interface GuestCategory {
+  id: string;
+  label: string;
+  quota: number | null;
+}
+
+/** Catégories de réservation définies dans la section RSVP (Famille, Amis…). */
+function parseCategories(sections: Section[]): GuestCategory[] {
+  const rsvp = sections.find((s) => s.type === 'rsvp');
+  const c = rsvp?.content && typeof rsvp.content === 'object' && !Array.isArray(rsvp.content) ? (rsvp.content as Record<string, unknown>) : {};
+  return Array.isArray(c.categories)
+    ? (c.categories as Record<string, unknown>[])
+        .filter((x) => x && typeof x.id === 'string' && typeof x.label === 'string' && String(x.label).trim())
+        .map((x) => ({ id: String(x.id), label: String(x.label), quota: typeof x.quota === 'number' ? x.quota : null }))
+    : [];
+}
 
 interface QuestionMeta {
   key: string;
@@ -153,6 +171,8 @@ export default function GuestsEditor() {
   const [questionFilter, setQuestionFilter] = useState('');
   const [answerFilter, setAnswerFilter] = useState('');
   const [viewingResponsesFor, setViewingResponsesFor] = useState<string | null>(null);
+  const [categories, setCategories] = useState<GuestCategory[]>([]);
+  const [categoryFilter, setCategoryFilter] = useState('');
 
   useEffect(() => {
     if (!wedding) return;
@@ -161,12 +181,13 @@ export default function GuestsEditor() {
       const [{ data: g }, { data: evs }, { data: secs }] = await Promise.all([
         db.from<Guest>('guests').select('*').eq('wedding_id', wedding.id).order('created_at'),
         db.from('wedding_events').select('*').eq('wedding_id', wedding.id).order('position'),
-        db.from('sections').select('*').eq('wedding_id', wedding.id).eq('type', 'mixed'),
+        db.from('sections').select('*').eq('wedding_id', wedding.id),
       ]);
       if (!active) return;
       setGuests(g ?? []);
       setEvents(evs ?? []);
-      setQuestions(parseQuestionsFromSections(secs ?? []));
+      setQuestions(parseQuestionsFromSections((secs ?? []).filter((x: Section) => x.type === 'mixed')));
+      setCategories(parseCategories(secs ?? []));
       setLoading(false);
 
       const guestIds = (g ?? []).map((row) => row.id);
@@ -262,6 +283,7 @@ export default function GuestsEditor() {
 
   const filteredGuests = useMemo(() => {
     let list = eventFilter ? guests.filter((g) => (g.invited_events ?? []).includes(eventFilter)) : guests;
+    if (categoryFilter) list = list.filter((g) => (categoryFilter === '__none' ? !g.category : g.category === categoryFilter));
     if (selectedQuestion) {
       list = list.filter((g) => {
         const answer = answersByGuestAndQuestion.get(`${g.id}::${selectedQuestion.key}`);
@@ -270,7 +292,17 @@ export default function GuestsEditor() {
       });
     }
     return list;
-  }, [guests, eventFilter, selectedQuestion, answerFilter, answersByGuestAndQuestion]);
+  }, [guests, eventFilter, categoryFilter, selectedQuestion, answerFilter, answersByGuestAndQuestion]);
+
+  // Places (1 + accompagnants) par catégorie, pour l'affichage des quotas.
+  const placesByCategory = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const g of guests) {
+      const k = g.category || '__none';
+      m[k] = (m[k] ?? 0) + 1 + Math.max(0, g.plus_ones ?? 0);
+    }
+    return m;
+  }, [guests]);
 
   if (loading) return <p className="text-ink-secondary">Chargement…</p>;
   if (error) return <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>;
@@ -290,6 +322,7 @@ export default function GuestsEditor() {
       name: g.name,
       phone: g.phone ?? '',
       plus_ones: g.plus_ones ?? 0,
+      category: g.category ?? '',
       invited_events: g.invited_events ?? [],
     });
   }
@@ -314,6 +347,7 @@ export default function GuestsEditor() {
       name: draft.name.trim(),
       phone: draft.phone.trim() || null,
       plus_ones: Math.max(0, Math.min(20, Math.floor(draft.plus_ones || 0))),
+      category: draft.category || null,
       invited_events: draft.invited_events,
     };
     if (draft.id) {
@@ -336,13 +370,14 @@ export default function GuestsEditor() {
   function exportLinks() {
     const couple = coupleLabel(wedding);
     const tpl = invitationTheme(wedding.theme).inviteMessage;
-    const rows = [['Nom', 'Téléphone', 'Places', 'Référence', 'Lien personnel', 'Message']];
+    const rows = [['Nom', 'Téléphone', 'Places', 'Catégorie', 'Référence', 'Lien personnel', 'Message']];
     for (const g of filteredGuests) {
       const link = personalInviteUrl(wedding.slug, g.qr_token);
       rows.push([
         g.name,
         g.phone ?? '',
         String(1 + (g.plus_ones ?? 0)),
+        categories.find((c) => c.id === g.category)?.label ?? '',
         guestRef(g.qr_token),
         link,
         buildInviteMessage(tpl, { nom: g.name, couple, lien: link }),
@@ -395,6 +430,26 @@ export default function GuestsEditor() {
         <div className="card text-sm text-ink-secondary">
           Ajoutez d'abord des sous-évènements (dot, mairie, église, soirée…) dans l'onglet
           « Programme » pour pouvoir convié vos invités à des étapes précises.
+        </div>
+      )}
+
+      {categories.length > 0 && !draft && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-ink-secondary">
+            <Users className="h-3.5 w-3.5" /> Catégorie
+          </span>
+          {[{ id: '', label: 'Toutes', quota: null as number | null }, ...categories, { id: '__none', label: 'Sans catégorie', quota: null }].map((c) => (
+            <button
+              key={c.id || 'all'}
+              onClick={() => setCategoryFilter(c.id)}
+              className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                categoryFilter === c.id ? 'bg-gold text-white' : 'border border-borderlight bg-paper-warm text-ink-secondary'
+              }`}
+            >
+              {c.label}
+              {c.id && ` · ${placesByCategory[c.id] ?? 0}${c.quota ? `/${c.quota}` : ''} pl.`}
+            </button>
+          ))}
         </div>
       )}
 
@@ -506,6 +561,19 @@ export default function GuestsEditor() {
                 Le pass affichera {1 + (draft.plus_ones || 0)} personne{draft.plus_ones > 0 ? 's' : ''}.
               </p>
             </div>
+            {categories.length > 0 && (
+              <div>
+                <label className="label">Catégorie</label>
+                <select className="input" value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })}>
+                  <option value="">— Aucune —</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.label}{c.quota ? ` (${placesByCategory[c.id] ?? 0}/${c.quota} places)` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           {events.length > 0 && (
@@ -565,7 +633,7 @@ export default function GuestsEditor() {
               {filteredGuests.map((g) => (
                 <Fragment key={g.id}>
                   <tr className="border-b border-borderlight/60 last:border-0">
-                    <td className="px-4 py-3 font-medium text-ink">{g.name}{(g.plus_ones ?? 0) > 0 && <span className="ml-1 rounded-full bg-paper-cream px-1.5 text-xs text-ink-secondary" title="Accompagnants">+{g.plus_ones}</span>}</td>
+                    <td className="px-4 py-3 font-medium text-ink">{g.name}{(g.plus_ones ?? 0) > 0 && <span className="ml-1 rounded-full bg-paper-cream px-1.5 text-xs text-ink-secondary" title="Accompagnants">+{g.plus_ones}</span>}{g.category && categories.find((c) => c.id === g.category) && <span className="ml-1 rounded-full border border-gold/40 px-1.5 text-[10px] text-gold">{categories.find((c) => c.id === g.category)!.label}</span>}</td>
                     <td className="px-4 py-3 text-ink-secondary">{g.phone ?? '—'}</td>
                     <td className="px-4 py-3">
                       {(g.invited_events ?? []).length === 0 ? (

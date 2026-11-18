@@ -168,7 +168,7 @@ export const TABLES: Record<Table, TableDef> = {
   guests: {
     columns: [
       'id', 'wedding_id', 'name', 'phone', 'plus_ones', 'invited_events',
-      'response', 'qr_token', 'checked_in_at', 'checked_in_by', 'created_at',
+      'response', 'qr_token', 'checked_in_at', 'checked_in_by', 'category', 'created_at',
     ],
     jsonColumns: ['response'],
     // Plus AUCUNE lecture/écriture anonyme : le site public passe par

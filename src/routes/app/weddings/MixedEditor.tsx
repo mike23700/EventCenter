@@ -3,7 +3,9 @@ import { Type, Image as ImageIcon, Video, ClipboardList, GripVertical, Trash2, C
 import type { Json } from '../../../types/database';
 import MediaUploader from '../../../components/MediaUploader';
 import { randomString } from '../../../lib/slug';
-import { galleryImageHint } from '../../../lib/imageHints';
+import RichTextarea from '../../../components/RichTextarea';
+import FrameOptions from '../../../components/FrameOptions';
+import { readFrame, frameHint } from '../../../lib/frames';
 import { normalizeTextSize, TEXT_SIZE_SCALE } from '../../../lib/fontSize';
 
 export interface MixedBlock {
@@ -14,6 +16,8 @@ export interface MixedBlock {
   titleSize?: number;
   textSize?: number;
   src?: string;
+  frame?: unknown;
+  titlePosition?: 'below' | 'above' | 'over';
   questions?: Question[];
 }
 
@@ -234,7 +238,7 @@ function BlockForm({
           </div>
           <div>
             <label className="label">Texte</label>
-            <textarea className="input min-h-24" value={block.text ?? ''} onChange={(e) => onChange({ text: e.target.value })} placeholder="Quelques mots sur vous, votre rencontre…" />
+            <RichTextarea value={block.text ?? ''} onChange={(text) => onChange({ text })} placeholder="Quelques mots sur vous, votre rencontre…" />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <FontSizeSelect
@@ -260,12 +264,23 @@ function BlockForm({
             label="Photo"
             value={block.src}
             onChange={(src) => onChange({ src: src ?? undefined })}
-            hint={`JPG, PNG ou WebP · ${galleryImageHint()}`}
+            hint={frameHint(readFrame(block.frame))}
           />
-          <div>
-            <label className="label">Légende</label>
-            <input className="input" value={block.title ?? ''} onChange={(e) => onChange({ title: e.target.value })} placeholder="Légende de la photo" />
+          <div className="grid gap-3 sm:grid-cols-[1fr,200px]">
+            <div>
+              <label className="label">Titre / légende</label>
+              <input className="input" value={block.title ?? ''} onChange={(e) => onChange({ title: e.target.value })} placeholder="Nos fiançailles" />
+            </div>
+            <div>
+              <label className="label">Position du titre</label>
+              <select className="input" value={block.titlePosition ?? 'below'} onChange={(e) => onChange({ titlePosition: e.target.value as 'below' | 'above' | 'over' })}>
+                <option value="below">Sous la photo (légende)</option>
+                <option value="above">Au-dessus de la photo</option>
+                <option value="over">Par-dessus la photo</option>
+              </select>
+            </div>
           </div>
+          {block.src && <FrameOptions value={readFrame(block.frame)} onChange={(frame) => onChange({ frame })} />}
         </div>
       );
     case 'video':

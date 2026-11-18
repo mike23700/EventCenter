@@ -12,10 +12,15 @@ export default function TestimonialForm({
   weddingId,
   accent,
   tpl,
+  autoPublish = false,
+  onSent,
 }: {
   weddingId: string;
   accent: string;
   tpl: TemplateDef;
+  /** Livre d'or en publication immédiate (option de la section). */
+  autoPublish?: boolean;
+  onSent?: () => void;
 }) {
   const { palette } = tpl;
   const [author, setAuthor] = useState('');
@@ -40,6 +45,7 @@ export default function TestimonialForm({
       return;
     }
     setDone(true);
+    onSent?.();
     setAuthor('');
     setText('');
   }
@@ -48,7 +54,7 @@ export default function TestimonialForm({
     <div className="rounded-2xl p-6" style={{ backgroundColor: palette.surface, border: `1px solid ${palette.border}` }}>
       {done ? (
         <p className="text-center tpl-body" style={{ color: palette.ink }}>
-          Merci pour votre message ! Il sera visible après validation.
+          {autoPublish ? 'Merci pour votre message, il est publié dans le livre d’or !' : 'Merci pour votre message ! Il sera visible après validation.'}
         </p>
       ) : (
         <div className="space-y-3">

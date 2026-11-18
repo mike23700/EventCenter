@@ -9,6 +9,7 @@ import GuestSelfRegister from './GuestSelfRegister';
 import GuestQrCard from './GuestQrCard';
 import GuestQrLookup from './GuestQrLookup';
 import { usePublicWedding } from '../publicContext';
+import CapacityGauge, { useRsvpConfig } from './CapacityGauge';
 
 type Mode = 'register' | 'lookup';
 
@@ -47,8 +48,11 @@ export default function Rsvp({ content, accent, tpl, wedding, events }: RsvpProp
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invitedGuest, status]);
 
-  async function registerSelf(name: string, phone: string, eventIds: string[]) {
-    await id.registerSelf({ name, phone, invitedEvents: eventIds });
+  const rsvp = useRsvpConfig(wedding.id);
+
+  async function registerSelf(name: string, phone: string, eventIds: string[], category?: string) {
+    await id.registerSelf({ name, phone, invitedEvents: eventIds, category });
+    rsvp.reload();
   }
 
   return (
@@ -61,6 +65,12 @@ export default function Rsvp({ content, accent, tpl, wedding, events }: RsvpProp
           </h2>
           <p className="mt-2 tpl-body" style={{ color: palette.muted }}>{intro}</p>
         </div>
+
+        {rsvp.config?.gauge && (
+          <div className="mt-8">
+            <CapacityGauge gauge={rsvp.config.gauge} tpl={tpl} accent={accent} />
+          </div>
+        )}
 
         <div
           className="mt-8 rounded-2xl p-4 sm:p-6"
@@ -103,6 +113,7 @@ export default function Rsvp({ content, accent, tpl, wedding, events }: RsvpProp
                   submitting={id.registering}
                   error={id.error}
                   events={events}
+                  rsvp={rsvp.config}
                   onSubmit={registerSelf}
                 />
               ) : (

@@ -76,7 +76,9 @@ export type SectionType =
   | 'info'
   | 'thanks'
   | 'dress_code'
-  | 'snapchat';
+  | 'snapchat'
+  | 'gifts'
+  | 'closing';
 
 export interface Guest {
   id: string;
@@ -89,6 +91,7 @@ export interface Guest {
   qr_token: string;
   checked_in_at: string | null;
   checked_in_by: string | null;
+  category?: string | null;
   created_at: string;
 }
 

@@ -22,7 +22,7 @@ import { rateLimit } from '../security';
 const router = Router();
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const GUEST_COLS = 'id, name, phone, plus_ones, invited_events, qr_token';
+const GUEST_COLS = 'id, name, phone, plus_ones, invited_events, qr_token, category';
 
 // Recherches nom + téléphone : bornées pour empêcher de deviner des numéros.
 const lookupLimit = rateLimit({ name: 'guest-lookup', windowMs: 15 * 60 * 1000, max: 20, message: 'Trop de recherches. Réessayez dans 15 minutes.' });
@@ -41,6 +41,59 @@ function phone9(v: unknown): string {
   if (last9.length !== 9) throw new HttpError(400, 'Le numéro doit comporter 9 chiffres (ex. 679...).');
   return last9;
 }
+
+
+interface RsvpCategory {
+  id: string;
+  label: string;
+  quota: number | null;
+}
+
+interface RsvpConfig {
+  askCategory: boolean;
+  showGauge: boolean;
+  categories: RsvpCategory[];
+  totalQuota: number | null;
+}
+
+/** Réglages de réservation, lus dans la section RSVP du mariage (définis par l'admin). */
+async function rsvpConfig(weddingId: string): Promise<RsvpConfig> {
+  const { rows } = await pool.query(
+    `select content from sections where wedding_id = $1 and type = 'rsvp' and enabled = true order by position limit 1`,
+    [weddingId],
+  );
+  const c = (rows[0]?.content ?? {}) as Record<string, unknown>;
+  const num = (v: unknown) => (typeof v === 'number' && v > 0 ? Math.floor(v) : typeof v === 'string' && Number(v) > 0 ? Math.floor(Number(v)) : null);
+  const categories: RsvpCategory[] = Array.isArray(c.categories)
+    ? (c.categories as Record<string, unknown>[])
+        .filter((x) => x && typeof x.id === 'string' && typeof x.label === 'string' && String(x.label).trim())
+        .map((x) => ({ id: String(x.id), label: String(x.label).trim(), quota: num(x.quota) }))
+    : [];
+  return {
+    askCategory: c.ask_category === true && categories.length > 0,
+    showGauge: c.show_gauge === true,
+    categories,
+    totalQuota: num(c.total_quota),
+  };
+}
+
+/** Places réservées (1 + accompagnants) : au total et par catégorie. */
+async function reservedPlaces(db: { query: typeof pool.query }, weddingId: string) {
+  const { rows } = await db.query(
+    `select category, coalesce(sum(1 + greatest(plus_ones, 0)), 0)::int as places
+       from guests where wedding_id = $1 group by category`,
+    [weddingId],
+  );
+  const byCat = new Map<string | null, number>();
+  let total = 0;
+  for (const r of rows as { category: string | null; places: number }[]) {
+    byCat.set(r.category, r.places);
+    total += r.places;
+  }
+  return { total, byCat };
+}
+
+const pct = (n: number, q: number | null) => (q ? Math.min(100, Math.round((n / q) * 100)) : null);
 
 async function assertAccessible(weddingId: string): Promise<void> {
   if (!(await weddingIsAccessible(weddingId))) throw new HttpError(404, "Ce mariage n'est pas disponible.");
@@ -108,7 +161,7 @@ router.post('/guest/lookup', lookupLimit, async (req, res, next) => {
 });
 
 // ---------------------------------------------------------------------
-// POST /api/public/guest/register { weddingId, name, phone, invitedEvents }
+// POST /api/public/guest/register { weddingId, name, phone, invitedEvents, category }
 // ---------------------------------------------------------------------
 router.post('/guest/register', registerLimit, async (req, res, next) => {
   try {
@@ -117,6 +170,12 @@ router.post('/guest/register', registerLimit, async (req, res, next) => {
     if (name.length < 2 || name.length > 80) throw new HttpError(400, 'Indiquez votre nom (2 à 80 caractères).');
     const phone = phone9(req.body?.phone);
     await assertAccessible(weddingId);
+    const cfg = await rsvpConfig(weddingId);
+
+    // Catégorie (Famille, Amis, Collègues…) : obligatoire si l'admin l'a activée.
+    const rawCat = typeof req.body?.category === 'string' ? req.body.category : '';
+    const category = cfg.categories.find((c) => c.id === rawCat) ?? null;
+    if (cfg.askCategory && !category) throw new HttpError(400, 'Choisissez votre catégorie.');
 
     // Étapes choisies : uniquement des étapes principales de CE mariage.
     const requested: string[] = Array.isArray(req.body?.invitedEvents)
@@ -131,25 +190,82 @@ router.post('/guest/register', registerLimit, async (req, res, next) => {
       invitedEvents = rows.map((r: { id: string }) => r.id);
     }
 
-    const { rows: dup } = await pool.query(
-      `select 1 from guests where wedding_id = $1 and right(regexp_replace(coalesce(phone, ''), '\\D', '', 'g'), 9) = $2 limit 1`,
-      [weddingId, phone],
-    );
-    if (dup.length > 0) {
-      res.status(409).json({
-        data: null,
-        error: { message: 'Ce numéro est déjà inscrit. Utilisez « Déjà inscrit(e) ? Retrouver mon pass ».' },
-      });
-      return;
-    }
+    const client = await pool.connect();
+    try {
+      await client.query('begin');
+      // Verrou par mariage : deux réservations simultanées ne peuvent pas
+      // dépasser un quota (la vérification et l'insertion sont atomiques).
+      await client.query('select pg_advisory_xact_lock(hashtext($1))', [weddingId]);
 
-    const { rows } = await pool.query(
-      `insert into guests (id, wedding_id, name, phone, plus_ones, invited_events, qr_token)
-       values ($1, $2, $3, $4, 0, $5::uuid[], $6)
-       returning ${GUEST_COLS}`,
-      [randomUUID(), weddingId, name, phone, invitedEvents, randomUUID()],
-    );
-    res.json({ data: rows[0], error: null });
+      const { rows: dup } = await client.query(
+        `select 1 from guests where wedding_id = $1 and right(regexp_replace(coalesce(phone, ''), '\\D', '', 'g'), 9) = $2 limit 1`,
+        [weddingId, phone],
+      );
+      if (dup.length > 0) {
+        await client.query('rollback');
+        res.status(409).json({ data: null, error: { message: 'Ce numéro est déjà inscrit. Utilisez « Déjà inscrit(e) ? Retrouver mon pass ».' } });
+        return;
+      }
+
+      const places = await reservedPlaces(client, weddingId);
+      if (cfg.totalQuota && places.total + 1 > cfg.totalQuota) {
+        await client.query('rollback');
+        res.status(409).json({ data: null, error: { message: 'Toutes les places sont réservées. Contactez les mariés.' } });
+        return;
+      }
+      if (category?.quota && (places.byCat.get(category.id) ?? 0) + 1 > category.quota) {
+        await client.query('rollback');
+        res.status(409).json({ data: null, error: { message: `Les places de la catégorie « ${category.label} » sont complètes.` } });
+        return;
+      }
+
+      const { rows } = await client.query(
+        `insert into guests (id, wedding_id, name, phone, plus_ones, invited_events, qr_token, category)
+         values ($1, $2, $3, $4, 0, $5::uuid[], $6, $7)
+         returning ${GUEST_COLS}`,
+        [randomUUID(), weddingId, name, phone, invitedEvents, randomUUID(), category?.id ?? null],
+      );
+      await client.query('commit');
+      res.json({ data: rows[0], error: null });
+    } catch (e) {
+      await client.query('rollback').catch(() => {});
+      throw e;
+    } finally {
+      client.release();
+    }
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ---------------------------------------------------------------------
+// POST /api/public/rsvp-config { weddingId } — catégories proposées + jauge
+// ---------------------------------------------------------------------
+router.post('/rsvp-config', tokenLimit, async (req, res, next) => {
+  try {
+    const weddingId = uuidOrThrow(req.body?.weddingId, 'Mariage');
+    await assertAccessible(weddingId);
+    const cfg = await rsvpConfig(weddingId);
+    const places = await reservedPlaces(pool, weddingId);
+    const full = (c: RsvpCategory) => !!c.quota && (places.byCat.get(c.id) ?? 0) >= c.quota;
+    res.json({
+      data: {
+        askCategory: cfg.askCategory,
+        categories: cfg.categories.map((c) => ({ id: c.id, label: c.label, full: full(c) })),
+        allFull: !!cfg.totalQuota && places.total >= cfg.totalQuota,
+        // Jauge publique (seulement si l'admin l'a activée).
+        gauge: cfg.showGauge
+          ? {
+              total: { reserved: places.total, quota: cfg.totalQuota, pct: pct(places.total, cfg.totalQuota) },
+              categories: cfg.categories.map((c) => {
+                const n = places.byCat.get(c.id) ?? 0;
+                return { id: c.id, label: c.label, reserved: n, quota: c.quota, pct: pct(n, c.quota) };
+              }),
+            }
+          : null,
+      },
+      error: null,
+    });
   } catch (e) {
     next(e);
   }

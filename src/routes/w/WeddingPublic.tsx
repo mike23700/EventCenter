@@ -6,13 +6,16 @@ import { useWeddingBySlug } from './useWeddingBySlug';
 import WeddingThemeShell from './WeddingThemeShell';
 import SectionRenderer from './sections';
 import SplashScreen from './SplashScreen';
-import EnvelopeIntro from './EnvelopeIntro';
+import IntroScreen from './IntroScreen';
+import AmbientPetals from './AmbientPetals';
+import StickyHeader from './StickyHeader';
+import { siteOptions } from '../../lib/siteOptions';
 import WelcomeModal from './WelcomeModal';
 import { useInvitedGuest } from './useInvitedGuest';
 import { PublicWeddingContext } from './publicContext';
 import { getTemplate } from '../../lib/templates';
 import { formatDate } from '../../lib/format';
-import { coupleInitials, coupleLabel, invitationTheme } from '../../lib/invitation';
+import { coupleInitials, coupleLabel } from '../../lib/invitation';
 
 const WELCOME_SEEN_KEY = 'etan_welcome_seen:';
 
@@ -66,6 +69,15 @@ export default function WeddingPublic() {
     return first?.date ? formatDate(first.date) : '';
   }, [sections, events]);
 
+  // Date courte du bandeau fixe : « 18 · 12 · 2026 ».
+  const dateShort = useMemo(() => {
+    const first = events.find((e) => e.date && !e.parent_id) ?? events.find((e) => e.date);
+    if (!first?.date) return '';
+    const d = new Date(first.date);
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${p(d.getDate())} · ${p(d.getMonth() + 1)} · ${d.getFullYear()}`;
+  }, [events]);
+
   useEffect(() => {
     if (wedding) document.title = `${coupleLabel(wedding)} — Invitation`;
   }, [wedding]);
@@ -87,12 +99,14 @@ export default function WeddingPublic() {
     ? (wedding.theme as Record<string, unknown>)
     : {};
   const accent = (theme['primaryColor'] as string) ?? '#C9A34A';
-  const inv = invitationTheme(wedding.theme);
+  const opts = siteOptions(wedding.theme, tpl);
   const couple = coupleLabel(wedding);
+  const monogram = coupleInitials(wedding);
   const hasSplash = !!wedding.splash_media_url &&
     (wedding.splash_media_type === 'video' || wedding.splash_media_type === 'gif');
   const splashVisible = showSplash && hasSplash;
-  const envelopeVisible = inv.envelopeEnabled && !envelopeDone && !splashVisible;
+  // Page de garde (enveloppe, image/GIF, vidéo ou simple) : facultative.
+  const envelopeVisible = opts.intro.enabled && !envelopeDone && !splashVisible;
   const guest = invited.guest;
   let welcomeAlreadySeen = false;
   try {
@@ -116,14 +130,14 @@ export default function WeddingPublic() {
     <PublicWeddingContext.Provider value={{ invitedGuest: guest, couple, dateLabel, tpl }}>
       {envelopeVisible && (
         <div style={{ ['--w-font' as string]: tpl.fonts.display, overflowWrap: 'anywhere' }}>
-          <EnvelopeIntro
+          <IntroScreen
             tpl={tpl}
             accent={accent}
-            monogram={inv.envelopeMonogram || coupleInitials(wedding)}
+            options={opts}
             couple={couple}
+            monogram={monogram}
+            dateLabel={dateLabel}
             guestName={guest?.name}
-            color={inv.envelopeColor}
-            tagline={inv.envelopeTagline}
             onDone={closeEnvelope}
           />
         </div>
@@ -155,6 +169,10 @@ export default function WeddingPublic() {
         />
       )}
       <WeddingThemeShell wedding={wedding}>
+        {!envelopeVisible && <AmbientPetals kind={opts.ambient} colors={opts.ambientColors} />}
+        {opts.stickyHeader && (
+          <StickyHeader tpl={tpl} accent={accent} monogram={monogram} couple={couple} dateShort={dateShort} />
+        )}
         {sections.map((section) => (
           <SectionRenderer key={section.id} section={section} wedding={wedding} events={events} />
         ))}

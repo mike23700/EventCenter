@@ -30,7 +30,9 @@ export default function WeddingThemeShell({ wedding, children }: { wedding: Wedd
 
   return (
     <div
-      className="min-h-screen font-display"
+      // Modèles dont la police de titre est manuscrite (Terracotta…) : le reste
+      // du site (libellés, boutons, formulaires) garde la police du texte.
+      className={`min-h-screen ${tpl.script && tpl.fonts.display === tpl.script ? 'tpl-body' : 'font-display'}`}
       style={{
         // Un mot sans espace plus long que sa ligne (lien collé, texte de
         // test…) est coupé au bord de son cadre au lieu de déborder.

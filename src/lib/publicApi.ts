@@ -12,6 +12,19 @@ export interface PublicGuest {
   plus_ones: number;
   invited_events: string[];
   qr_token: string;
+  category?: string | null;
+}
+
+export interface RsvpGauge {
+  total: { reserved: number; quota: number | null; pct: number | null };
+  categories: { id: string; label: string; reserved: number; quota: number | null; pct: number | null }[];
+}
+
+export interface RsvpConfig {
+  askCategory: boolean;
+  categories: { id: string; label: string; full: boolean }[];
+  allFull: boolean;
+  gauge: RsvpGauge | null;
 }
 
 export interface PublicPass {
@@ -55,7 +68,7 @@ export function lookupGuest(weddingId: string, name: string, phone: string): Pro
 
 export function registerGuest(
   weddingId: string,
-  payload: { name: string; phone: string; invitedEvents: string[] },
+  payload: { name: string; phone: string; invitedEvents: string[]; category?: string },
 ): Promise<PublicGuest> {
   return post('/guest/register', { weddingId, ...payload });
 }
@@ -70,4 +83,9 @@ export function saveResponses(
   answers: { question_key: string; answer: unknown }[],
 ): Promise<{ ok: true }> {
   return post('/guest/responses', { weddingId, token, answers });
+}
+
+/** Catégories proposées à la réservation et jauge des places (si activée). */
+export function fetchRsvpConfig(weddingId: string): Promise<RsvpConfig> {
+  return post('/rsvp-config', { weddingId });
 }

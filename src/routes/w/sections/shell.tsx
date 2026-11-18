@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import { useContext, type ReactNode } from 'react';
+import { SectionBackgroundContext } from './sectionStyle';
 import type { TemplateDef } from '../../../lib/templates';
 import { DividerByTemplate } from '../../../lib/templates';
 
@@ -17,15 +18,23 @@ export function SectionShell({
   children: ReactNode;
   className?: string;
 }) {
+  // Fond de bloc choisi par l'admin (image + voile) : voir sectionStyle.ts.
+  const bg = useContext(SectionBackgroundContext);
   return (
     <section
-      className={className}
+      className={`${bg ? 'relative isolate overflow-hidden' : ''} ${className}`}
       style={{
         backgroundColor: tpl.palette.background,
         color: tpl.palette.text,
         ['--accent' as string]: accent,
       }}
     >
+      {bg?.image && (
+        <>
+          <img src={bg.image} alt="" aria-hidden loading="lazy" decoding="async" className="absolute inset-0 -z-10 h-full w-full object-cover" />
+          <div aria-hidden className="absolute inset-0 -z-10" style={{ backgroundColor: bg.overlayColor, opacity: bg.overlay / 100 }} />
+        </>
+      )}
       {children}
     </section>
   );

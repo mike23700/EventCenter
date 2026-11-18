@@ -8,6 +8,7 @@ import { TEMPLATE_DEFS, getTemplate } from '../../../lib/templates';
 import { storageUrl, uploadFile, deleteFile, validateAudioFile } from '../../../lib/media';
 import MediaUploader from '../../../components/MediaUploader';
 import { DEFAULT_INVITE_MESSAGE, coupleInitials, invitationTheme } from '../../../lib/invitation';
+import { AMBIENT_CHOICES, siteOptions, type IntroConfig } from '../../../lib/siteOptions';
 
 function themeRecord(theme: Json): Record<string, unknown> {
   return theme && typeof theme === 'object' && !Array.isArray(theme)
@@ -67,10 +68,12 @@ export default function ThemeEditor() {
     (themeRecord(wedding.theme)['bodyFontScale'] as number) ?? 1,
   );
   const initialInv = invitationTheme(wedding.theme);
-  const [envelopeEnabled, setEnvelopeEnabled] = useState<boolean>(initialInv.envelopeEnabled);
-  const [envelopeMonogram, setEnvelopeMonogram] = useState<string>(initialInv.envelopeMonogram);
-  const [envelopeColor, setEnvelopeColor] = useState<string>(initialInv.envelopeColor);
-  const [envelopeTagline, setEnvelopeTagline] = useState<string>(initialInv.envelopeTagline);
+  const initialOpts = siteOptions(wedding.theme, getTemplate(wedding.template));
+  const [intro, setIntro] = useState<IntroConfig>(initialOpts.intro);
+  const setIntroField = (patch: Partial<IntroConfig>) => setIntro((prev) => ({ ...prev, ...patch }));
+  const [ambient, setAmbient] = useState<string>((themeRecord(wedding.theme)['ambient'] as string) || 'auto');
+  const [decor, setDecor] = useState<string>((themeRecord(wedding.theme)['decor'] as string) || 'auto');
+  const [stickyHeader, setStickyHeader] = useState<boolean>(themeRecord(wedding.theme)['stickyHeader'] === true);
   const [inviteMessage, setInviteMessage] = useState<string>(initialInv.inviteMessage);
   const [ogImage, setOgImage] = useState<string>((themeRecord(wedding.theme)['ogImage'] as string) ?? '');
   const [template, setTemplate] = useState<string>(wedding.template);
@@ -107,10 +110,12 @@ export default function ThemeEditor() {
           footerText: footerText.trim(),
           displayFontScale,
           bodyFontScale,
-          envelopeEnabled,
-          envelopeMonogram: envelopeMonogram.trim(),
-          envelopeColor,
-          envelopeTagline: envelopeTagline.trim(),
+          intro: { ...intro, monogram: intro.monogram.trim(), tagline: intro.tagline.trim() },
+          // compatibilité avec les anciens réglages d'enveloppe
+          envelopeEnabled: intro.enabled && intro.mode === 'envelope',
+          ambient,
+          decor,
+          stickyHeader,
           inviteMessage: inviteMessage.trim(),
           ogImage,
         },
@@ -366,53 +371,130 @@ export default function ThemeEditor() {
           {audioError && <p className="mt-1 text-xs text-red-600">{audioError}</p>}
         </div>
 
+        {/* Page de garde (commune à tous les modèles) */}
+        <div className="space-y-4 rounded-xl border border-borderlight p-4">
+          <div>
+            <p className="font-medium text-ink">Page de garde</p>
+            <p className="text-xs text-ink-secondary">
+              Écran d'ouverture avant le site (facultatif). Il reprend le style du modèle choisi (couleurs,
+              polices, décor, animation) ; l'invité arrivé par son lien personnel y voit son nom.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {([
+              ['none', 'Aucune'],
+              ['envelope', 'Enveloppe animée'],
+              ['media', 'Image ou GIF animé'],
+              ['video', 'Vidéo'],
+              ['simple', 'Titre + bouton'],
+            ] as const).map(([id, label]) => {
+              const active = id === 'none' ? !intro.enabled : intro.enabled && intro.mode === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => (id === 'none' ? setIntroField({ enabled: false }) : setIntroField({ enabled: true, mode: id }))}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${active ? 'border-gold bg-gold text-white' : 'border-borderlight bg-white text-ink-secondary hover:border-gold/50'}`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          {intro.enabled && (
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="label">Petite ligne au-dessus</label>
+                  <input className="input" value={intro.kicker} onChange={(e) => setIntroField({ kicker: e.target.value })} placeholder="Invitation au mariage de" />
+                </div>
+                <div>
+                  <label className="label">Titre (vide = noms du couple)</label>
+                  <input className="input" value={intro.title} onChange={(e) => setIntroField({ title: e.target.value })} placeholder={`${wedding.name}${wedding.secondary_name ? ` & ${wedding.secondary_name}` : ''}`} />
+                </div>
+                <div>
+                  <label className="label">Sous-titre (vide = date du programme)</label>
+                  <input className="input" value={intro.subtitle} onChange={(e) => setIntroField({ subtitle: e.target.value })} placeholder="18 décembre 2026 — Douala" />
+                </div>
+                <div>
+                  <label className="label">Texte du bouton</label>
+                  <input className="input" value={intro.button} onChange={(e) => setIntroField({ button: e.target.value })} placeholder="Ouvrir l'invitation" />
+                </div>
+              </div>
+
+              {(intro.mode === 'media' || intro.mode === 'video' || intro.mode === 'envelope') && (
+                <MediaUploader
+                  bucket="media"
+                  folder={`weddings/${wedding.slug}/page-de-garde`}
+                  accept={intro.mode === 'video' ? 'video/mp4,video/webm,video/quicktime' : 'image/*'}
+                  label={intro.mode === 'video' ? 'Vidéo (en boucle, sans son)' : intro.mode === 'envelope' ? "Image ou GIF d'enveloppe (facultatif — sinon l'enveloppe ETAN dessinée)" : 'Image ou GIF animé'}
+                  value={intro.media}
+                  onChange={(v) => setIntroField({ media: v ?? '', mediaType: v ? (intro.mode === 'video' ? 'video' : 'image') : '' })}
+                  hint={intro.mode === 'video' ? 'MP4, portrait 3:4 ou 9:16, 15 Mo max, quelques secondes' : 'GIF animé ou PNG transparent conseillé, 1000 px de large'}
+                />
+              )}
+
+              {intro.mode === 'envelope' && !intro.media && (
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div>
+                    <label className="label">Monogramme</label>
+                    <input className="input" maxLength={4} value={intro.monogram} onChange={(e) => setIntroField({ monogram: e.target.value })} placeholder={coupleInitials(wedding)} />
+                  </div>
+                  <div>
+                    <label className="label">Couleur de l'enveloppe</label>
+                    <div className="flex items-center gap-2">
+                      <input type="color" value={intro.color || activeTpl.palette.surface} onChange={(e) => setIntroField({ color: e.target.value })} className="h-10 w-14 cursor-pointer rounded border border-borderlight" />
+                      {intro.color && (
+                        <button type="button" onClick={() => setIntroField({ color: '' })} className="text-xs text-ink-secondary underline">Couleur du modèle</button>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="label">Petite phrase (optionnel)</label>
+                    <input className="input" value={intro.tagline} onChange={(e) => setIntroField({ tagline: e.target.value })} placeholder="Avec toute notre affection" />
+                  </div>
+                </div>
+              )}
+              <p className="text-xs text-ink-secondary">Le toucher qui ouvre la page de garde lance aussi la musique d'ambiance.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Animations et décor */}
+        <div className="space-y-4 rounded-xl border border-borderlight p-4">
+          <p className="font-medium text-ink">Animations et décor</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="label">Animation qui tombe</label>
+              <select className="input" value={ambient} onChange={(e) => setAmbient(e.target.value)}>
+                {AMBIENT_CHOICES.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.label}{a.id === 'auto' && activeTpl.ambient ? ` (${AMBIENT_CHOICES.find((x) => x.id === activeTpl.ambient?.kind)?.label.toLowerCase() ?? ''})` : a.id === 'auto' ? ' (aucune)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label">Décor fleuri (bouquets dans les coins)</label>
+              <select className="input" value={decor} onChange={(e) => setDecor(e.target.value)}>
+                <option value="auto">Selon le modèle{activeTpl.decor === 'floral-corners' ? ' (oui)' : ' (non)'}</option>
+                <option value="floral-corners">Oui</option>
+                <option value="none">Non</option>
+              </select>
+            </div>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-ink">
+            <input type="checkbox" checked={stickyHeader} onChange={(e) => setStickyHeader(e.target.checked)} />
+            Bandeau fixe en haut du site (monogramme, noms, date)
+          </label>
+        </div>
+
         {/* Invitation personnalisée */}
         <div className="space-y-4 rounded-xl border border-borderlight p-4">
           <div>
             <p className="font-medium text-ink">Invitation personnalisée</p>
-            <p className="text-xs text-ink-secondary">
-              Écran d'ouverture « enveloppe » et message envoyé avec le lien personnel de chaque
-              invité (onglet « Invités »).
-            </p>
+            <p className="text-xs text-ink-secondary">Message envoyé avec le lien personnel de chaque invité (onglet « Invités ») et image d'aperçu du lien.</p>
           </div>
-          <label className="flex items-center gap-2 text-sm text-ink">
-            <input type="checkbox" checked={envelopeEnabled} onChange={(e) => setEnvelopeEnabled(e.target.checked)} />
-            Afficher l'enveloppe à l'ouverture du site (lance aussi la musique au toucher)
-          </label>
-          {envelopeEnabled && (
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div>
-                <label className="label">Monogramme</label>
-                <input
-                  className="input"
-                  maxLength={4}
-                  value={envelopeMonogram}
-                  onChange={(e) => setEnvelopeMonogram(e.target.value)}
-                  placeholder={coupleInitials(wedding)}
-                />
-              </div>
-              <div>
-                <label className="label">Couleur de l'enveloppe</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={envelopeColor || activeTpl.palette.surface}
-                    onChange={(e) => setEnvelopeColor(e.target.value)}
-                    className="h-10 w-14 cursor-pointer rounded border border-borderlight"
-                  />
-                  {envelopeColor && (
-                    <button type="button" onClick={() => setEnvelopeColor('')} className="text-xs text-ink-secondary underline">
-                      Couleur du modèle
-                    </button>
-                  )}
-                </div>
-              </div>
-              <div>
-                <label className="label">Petite phrase (optionnel)</label>
-                <input className="input" value={envelopeTagline} onChange={(e) => setEnvelopeTagline(e.target.value)} placeholder="Avec toute notre affection" />
-              </div>
-            </div>
-          )}
           <div>
             <label className="label">Message d'invitation (WhatsApp)</label>
             <textarea

@@ -39,6 +39,9 @@ export default function Program({ events, accent, tpl, content }: ProgramProps) 
   if (str(asRecord(content), 'layout') === 'photo') {
     return <PhotoCards events={topLevel} childrenOf={childrenOf} accent={accent} tpl={tpl} />;
   }
+  if (str(asRecord(content), 'layout') === 'hours') {
+    return <HoursTimeline events={topLevel} childrenOf={childrenOf} accent={accent} tpl={tpl} title={str(asRecord(content), 'title')} />;
+  }
 
   // "africain" : cartes alternées en quinconce ; sinon timeline verticale.
   if (id === 'africain') {
@@ -332,6 +335,101 @@ function PhotoCards({
             );
           })}
         </div>
+      </div>
+    </SectionShell>
+  );
+}
+
+function hhmm(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, '0')}H${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+/** Mise en page « heures » : l'heure en grand, une photo ronde par étape, puis la carte du lieu. */
+function HoursTimeline({
+  events,
+  childrenOf,
+  accent,
+  tpl,
+  title,
+}: {
+  events: WeddingEvent[];
+  childrenOf: (id: string) => WeddingEvent[];
+  accent: string;
+  tpl: SectionProps['tpl'];
+  title?: string;
+}) {
+  const { palette } = tpl;
+  // Carte « Lieu » : le dernier lieu renseigné (souvent la réception).
+  const venue = [...events].reverse().find((e) => e.location_title);
+  return (
+    <SectionShell tpl={tpl} accent={accent}>
+      <div className="mx-auto max-w-2xl px-5 py-16 sm:px-8">
+        <div className="text-center">
+          <p className="tpl-body text-[11px] font-semibold uppercase tracking-[0.35em]" style={{ color: accent }}>Déroulé de la journée</p>
+          <h2 className="mt-2 font-display tpl-display text-4xl sm:text-5xl" style={{ color: palette.ink }}>{title || 'Le programme'}</h2>
+          <div className="mx-auto mt-3 flex w-32 items-center gap-2">
+            <span className="h-px flex-1" style={{ backgroundColor: `${accent}99` }} />
+            <span className="h-1.5 w-1.5 rotate-45" style={{ backgroundColor: accent }} />
+            <span className="h-px flex-1" style={{ backgroundColor: `${accent}99` }} />
+          </div>
+        </div>
+
+        <ol className="relative mt-12">
+          <span aria-hidden className="absolute bottom-8 top-8 left-[7.5rem] w-px sm:left-[8rem]" style={{ backgroundColor: `${accent}40` }} />
+          {events.map((ev) => {
+            const img = storageUrl('media', ev.location_image);
+            const kids = childrenOf(ev.id);
+            return (
+              <li key={ev.id} className="relative mb-8 flex items-center gap-4 last:mb-0 sm:gap-6">
+                <span className="w-[4.5rem] flex-none whitespace-nowrap text-right font-display tpl-display text-[1.35rem] leading-none [overflow-wrap:normal] min-[380px]:text-2xl sm:text-3xl" style={{ color: accent }}>
+                  {hhmm(ev.date)}
+                </span>
+                <span
+                  className="relative z-10 flex h-16 w-16 flex-none items-center justify-center overflow-hidden rounded-full"
+                  style={{ boxShadow: `0 0 0 3px ${palette.background}, 0 0 0 4px ${accent}99`, backgroundColor: palette.accentSoft }}
+                >
+                  {img ? (
+                    <img src={img} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                  ) : (
+                    <CalendarDays className="h-6 w-6" style={{ color: accent }} />
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-display tpl-display text-xl leading-tight sm:text-2xl" style={{ color: palette.ink }}>{ev.name}</p>
+                  {ev.description && (
+                    <p className="mt-0.5 tpl-body text-sm leading-snug" style={{ color: palette.muted }}>{ev.description.split('\n')[0]}</p>
+                  )}
+                  {kids.length > 0 && (
+                    <p className="mt-1 tpl-body text-xs" style={{ color: palette.muted }}>
+                      {kids.map((k) => `${hhmm(k.date)} ${k.name}`.trim()).join(' · ')}
+                    </p>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+
+        {venue && (
+          <div className="mx-auto mt-12 max-w-md rounded-2xl px-6 py-8 text-center text-white shadow-xl" style={{ background: `linear-gradient(160deg, ${accent}, ${palette.ink})` }}>
+            <MapPin className="mx-auto h-6 w-6 opacity-90" />
+            <p className="mt-2 tpl-body text-[11px] font-semibold uppercase tracking-[0.35em] opacity-80">Lieu</p>
+            <p className="mt-2 font-display tpl-display text-2xl leading-tight sm:text-3xl">{venue.location_title}</p>
+            {venue.location_address && <p className="mt-1 tpl-body text-sm opacity-85">{venue.location_address}</p>}
+            {venue.location_maps_url && (
+              <a
+                href={venue.location_maps_url}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2 tpl-body text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-900 transition hover:opacity-90"
+              >
+                <Navigation className="h-3.5 w-3.5" style={{ color: accent }} /> Itinéraire
+              </a>
+            )}
+          </div>
+        )}
       </div>
     </SectionShell>
   );

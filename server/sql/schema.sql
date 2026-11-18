@@ -134,7 +134,8 @@ create table if not exists public.sections (
              check (type in ('cover','location','countdown','save_the_date','program',
                              'image_video','mixed','rsvp','gallery',
                              'tables','testimonials',
-                             'story','quote','info','thanks','dress_code','snapchat')),
+                             'story','quote','info','thanks','dress_code','snapchat',
+                             'gifts','closing')),
   enabled    boolean not null default true,
   position   integer not null default 0,
   title      text,
@@ -155,6 +156,7 @@ create table if not exists public.guests (
   qr_token       uuid not null,
   checked_in_at  timestamptz,
   checked_in_by  uuid references public.users(id) on delete set null,
+  category       text,
   created_at     timestamptz not null default now()
 );
 
@@ -264,3 +266,4 @@ create index if not exists media_wedding_status_idx     on public.media (wedding
 create index if not exists testimonials_wedding_status_idx on public.testimonials (wedding_id, status);
 create index if not exists sessions_expires_idx         on public.sessions (expires_at);
 create index if not exists guests_wedding_phone_idx     on public.guests (wedding_id, phone);
+create index if not exists guests_wedding_category_idx  on public.guests (wedding_id, category);

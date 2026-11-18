@@ -25,7 +25,7 @@ Performances » (novembre 2026), **adapté à l'hébergement actuel** :
 | `maj-o2switch.sh` | **Script de mise à jour automatique** (sauvegardes, migrations, fichiers, dépendances, redémarrage, vérifications) |
 | `1-site.zip` | Site compilé → `~/eventcenter-repo/dist` |
 | `2-api.zip` | API compilée → `~/eventcenter-repo/server` (`dist/`, `app.js`, `package.json`, `package-lock.json`) |
-| `3-sql.zip` | Migrations 18 et 19 (+ schéma complet pour une installation neuve) |
+| `3-sql.zip` | Migrations 18, 19 et 20 (+ schéma complet pour une installation neuve) |
 | `uploads.htaccess` | Seulement si les photos étaient un jour servies par Apache (pas le cas actuellement) |
 | `build.sh` | Régénère tous les zips (sur le PC) |
 | `sql/` | Sources des migrations |
@@ -46,6 +46,19 @@ Performances » (novembre 2026), **adapté à l'hébergement actuel** :
 - Privilèges des clients restreints.
 - Anti force brute sur la connexion, anti-CSRF, en-têtes de sécurité.
 - Dépendances serveur à jour : aucune faille connue (`npm audit`).
+
+**Modèles et personnalisation (migration 20)**
+- 2 nouveaux modèles : **Ivoire & Rose** et **Terracotta fleuri** (pétales ou roses qui tombent, bouquets dessinés, polices manuscrites).
+- **Page de garde configurable** : aucune, enveloppe animée (ou votre image/GIF), image/GIF, vidéo ou titre + bouton.
+- **Bandeau fixe** (monogramme, noms, date) et **animations** au choix (pétales, roses, cœurs, paillettes).
+- **Communs à tous les modèles** :
+  - texte **gras / italique / souligné / couleur** ;
+  - **cadre et dimensions** de chaque photo ;
+  - **fond de bloc** (couleur ou image) ;
+  - titre au-dessus ou par-dessus les images.
+- Nouvelles sections : **Espace cadeaux** (message + lien) et **Clôture**.
+- Couverture « faire-part », programme « heures », code vestimentaire avec noms de couleurs et exemples Pour elles / Pour eux.
+- **Réservation par catégorie** (Famille, Amis, Collègues…) avec quotas et **jauge des places** ; livre d'or en **publication immédiate** (option).
 
 **Performances** : compression gzip, cache navigateur, admin chargée à la demande, images différées, index SQL.
 
@@ -88,7 +101,7 @@ Le script affiche chaque étape :
 |---|---|
 | 0 | Vérifie les paquets, l'environnement Node et la connexion à la base (lit `DATABASE_URL` dans les variables cPanel ; s'il n'y arrive pas, il vous la demande) |
 | 1 | **Sauvegarde** la base (`pg_dump`) et le code dans `~/sauvegardes-eventcenter/` |
-| 2 | Applique les migrations **18** et **19** (elles peuvent être relancées sans risque) |
+| 2 | Applique les migrations **18**, **19** et **20** (elles peuvent être relancées sans risque) |
 | 3 | Remplace `dist/` et `server/dist/` (+ `app.js`, `package*.json`) |
 | 4 | Contrôle `SESSION_SECRET`, `COOKIE_SECURE`, `SITE_URL`. S'il faut corriger, il s'arrête et vous laisse modifier dans cPanel |
 | 5 | Vérifie le dossier des photos (servi par Node : rien à faire) |
@@ -119,6 +132,7 @@ cd ~/eventcenter-repo && zip -qr ~/sauvegardes-eventcenter/code-$(date +%F).zip 
 cd ~/maj && unzip -o -q 3-sql.zip -d sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/18_invitation_personnalisee.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/19_securite_performances.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/20_modeles_reservation.sql
 
 # 3. Fichiers
 rm -rf ~/eventcenter-repo/dist ~/eventcenter-repo/server/dist
@@ -128,7 +142,7 @@ unzip -o -q ~/maj/2-api.zip  -d ~/eventcenter-repo
 
 Ensuite, dans cPanel → *Setup Node.js App* : **Run NPM Install**, puis **Restart**.
 
-Sans terminal, les migrations peuvent se faire dans phpPgAdmin → `sc2biro3703_eventcenter` → **SQL** : collez le contenu de chaque fichier, dans l'ordre 18 puis 19.
+Sans terminal, les migrations peuvent se faire dans phpPgAdmin → `sc2biro3703_eventcenter` → **SQL** : collez le contenu de chaque fichier, dans l'ordre 18, 19 puis 20.
 
 ---
 
@@ -177,7 +191,7 @@ unzip -o -q ~/sauvegardes-eventcenter/code-<DATE>.zip
 
 Ensuite, dans cPanel : **Run NPM Install**, puis **Restart**.
 
-La base **n'a pas besoin** d'être restaurée : les migrations 18 et 19 n'ajoutent que des types de section autorisés et des index, que l'ancienne version ignore. En dernier recours : phpPgAdmin → **Importer** `base-<DATE>.sql` dans une base vide.
+La base **n'a pas besoin** d'être restaurée : les migrations 18, 19 et 20 n'ajoutent que des types de section autorisés, des index et une colonne facultative (catégorie d'invité), que l'ancienne version ignore. En dernier recours : phpPgAdmin → **Importer** `base-<DATE>.sql` dans une base vide.
 
 ---
 

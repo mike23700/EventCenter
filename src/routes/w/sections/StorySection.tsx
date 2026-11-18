@@ -4,6 +4,7 @@ import { storageUrl } from '../../../lib/media';
 import type { SectionProps } from './types';
 import { asRecord, str } from './types';
 import { SectionShell, SectionTitle } from './shell';
+import { renderRich, stripRich } from '../../../lib/richText';
 
 /**
  * Section « Notre histoire » (type `story`).
@@ -45,7 +46,7 @@ function s(v: unknown): string {
 
 /** Extrait propre : coupé sur un mot, retours à la ligne aplatis. */
 function excerpt(text: string): { short: string; cut: boolean } {
-  const flat = text.replace(/\s+/g, ' ').trim();
+  const flat = stripRich(text).replace(/\s+/g, ' ').trim();
   if (flat.length <= EXCERPT) return { short: flat, cut: false };
   return { short: flat.slice(0, EXCERPT).replace(/\s+\S*$/, '').replace(/[,;:.!?…-]+$/, ''), cut: true };
 }
@@ -172,7 +173,7 @@ function StoryReader({ voice, accent, tpl, onClose }: { voice: Voice; accent: st
         <div className="overflow-y-auto overscroll-contain px-6 pb-10 pt-5">
           {voice.text.split(/\n{2,}/).map((para, i) => (
             <p key={i} className="mb-5 whitespace-pre-line tpl-body text-[15.5px] leading-[1.8] [overflow-wrap:anywhere] last:mb-0" style={{ color: palette.text }}>
-              {para}
+              {renderRich(para, accent)}
             </p>
           ))}
           {voice.name && (

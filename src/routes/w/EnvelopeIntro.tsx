@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import type { TemplateDef } from '../../lib/templates';
+import type { AmbientKind, TemplateDef } from '../../lib/templates';
+import AmbientPetals from './AmbientPetals';
+import FloralCorner from './FloralCorner';
 
 export const INVITATION_OPENED_EVENT = 'etan:invitation-opened';
 
@@ -23,6 +25,14 @@ export default function EnvelopeIntro({
   guestName,
   color,
   tagline,
+  kicker,
+  title,
+  subtitle,
+  buttonLabel,
+  customImage,
+  ambient,
+  ambientColors = [],
+  decor,
   onDone,
 }: {
   tpl: TemplateDef;
@@ -32,6 +42,16 @@ export default function EnvelopeIntro({
   guestName?: string | null;
   color?: string;
   tagline?: string;
+  /** Petite ligne au-dessus, titre (noms) et sous-titre (date · lieu) quand l'invité n'est pas connu. */
+  kicker?: string;
+  title?: string;
+  subtitle?: string;
+  buttonLabel?: string;
+  /** Image ou GIF animé à la place de l'enveloppe dessinée. */
+  customImage?: string | null;
+  ambient?: AmbientKind;
+  ambientColors?: string[];
+  decor?: 'floral-corners' | 'none';
   onDone: () => void;
 }) {
   const [phase, setPhase] = useState<Phase>('closed');
@@ -39,10 +59,17 @@ export default function EnvelopeIntro({
   // Contraste garanti quel que soit le modèle (certains ont un « ink » clair,
   // ex. Royal) : fond = la plus foncée des deux couleurs, texte = la plus
   // claire ; l'enveloppe prend la teinte claire pour se détacher du fond.
-  const [bg, fg] = luminance(palette.ink) <= luminance(palette.background)
-    ? [palette.ink, palette.background]
-    : [palette.background, palette.ink];
-  const paper = color || (luminance(palette.surface) >= luminance(palette.ink) ? palette.surface : palette.ink);
+  // Les modèles « faire-part » (avec animation d'ambiance, ex. Terracotta,
+  // Ivoire) gardent leur fond clair, comme un papier ; les autres passent
+  // sur le fond le plus foncé pour faire ressortir l'enveloppe.
+  const lightPaper = !!tpl.ambient && luminance(palette.background) > 0.6;
+  const darker = luminance(palette.ink) <= luminance(palette.background);
+  const [bg, fg] = lightPaper
+    ? [palette.background, palette.ink]
+    : darker ? [palette.ink, palette.background] : [palette.background, palette.ink];
+  const paper = color || (lightPaper ? palette.surface : luminance(palette.surface) >= luminance(palette.ink) ? palette.surface : palette.ink);
+  // Petit titre : couleur d'accent seulement si elle se lit sur le fond.
+  const kickerColor = Math.abs(luminance(accent) - luminance(bg)) > 0.18 ? accent : fg;
 
   useEffect(() => {
     if (phase === 'opening') {
@@ -87,21 +114,41 @@ export default function EnvelopeIntro({
     >
       <style>{ENVELOPE_CSS}</style>
 
-      {/* Paillettes dorées discrètes */}
-      <div aria-hidden className="etan-env-dust pointer-events-none absolute inset-0" style={{ ['--dust' as string]: accent }} />
+      {/* Ambiance : pétales du modèle, sinon paillettes dorées discrètes */}
+      {ambient && ambient !== 'none' ? (
+        <AmbientPetals kind={ambient} colors={ambientColors} />
+      ) : (
+        <div aria-hidden className="etan-env-dust pointer-events-none absolute inset-0" style={{ ['--dust' as string]: accent }} />
+      )}
+      {decor === 'floral-corners' && (
+        <>
+          <FloralCorner accent={accent} className="absolute -bottom-2 -left-6 w-48 opacity-95 sm:w-72" />
+          <FloralCorner accent={accent} flip className="absolute -bottom-2 -right-6 w-48 opacity-95 sm:w-72" />
+        </>
+      )}
 
       <div className={`relative z-10 mb-8 text-center transition-opacity duration-500 ${opening ? 'opacity-0' : 'opacity-100'}`}>
-        <p className="tpl-body text-[11px] font-semibold uppercase tracking-[0.35em] sm:text-xs" style={{ color: accent }}>
-          {guestName ? 'Une invitation pour' : 'Vous êtes invité(e)'}
+        <p className="tpl-body text-[11px] font-semibold uppercase tracking-[0.35em] sm:text-xs" style={{ color: kickerColor }}>
+          {guestName ? 'Une invitation pour' : kicker || 'Vous êtes invité(e)'}
         </p>
-        {guestName && (
-          <p className="mt-3 max-w-[90vw] break-words px-2 font-display tpl-display text-[1.65rem] leading-tight [overflow-wrap:anywhere] min-[380px]:text-3xl sm:text-5xl" style={{ color: fg }}>
-            {guestName}
+        {(guestName || title) && (
+          <p className="mt-3 max-w-[90vw] break-words px-2 font-display tpl-display text-[1.65rem] leading-tight [overflow-wrap:anywhere] min-[380px]:text-3xl sm:text-5xl" style={{ color: fg, fontFamily: !guestName && tpl.script ? tpl.script : undefined, fontSize: !guestName && tpl.script ? 'clamp(2.4rem, 11vw, 4rem)' : undefined }}>
+            {guestName || title}
           </p>
+        )}
+        {!guestName && subtitle && (
+          <p className="mt-3 tpl-body text-xs font-medium uppercase tracking-[0.25em] sm:text-sm" style={{ color: fg, opacity: 0.85 }}>{subtitle}</p>
         )}
       </div>
 
-      {/* Enveloppe */}
+      {customImage ? (
+        <img
+          src={customImage}
+          alt=""
+          className={`etan-env-img relative z-10 ${opening ? 'etan-env-img-open' : ''}`}
+        />
+      ) : (
+      /* Enveloppe */
       <div className="etan-env relative z-10" style={{ ['--paper' as string]: paper, ['--gold' as string]: accent }}>
         {/* Carte d'invitation (sort au moment de l'ouverture) */}
         <div className={`etan-env-card ${opening ? 'etan-env-card-out' : ''}`} style={{ backgroundColor: palette.background, borderColor: `${accent}66` }}>
@@ -120,13 +167,14 @@ export default function EnvelopeIntro({
           <span className="font-display tpl-display">{monogram}</span>
         </div>
       </div>
+      )}
 
       <div className={`relative z-10 mt-10 text-center transition-opacity duration-500 ${opening ? 'opacity-0' : 'opacity-100'}`}>
         <span
           className="etan-env-cta inline-flex items-center gap-2 rounded-full border px-6 py-2.5 text-xs font-medium uppercase tracking-[0.25em]"
           style={{ borderColor: `${accent}99`, color: fg }}
         >
-          Ouvrir l'invitation
+          {buttonLabel || "Ouvrir l'invitation"}
         </span>
         {tagline && (
           <p className="tpl-body mt-4 text-xs italic sm:text-sm" style={{ color: fg, opacity: 0.75 }}>{tagline}</p>
@@ -155,6 +203,9 @@ const ENVELOPE_CSS = `
 }
 @keyframes etanDust { to { background-position: 0 -220px } }
 
+.etan-env-img { width: min(80vw, 360px); max-height: 46vh; object-fit: contain; filter: drop-shadow(0 24px 30px rgba(0,0,0,.25)); transition: transform 1.2s cubic-bezier(.2,.8,.2,1), opacity 1.2s ease; }
+.etan-env-img-open { transform: scale(1.18) translateY(-4%); opacity: 0; }
+@media (min-width: 640px) { .etan-env-img { width: min(60vw, 440px); } }
 .etan-env { width: min(84vw, 340px); aspect-ratio: 1.5; perspective: 1200px; }
 @media (min-width: 640px) { .etan-env { width: min(70vw, 440px); } .etan-env-medal { transform: scale(1.2); } .etan-env-medal-off { transform: scale(.4) rotate(-25deg); } }
 @media (max-height: 560px) { .etan-env { width: min(60vw, 300px); } }

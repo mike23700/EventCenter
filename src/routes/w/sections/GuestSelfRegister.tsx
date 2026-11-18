@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { UserPlus } from 'lucide-react';
 import type { TemplateDef } from '../../../lib/templates';
 import type { WeddingEvent } from '../../../types/database';
+import type { RsvpConfig } from '../../../lib/publicApi';
 
 /**
  * Formulaire d'auto-inscription : nom + téléphone, et — quand le programme
@@ -18,6 +19,7 @@ export default function GuestSelfRegister({
   submitting,
   error,
   events,
+  rsvp,
   onSubmit,
   onCancel,
 }: {
@@ -27,7 +29,9 @@ export default function GuestSelfRegister({
   submitting: boolean;
   error?: string;
   events?: WeddingEvent[];
-  onSubmit: (name: string, phone: string, eventIds: string[]) => void;
+  /** Catégories (Famille, Amis…) si l'admin les a activées. */
+  rsvp?: RsvpConfig | null;
+  onSubmit: (name: string, phone: string, eventIds: string[], category?: string) => void;
   onCancel?: () => void;
 }) {
   const [name, setName] = useState(initialName);
@@ -43,6 +47,8 @@ export default function GuestSelfRegister({
   }
 
   const needsChoice = selectable.length > 1;
+  const askCategory = !!rsvp?.askCategory && rsvp.categories.length > 0;
+  const [category, setCategory] = useState('');
 
   return (
     <div className="space-y-4">
@@ -65,7 +71,7 @@ export default function GuestSelfRegister({
       </div>
 
       <div>
-        <label className="label">Votre téléphone *</label>
+        <label className="label">Votre numéro WhatsApp *</label>
         <input
           className="input"
           placeholder="679..."
@@ -79,6 +85,37 @@ export default function GuestSelfRegister({
           <p className="mt-1 text-xs text-red-600">Le numéro doit comporter exactement 9 chiffres (ex. 679...).</p>
         )}
       </div>
+
+      {askCategory && (
+        <div>
+          <label className="label">Vous êtes invité(e) en tant que *</label>
+          <div className="flex flex-wrap gap-2">
+            {rsvp!.categories.map((cat) => {
+              const active = category === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  disabled={cat.full}
+                  onClick={() => setCategory(cat.id)}
+                  className="rounded-full px-4 py-1.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-45"
+                  style={{
+                    backgroundColor: active ? accent : 'transparent',
+                    color: active ? '#fff' : palette.text,
+                    border: `1px solid ${active ? accent : palette.border}`,
+                  }}
+                >
+                  {cat.label}{cat.full ? ' — complet' : ''}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {rsvp?.allFull && (
+        <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">Toutes les places sont réservées. Contactez les mariés si besoin.</p>
+      )}
 
       {needsChoice && (
         <div>
@@ -115,8 +152,8 @@ export default function GuestSelfRegister({
       <div className="flex justify-end gap-2">
         {onCancel && <button onClick={onCancel} className="btn-outline">Retour</button>}
         <button
-          onClick={() => onSubmit(name, phone, selectedEvents)}
-          disabled={submitting || name.trim().length < 2 || phoneInvalid || phoneMissing || (needsChoice && selectedEvents.length === 0)}
+          onClick={() => onSubmit(name, phone, selectedEvents, askCategory ? category : undefined)}
+          disabled={submitting || name.trim().length < 2 || phoneInvalid || phoneMissing || (needsChoice && selectedEvents.length === 0) || (askCategory && !category) || !!rsvp?.allFull}
           className="flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white disabled:opacity-40"
           style={{ backgroundColor: accent }}
         >

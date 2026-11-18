@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import type { Section, WeddingEvent, Wedding } from '../../../types/database';
 import { getTemplate } from '../../../lib/templates';
+import { applySectionStyle, readSectionStyle, SectionBackgroundContext } from './sectionStyle';
 import Cover from './Cover';
 import Countdown from './Countdown';
 import SaveTheDate from './SaveTheDate';
@@ -13,6 +14,7 @@ import Gallery from './Gallery';
 import Testimonials from './Testimonials';
 import StorySection from './StorySection';
 import SnapchatSection from './SnapchatSection';
+import { GiftsSection, ClosingSection } from './GiftsClosing';
 import { QuoteSection, InfoSection, ThanksSection, DressCodeSection } from './storyBlocks';
 
 export interface SectionRendererProps {
@@ -39,6 +41,8 @@ const registry: Record<string, ComponentType<any>> = {
   thanks: ThanksSection,
   dress_code: DressCodeSection,
   snapchat: SnapchatSection,
+  gifts: GiftsSection,
+  closing: ClosingSection,
 };
 
 /**
@@ -53,10 +57,21 @@ export default function SectionRenderer({ section, wedding, events }: SectionRen
     ? (wedding.theme as Record<string, unknown>)
     : {};
   const accent = (theme['primaryColor'] as string) ?? '#C9A34A';
-  const tpl = getTemplate(wedding.template);
+  // Fond de bloc (couleur / image) : modèle recoloré pour cette section.
+  const styled = section.type === 'cover'
+    ? { tpl: getTemplate(wedding.template), background: null }
+    : applySectionStyle(getTemplate(wedding.template), readSectionStyle(section.content));
+  const tpl = styled.tpl;
   const shared = { accent, tpl, wedding, sectionId: section.id };
 
   if (!C) return null;
+
+  // Ancre (« Réserver ma place », « Le programme »…) + fond éventuel.
+  const wrap = (node: React.ReactNode) => (
+    <div id={`section-${section.type}`} className="scroll-mt-16">
+      <SectionBackgroundContext.Provider value={styled.background}>{node}</SectionBackgroundContext.Provider>
+    </div>
+  );
 
   if (
     section.type === 'program' ||
@@ -65,7 +80,7 @@ export default function SectionRenderer({ section, wedding, events }: SectionRen
     section.type === 'rsvp' ||
     section.type === 'mixed'
   ) {
-    return <C {...shared} content={section.content} events={events} />;
+    return wrap(<C {...shared} content={section.content} events={events} />);
   }
-  return <C {...shared} content={section.content} />;
+  return wrap(<C {...shared} content={section.content} events={section.type === 'cover' || section.type === 'closing' ? events : undefined} />);
 }

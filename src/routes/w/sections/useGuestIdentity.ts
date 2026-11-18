@@ -45,13 +45,13 @@ export function useGuestIdentity(weddingId: string) {
     }
   }
 
-  async function registerSelf(payload: { name: string; phone: string; invitedEvents?: string[] }) {
+  async function registerSelf(payload: { name: string; phone: string; invitedEvents?: string[]; category?: string }) {
     const name = payload.name.trim();
     if (!name) return;
     setError('');
     setRegistering(true);
     try {
-      found(await registerGuest(weddingId, { name, phone: payload.phone, invitedEvents: payload.invitedEvents ?? [] }));
+      found(await registerGuest(weddingId, { name, phone: payload.phone, invitedEvents: payload.invitedEvents ?? [], category: payload.category }));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Inscription impossible');
     } finally {

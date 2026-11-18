@@ -4,6 +4,7 @@ import { Check, GripVertical, Pencil, Power, ArrowUp, ArrowDown, X, Trash2 } fro
 import { db } from '../../../lib/db';
 import type { Wedding, Section, Json, SectionType } from '../../../types/database';
 import SectionContentEditor from './SectionContentEditor';
+import SectionStyleEditor from './SectionStyleEditor';
 
 const SECTION_LABELS: Record<string, string> = {
   cover: 'Photo de couverture',
@@ -23,6 +24,8 @@ const SECTION_LABELS: Record<string, string> = {
   thanks: 'Remerciements',
   dress_code: 'Code vestimentaire',
   snapchat: 'Filtre Snapchat',
+  gifts: 'Espace cadeaux',
+  closing: 'Clôture (photo + mot des familles)',
 };
 
 export function sectionLabel(type: string): string {
@@ -34,7 +37,7 @@ export function sectionLabel(type: string): string {
 const ALL_TYPES: SectionType[] = [
   'cover', 'location', 'countdown', 'save_the_date', 'program', 'image_video',
   'mixed', 'rsvp', 'gallery', 'testimonials',
-  'story', 'quote', 'info', 'thanks', 'dress_code', 'snapchat',
+  'story', 'quote', 'info', 'thanks', 'dress_code', 'snapchat', 'gifts', 'closing',
 ];
 
 /** Liste des sections, activation, réordonnancement et édition de contenu. */
@@ -243,6 +246,15 @@ export default function SectionsEditor() {
                   folder={`weddings/${wedding.slug}`}
                   onChange={(content) => setSections((prev) => prev.map((s) => (s.id === section.id ? { ...s, content } : s)))}
                 />
+                {section.type !== 'cover' && (
+                  <SectionStyleEditor
+                    content={section.content}
+                    folder={`weddings/${wedding.slug}`}
+                    onChange={(style) => setSections((prev) => prev.map((s) => (s.id === section.id
+                      ? { ...s, content: { ...(s.content && typeof s.content === 'object' && !Array.isArray(s.content) ? s.content : {}), style } as unknown as Json }
+                      : s)))}
+                  />
+                )}
                 <button onClick={() => saveContent(section, section.content)} disabled={saving} className="btn-primary">
                   <Check className="h-4 w-4" />
                   {saving ? 'Enregistrement…' : 'Enregistrer le contenu'}
