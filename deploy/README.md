@@ -13,7 +13,9 @@ Performances » (novembre 2026), **adapté à l'hébergement actuel** :
 | Base PostgreSQL | `sc2biro3703_eventcenter` |
 | Variables (`DATABASE_URL`, `SESSION_SECRET`, `COOKIE_SECURE`, `UPLOADS_DIR`) | cPanel → **Setup Node.js App** → **Environment variables** |
 
-> **Avant la mise en ligne** : déroulez le guide `Guide_de_test_invitation_personnalisee.pdf` **en local**.
+> **Avant la mise en ligne** : déroulez **en local** les deux guides de test :
+> `Guide_de_test_invitation_personnalisee.pdf` (validé, 98/98 OK) et
+> `Guide_de_test_modeles_personnalisation.pdf` (nouveautés : modèles, page de garde, réservation par catégorie…).
 
 ---
 
@@ -29,6 +31,8 @@ Performances » (novembre 2026), **adapté à l'hébergement actuel** :
 | `uploads.htaccess` | Seulement si les photos étaient un jour servies par Apache (pas le cas actuellement) |
 | `build.sh` | Régénère tous les zips (sur le PC) |
 | `sql/` | Sources des migrations |
+| `Guide_de_test_invitation_personnalisee.pdf` | Guide de test n° 1 (invitation, sécurité, performances) — validé |
+| `Guide_de_test_modeles_personnalisation.pdf` | Guide de test n° 2 (modèles, page de garde, éléments communs, réservation) |
 
 ---
 
