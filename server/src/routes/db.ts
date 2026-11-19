@@ -277,7 +277,7 @@ router.post('/:table', async (req, res, next) => {
       const row = prepareRowForWrite(t, source);
       // Message écrit depuis le site par un utilisateur connecté (ex. l'admin
       // qui teste) : même règle que pour un invité.
-      if (user && t === 'testimonials' && row.status === undefined && (await guestbookAutoPublish(row.wedding_id))) {
+      if (user && t === 'testimonials' && (row.status === undefined || row.status === 'pending') && (await guestbookAutoPublish(row.wedding_id))) {
         row.status = 'published';
       }
       if (t !== 'weddings') {

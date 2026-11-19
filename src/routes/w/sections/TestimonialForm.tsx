@@ -37,7 +37,8 @@ export default function TestimonialForm({
       wedding_id: weddingId,
       author: author.trim() || null,
       content: text.trim(),
-      status: 'pending',
+      // statut décidé par le serveur (en attente, ou publié si l'option
+      // « publication immédiate » du livre d'or est cochée)
     });
     setSubmitting(false);
     if (error) {

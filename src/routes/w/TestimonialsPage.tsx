@@ -17,6 +17,30 @@ export default function TestimonialsPage() {
   const { wedding, loading: weddingLoading } = useWeddingBySlug();
   const [items, setItems] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
+  // réglages de la section Livre d'or (titre, intro, publication immédiate)
+  const [section, setSection] = useState<Record<string, unknown>>({});
+
+  useEffect(() => {
+    if (!wedding) return;
+    let active = true;
+    (async () => {
+      const { data } = await db
+        .from('sections')
+        .select('content')
+        .eq('wedding_id', wedding.id)
+        .eq('type', 'testimonials')
+        .limit(1);
+      const c = (data as { content: unknown }[] | null)?.[0]?.content;
+      if (active && c && typeof c === 'object' && !Array.isArray(c)) setSection(c as Record<string, unknown>);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [wedding]);
+  const autoPublish = section['auto_publish'] === true || section['auto_publish'] === 'true';
+  const title = typeof section['title'] === 'string' && section['title'].trim() ? section['title'] : 'Témoignages';
+  const intro = typeof section['intro'] === 'string' && section['intro'].trim() ? section['intro'] : 'Laissez un petit mot aux mariés.';
 
   useEffect(() => {
     if (!wedding) return;
@@ -35,7 +59,7 @@ export default function TestimonialsPage() {
     return () => {
       active = false;
     };
-  }, [wedding]);
+  }, [wedding, reloadKey]);
 
   if (weddingLoading || (wedding && loading)) return <p className="p-8 text-center text-ink-secondary">Chargement…</p>;
 
@@ -68,15 +92,21 @@ export default function TestimonialsPage() {
         <div className="mt-6 text-center">
           <MessageCircleHeart className="mx-auto h-6 w-6" style={{ color: accent }} />
           <h1 className="mt-2 font-display tpl-display text-3xl sm:text-4xl font-bold" style={{ color: palette.ink }}>
-            Témoignages
+            {title}
           </h1>
           <p className="mt-2 tpl-body" style={{ color: palette.muted }}>
-            Laissez un petit mot aux mariés.
+            {intro}
           </p>
         </div>
 
         <div className="mt-8">
-          <TestimonialForm weddingId={wedding.id} accent={accent} tpl={tpl} />
+          <TestimonialForm
+            weddingId={wedding.id}
+            accent={accent}
+            tpl={tpl}
+            autoPublish={autoPublish}
+            onSent={() => autoPublish && setReloadKey((k) => k + 1)}
+          />
         </div>
 
         {items.length === 0 ? (
