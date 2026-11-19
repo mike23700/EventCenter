@@ -174,16 +174,21 @@ async function prepareAnonRow(t: Table, def: TableDef, raw: Record<string, unkno
   }
   if (t === 'testimonials') {
     if (typeof row.content !== 'string' || !row.content.trim()) throw new HttpError(400, 'Message vide.');
-    // Livre d'or « publication immédiate » (option de la section) : le message
-    // apparaît tout de suite, sans passer par la modération.
-    const { rows: auto } = await pool.query(
-      `select 1 from sections where wedding_id = $1 and type = 'testimonials' and enabled = true
-          and content->>'auto_publish' = 'true' limit 1`,
-      [row.wedding_id],
-    );
-    if (auto.length > 0) row.status = 'published';
+    if (await guestbookAutoPublish(row.wedding_id)) row.status = 'published';
   }
   return row;
+}
+
+/** Livre d'or « publication immédiate » (option de la section) : le message
+ *  apparaît tout de suite, sans passer par la modération. */
+async function guestbookAutoPublish(weddingId: unknown): Promise<boolean> {
+  if (typeof weddingId !== 'string') return false;
+  const { rows } = await pool.query(
+    `select 1 from sections where wedding_id = $1 and type = 'testimonials' and enabled = true
+        and content->>'auto_publish' = 'true' limit 1`,
+    [weddingId],
+  );
+  return rows.length > 0;
 }
 
 // ---------------------------------------------------------------------
@@ -270,6 +275,11 @@ router.post('/:table', async (req, res, next) => {
     for (const raw of bodyRows) {
       const source = user ? (raw as Record<string, unknown>) : await prepareAnonRow(t, def, raw as Record<string, unknown>);
       const row = prepareRowForWrite(t, source);
+      // Message écrit depuis le site par un utilisateur connecté (ex. l'admin
+      // qui teste) : même règle que pour un invité.
+      if (user && t === 'testimonials' && row.status === undefined && (await guestbookAutoPublish(row.wedding_id))) {
+        row.status = 'published';
+      }
       if (t !== 'weddings') {
         const weddingId = await weddingIdOfRow(t, row);
         if (!weddingId) throw new HttpError(400, "Impossible de déterminer le mariage concerné.");
