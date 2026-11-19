@@ -92,7 +92,7 @@ export default function WeddingConfigShell({
               </NavLink>
             ))}
           </nav>
-          <Outlet context={{ wedding }} />
+          <Outlet context={{ wedding, setWedding }} />
         </>
       )}
     </div>

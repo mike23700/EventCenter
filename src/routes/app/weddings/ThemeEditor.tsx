@@ -48,7 +48,7 @@ function TemplateMiniature({ id, selected }: { id: string; selected: boolean }) 
 
 /** Éditeur du thème : template (4 modèles), couleur, polices. */
 export default function ThemeEditor() {
-  const { wedding } = useOutletContext<{ wedding: Wedding }>();
+  const { wedding, setWedding } = useOutletContext<{ wedding: Wedding; setWedding?: (w: Wedding) => void }>();
   const [primaryColor, setPrimaryColor] = useState<string>(
     (themeRecord(wedding.theme)['primaryColor'] as string) ?? '#C9A34A',
   );
@@ -97,9 +97,7 @@ export default function ThemeEditor() {
     setSaving(true);
     setError('');
     setSaved(false);
-    const { error } = await db
-      .from('weddings')
-      .update({
+    const patch = {
         template,
         audio_url: audioPath || null,
         theme: {
@@ -119,13 +117,16 @@ export default function ThemeEditor() {
           inviteMessage: inviteMessage.trim(),
           ogImage,
         },
-      })
-      .eq('id', wedding.id);
+      };
+    const { error } = await db.from('weddings').update(patch).eq('id', wedding.id);
     setSaving(false);
     if (error) {
       setError(error.message);
       return;
     }
+    // met à jour la copie partagée par les onglets (Thème, Invités…) :
+    // sinon, en revenant sur l'onglet, l'ancien réglage réapparaît
+    setWedding?.({ ...wedding, ...patch } as Wedding);
     setSaved(true);
   }
 
