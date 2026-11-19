@@ -74,7 +74,7 @@ export default function ThemeEditor() {
   const [ambient, setAmbient] = useState<string>((themeRecord(wedding.theme)['ambient'] as string) || 'auto');
   const [decor, setDecor] = useState<string>((themeRecord(wedding.theme)['decor'] as string) || 'auto');
   const [stickyHeader, setStickyHeader] = useState<boolean>(themeRecord(wedding.theme)['stickyHeader'] === true);
-  const [inviteMessage, setInviteMessage] = useState<string>(initialInv.inviteMessage);
+  const [inviteMessage, setInviteMessage] = useState<string>(initialInv.inviteMessage.trim() || DEFAULT_INVITE_MESSAGE);
   const [ogImage, setOgImage] = useState<string>((themeRecord(wedding.theme)['ogImage'] as string) ?? '');
   const [template, setTemplate] = useState<string>(wedding.template);
   const [audioPath, setAudioPath] = useState<string>(wedding.audio_url ?? '');
@@ -503,9 +503,19 @@ export default function ThemeEditor() {
               onChange={(e) => setInviteMessage(e.target.value)}
               placeholder={DEFAULT_INVITE_MESSAGE}
             />
-            <p className="mt-1 text-xs text-ink-secondary">
-              Variables : <code>{'{nom}'}</code> (nom de l'invité), <code>{'{couple}'}</code>, <code>{'{lien}'}</code> (lien personnel). Laissez vide pour le message par défaut.
-            </p>
+            <div className="mt-1 flex flex-wrap items-start justify-between gap-2">
+              <p className="text-xs text-ink-secondary">
+                Variables : <code>{'{nom}'}</code> (nom de l'invité), <code>{'{couple}'}</code>, <code>{'{lien}'}</code> (lien personnel). Modifiez librement le texte proposé.
+              </p>
+              {inviteMessage !== DEFAULT_INVITE_MESSAGE && (
+                <button type="button" className="text-xs font-medium text-gold underline" onClick={() => setInviteMessage(DEFAULT_INVITE_MESSAGE)}>
+                  Rétablir le message par défaut
+                </button>
+              )}
+            </div>
+            {inviteMessage.trim() && !inviteMessage.includes('{lien}') && (
+              <p className="mt-1 text-xs text-amber-700">Attention : sans <code>{'{lien}'}</code>, l'invité ne recevra pas son lien personnel.</p>
+            )}
           </div>
           <MediaUploader
             bucket="media"
