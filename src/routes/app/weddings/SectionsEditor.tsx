@@ -17,7 +17,7 @@ const SECTION_LABELS: Record<string, string> = {
   rsvp: 'Confirmation de présence (RSVP)',
   gallery: 'Galerie',
   tables: 'Tables (ancien module — géré depuis l\'onglet Tables)',
-  testimonials: 'Témoignages (livre d\'or)',
+  testimonials: 'Livre d\'or (témoignages)',
   story: 'Notre histoire (à deux voix)',
   quote: 'Citation / verset',
   info: 'Informations pratiques',
