@@ -61,12 +61,17 @@ export default function WeddingPublic() {
     };
   }, [wedding]);
 
-  // Programme montré : étapes de l'invité identifié, sinon du lien par
-  // étape, sinon tout (voir useShareLink.ts).
-  const shownEvents = useMemo(
-    () => visibleEvents(events, invited.guest?.invited_events?.length ? invited.guest.invited_events : share.link?.event_ids),
-    [events, invited.guest, share.link],
-  );
+  // Programme montré, par ordre de priorité :
+  //  1. invité arrivé par SON lien personnel (?i=) : ses étapes ;
+  //  2. lien par étape ouvert (?l= ou /i/<code>) : les étapes du lien — il
+  //     l'emporte sur un invité mémorisé lors d'une visite précédente ;
+  //  3. invité mémorisé sur ce navigateur : ses étapes ;
+  //  sinon tout le programme (voir useShareLink.ts).
+  const shownEvents = useMemo(() => {
+    const guestEvents = invited.guest?.invited_events?.length ? invited.guest.invited_events : null;
+    const allowed = invited.fromLink && guestEvents ? guestEvents : share.link?.event_ids?.length ? share.link.event_ids : guestEvents;
+    return visibleEvents(events, allowed);
+  }, [events, invited.guest, invited.fromLink, share.link]);
 
   const dateLabel = useMemo(() => {
     const cover = sections.find((x) => x.type === 'cover');
