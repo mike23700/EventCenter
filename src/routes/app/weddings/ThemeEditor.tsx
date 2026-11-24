@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Check, ExternalLink, Flower, Crown, Music, UploadCloud, X, Loader2 } from 'lucide-react';
 import { db } from '../../../lib/db';
@@ -12,6 +12,7 @@ import { AMBIENT_CHOICES, siteOptions, type CornersConfig, type IntroConfig } fr
 import { readThemeLook, type ThemeLook } from '../../../lib/themeLook';
 import LookEditor from '../../../components/LookEditor';
 import CornersEditor from '../../../components/CornersEditor';
+import SuccessModal from '../../../components/SuccessModal';
 
 function themeRecord(theme: Json): Record<string, unknown> {
   return theme && typeof theme === 'object' && !Array.isArray(theme)
@@ -88,6 +89,7 @@ export default function ThemeEditor() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
+  const closeSaved = useCallback(() => setSaved(false), []);
 
   const activeTpl = getTemplate(template);
   const displayFontsList = DISPLAY_FONTS.filter(
@@ -536,7 +538,7 @@ export default function ThemeEditor() {
         </div>
 
         {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
-        {saved && <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700">Thème enregistré.</p>}
+        <SuccessModal open={saved} message="Thème enregistré" onClose={closeSaved} />
 
         <div className="flex items-center gap-3">
           <button onClick={save} disabled={saving} className="btn-primary">
