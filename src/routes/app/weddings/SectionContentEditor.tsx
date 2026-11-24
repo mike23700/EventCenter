@@ -280,9 +280,66 @@ export default function SectionContentEditor({ type, content, onChange, folder =
               <option value="">Selon le modèle de design (frise / cartes alternées)</option>
               <option value="photo">Cartes photo plein cadre + bouton « Itinéraire »</option>
               <option value="hours">Frise des heures (grande photo ronde, nom, description, heure + itinéraire)</option>
+              <option value="days">Par jour (carte en dégradé, photo en cœur, étapes groupées par date)</option>
             </select>
           </Field>
-          <Field label="Titre (vide = titre par défaut)"><input className="input" value={str('title')} onChange={(e) => set('title', e.target.value)} placeholder={str('layout') === 'hours' ? 'Le programme' : 'Notre programme'} /></Field>
+          <Field label="Titre (vide = titre par défaut)"><input className="input" value={str('title')} onChange={(e) => set('title', e.target.value)} placeholder={str('layout') === 'hours' ? 'Le programme' : str('layout') === 'days' ? 'Programme de Cérémonie' : 'Notre programme'} /></Field>
+          {str('layout') === 'days' && (
+            <div className="space-y-4 rounded-xl border border-borderlight p-4">
+              <p className="text-sm font-semibold text-ink">Carte « par jour »</p>
+              <div className="grid gap-4 sm:grid-cols-[200px,1fr]">
+                <MediaUploader
+                  bucket="media"
+                  folder={`${folder}/programme`}
+                  accept="image/*"
+                  label="Photo du couple (facultatif)"
+                  value={str('photo')}
+                  onChange={(v) => set('photo', v ?? '')}
+                  hint={frameHint(frame('photo_frame', { style: 'heart', size: 'sm' }))}
+                />
+                <div className="space-y-3">
+                  <div>
+                    <label className="label">Mot des familles (facultatif)</label>
+                    <RichTextarea value={str('intro')} onChange={(v) => set('intro', v)} placeholder="Les familles **Kouokam** & **Fopoussi** ont l'honneur de vous inviter à ce mariage" className="min-h-16" />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4">
+                    <label className="flex items-center gap-2 text-xs text-ink-secondary">
+                      Couleur du haut
+                      <input type="color" value={/^#[0-9a-f]{6}$/i.test(str('card_color1')) ? str('card_color1') : '#B5472B'} onChange={(e) => set('card_color1', e.target.value)} className="h-9 w-12 cursor-pointer rounded border border-borderlight" />
+                    </label>
+                    <label className="flex items-center gap-2 text-xs text-ink-secondary">
+                      Couleur du bas
+                      <input type="color" value={/^#[0-9a-f]{6}$/i.test(str('card_color2')) ? str('card_color2') : '#0F5C45'} onChange={(e) => set('card_color2', e.target.value)} className="h-9 w-12 cursor-pointer rounded border border-borderlight" />
+                    </label>
+                    {(str('card_color1') || str('card_color2')) && (
+                      <button type="button" className="text-xs text-ink-secondary underline" onClick={() => onChange({ ...record, card_color1: '', card_color2: '' } as Json)}>
+                        Couleurs du modèle
+                      </button>
+                    )}
+                  </div>
+                  {str('card_color1') || str('card_color2') ? (
+                    <div
+                      className="h-10 rounded-lg"
+                      style={{ background: `linear-gradient(90deg, ${str('card_color1') || '#B5472B'}, ${str('card_color2') || '#0F5C45'})` }}
+                      aria-hidden
+                    />
+                  ) : (
+                    <p className="text-xs text-ink-secondary">Sans choix : dégradé de la couleur principale vers la couleur foncée du modèle.</p>
+                  )}
+                </div>
+              </div>
+              {str('photo') && (
+                <div>
+                  <label className="label">Cadre de la photo</label>
+                  <FrameOptions value={frame('photo_frame', { style: 'heart', size: 'sm' })} onChange={(v) => set('photo_frame', v)} />
+                </div>
+              )}
+              <p className="text-xs text-ink-secondary">
+                Les étapes sont regroupées par date. Pour un horaire comme « À la suite de la cérémonie », remplissez
+                « Horaire affiché » dans l'onglet Programme.
+              </p>
+            </div>
+          )}
           {str('layout') === 'hours' && (
             <label className="flex items-center gap-2 text-sm text-ink-secondary">
               <input type="checkbox" checked={bool('show_venue')} onChange={(e) => set('show_venue', e.target.checked)} />

@@ -98,6 +98,7 @@ export const AMBIENT_CHOICES: { id: string; label: string }[] = [
   { id: 'roses', label: 'Roses' },
   { id: 'hearts', label: 'Petits cœurs' },
   { id: 'gold', label: 'Paillettes dorées' },
+  { id: 'butterflies', label: 'Papillons' },
 ];
 
 const DEFAULT_COLORS: Record<string, string[]> = {
@@ -105,6 +106,7 @@ const DEFAULT_COLORS: Record<string, string[]> = {
   roses: ['#B8452C', '#D0613F', '#E9A07F', '#8E2F1D'],
   hearts: ['#E58FA3', '#D9667F', '#F3B7C4'],
   gold: ['#D4AF37', '#E6C56A', '#F4E3A1'],
+  butterflies: ['#2E8B6E', '#E2733A', '#D9A53F', '#F2EDE2', '#C24E2A'],
 };
 
 export function siteOptions(theme: Json, tpl: TemplateDef): SiteOptions {
@@ -112,7 +114,7 @@ export function siteOptions(theme: Json, tpl: TemplateDef): SiteOptions {
   const ambientRaw = s(t, 'ambient') || 'auto';
   const ambient: AmbientKind = ambientRaw === 'auto'
     ? tpl.ambient?.kind ?? 'none'
-    : (['petals', 'roses', 'hearts', 'gold', 'none'].includes(ambientRaw) ? ambientRaw as AmbientKind : 'none');
+    : (['petals', 'roses', 'hearts', 'gold', 'butterflies', 'none'].includes(ambientRaw) ? ambientRaw as AmbientKind : 'none');
   const ambientColors = ambientRaw === 'auto' && tpl.ambient ? tpl.ambient.colors : DEFAULT_COLORS[ambient] ?? [];
 
 

@@ -83,6 +83,7 @@ create table if not exists public.wedding_events (
   location_address  text,
   location_image    text,
   location_maps_url text,
+  time_label        text,
   position          integer not null default 0,
   created_at        timestamptz not null default now()
 );

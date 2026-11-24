@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Paintbrush, ChevronDown } from 'lucide-react';
 import MediaUploader from '../../../components/MediaUploader';
-import { readSectionStyle, type SectionStyle } from '../../w/sections/sectionStyle';
+import { gradientCss, readSectionStyle, type SectionStyle } from '../../w/sections/sectionStyle';
 
 /**
  * « Apparence du bloc » (commun à toutes les sections) : fond par défaut du
@@ -32,7 +32,7 @@ export default function SectionStyleEditor({
         <Paintbrush className="h-4 w-4 text-gold" />
         <span className="flex-1 text-sm font-semibold text-ink">Apparence du bloc</span>
         <span className="text-xs text-ink-secondary">
-          {st.bg === 'default' ? 'Fond du modèle' : st.bg === 'color' ? 'Couleur' : 'Image'}
+          {st.bg === 'default' ? 'Fond du modèle' : st.bg === 'color' ? 'Couleur' : st.bg === 'gradient' ? 'Dégradé' : 'Image'}
         </span>
         <ChevronDown className={`h-4 w-4 text-ink-secondary transition ${open ? 'rotate-180' : ''}`} />
       </button>
@@ -42,6 +42,7 @@ export default function SectionStyleEditor({
           <div className="flex flex-wrap gap-2">
             <button type="button" className={chip(st.bg === 'default')} onClick={() => set({ bg: 'default' })}>Fond du modèle</button>
             <button type="button" className={chip(st.bg === 'color')} onClick={() => set({ bg: 'color' })}>Couleur unie</button>
+            <button type="button" className={chip(st.bg === 'gradient')} onClick={() => set({ bg: 'gradient' })}>Dégradé</button>
             <button type="button" className={chip(st.bg === 'image')} onClick={() => set({ bg: 'image' })}>Image de fond</button>
           </div>
 
@@ -49,6 +50,30 @@ export default function SectionStyleEditor({
             <div className="flex items-center gap-3">
               <input type="color" value={st.color} onChange={(e) => set({ color: e.target.value })} className="h-10 w-14 cursor-pointer rounded border border-borderlight" />
               <input className="input max-w-[9rem] font-mono" value={st.color} onChange={(e) => set({ color: e.target.value })} />
+            </div>
+          )}
+
+          {st.bg === 'gradient' && (
+            <div className="grid gap-4 sm:grid-cols-[1fr,8rem]">
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="flex items-center gap-2 text-xs text-ink-secondary">
+                    Couleur 1
+                    <input type="color" value={/^#[0-9a-f]{6}$/i.test(st.color) ? st.color : '#5A2416'} onChange={(e) => set({ color: e.target.value })} className="h-9 w-12 cursor-pointer rounded border border-borderlight" />
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-ink-secondary">
+                    Couleur 2
+                    <input type="color" value={st.color2} onChange={(e) => set({ color2: e.target.value })} className="h-9 w-12 cursor-pointer rounded border border-borderlight" />
+                  </label>
+                  <button type="button" className="text-xs text-ink-secondary underline" onClick={() => set({ color: st.color2, color2: st.color })}>Inverser</button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {([['vertical', 'De haut en bas'], ['diagonal', 'En biais'], ['horizontal', 'De gauche à droite']] as const).map(([id, label]) => (
+                    <button key={id} type="button" className={chip(st.direction === id)} onClick={() => set({ direction: id })}>{label}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="h-20 rounded-lg border border-borderlight" style={{ backgroundImage: gradientCss(st) }} aria-label="Aperçu du dégradé" />
             </div>
           )}
 

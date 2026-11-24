@@ -11,7 +11,7 @@ import { getTemplate, type TemplateDef } from './templates';
  */
 
 export type PatternId =
-  | 'auto' | 'none' | 'dots' | 'diamonds' | 'grid' | 'wax' | 'flowers' | 'hearts' | 'stripes' | 'waves' | 'stars';
+  | 'auto' | 'none' | 'dots' | 'diamonds' | 'grid' | 'wax' | 'flowers' | 'hearts' | 'stripes' | 'waves' | 'stars' | 'leaves';
 
 export const PATTERNS: { id: PatternId; label: string }[] = [
   { id: 'auto', label: 'Selon le modèle' },
@@ -21,6 +21,7 @@ export const PATTERNS: { id: PatternId; label: string }[] = [
   { id: 'grid', label: 'Quadrillage' },
   { id: 'wax', label: 'Wax (cercles)' },
   { id: 'flowers', label: 'Fleurettes' },
+  { id: 'leaves', label: 'Feuilles' },
   { id: 'hearts', label: 'Petits cœurs' },
   { id: 'stars', label: 'Étoiles' },
   { id: 'stripes', label: 'Rayures fines' },
@@ -120,6 +121,12 @@ function tile(id: PatternId, color: string): string {
       return `<path d="M20 30 C9 22 9 13 15 13 C18 13 20 16 20 16 C20 16 22 13 25 13 C31 13 31 22 20 30 Z" fill="${c}"/>`;
     case 'stars':
       return `<path d="M20 9 L22.4 17.6 L31 20 L22.4 22.4 L20 31 L17.6 22.4 L9 20 L17.6 17.6 Z" fill="${c}"/>`;
+    case 'leaves': {
+      // Amandes verticales (feuilles stylisées) en quinconce, petit point au centre.
+      const leaf = (x: number, y: number) =>
+        `<path d="M${x} ${y - 9} C${x + 5} ${y - 4} ${x + 5} ${y + 4} ${x} ${y + 9} C${x - 5} ${y + 4} ${x - 5} ${y - 4} ${x} ${y - 9} Z" fill="none" stroke="${c}" stroke-width="1"/><circle cx="${x}" cy="${y}" r="1.2" fill="${c}"/>`;
+      return leaf(10, 10) + leaf(30, 30) + leaf(30, -10) + leaf(30, 50) + leaf(-10, 30) + leaf(50, 30);
+    }
     case 'stripes':
       return `<path d="M-10 10 L10 -10 M0 40 L40 0 M30 50 L50 30" stroke="${c}" stroke-width="1.4"/>`;
     case 'waves':

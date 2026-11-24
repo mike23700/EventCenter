@@ -9,7 +9,7 @@ import FramedImage from '../FramedImage';
 import CornerDecor from '../CornerDecor';
 import { cornersAt, siteOptions } from '../../../lib/siteOptions';
 import { useTextStyle } from '../../../lib/textStyles';
-import { readSectionStyle, SectionBackgroundContext, SectionPatternContext } from './sectionStyle';
+import { gradientCss, readSectionStyle, SectionBackgroundContext, SectionPatternContext } from './sectionStyle';
 import { PATTERN_STYLE } from './shell';
 import { useContext } from 'react';
 
@@ -109,6 +109,7 @@ export default function Cover({ content, wedding, accent, tpl, events = [] }: Co
       showNames={showNames}
       extras={extras}
       bgColor={block.bg === 'color' ? block.color : null}
+      bgGradient={block.bg === 'gradient' ? gradientCss(block) : null}
       overlay={block.bg === 'default' ? 60 : block.overlay}
     />
   );
@@ -207,7 +208,7 @@ function PaperCover({
   return (
     <header
       className={`relative isolate overflow-hidden px-5 pb-16 text-center ${shown.top ? 'pt-32 sm:pt-44' : 'pt-20 sm:pt-24'}`}
-      style={{ backgroundColor: palette.background, color: palette.text, ...(pattern && !bg ? PATTERN_STYLE : {}) }}
+      style={{ backgroundColor: palette.background, color: palette.text, ...(pattern && !bg ? PATTERN_STYLE : {}), ...(bg?.gradient ? { backgroundImage: bg.gradient } : {}) }}
     >
       {bg?.image && (
         <>
@@ -259,6 +260,7 @@ function CoverShell({
   showNames,
   extras,
   bgColor,
+  bgGradient,
   overlay,
 }: {
   accent: string;
@@ -270,6 +272,8 @@ function CoverShell({
   extras: Extras;
   /** Apparence du bloc : couleur de fond (sans photo). */
   bgColor: string | null;
+  /** Apparence du bloc : dégradé (sans photo). */
+  bgGradient: string | null;
   /** Assombrissement de la photo, en %. */
   overlay: number;
 }) {
@@ -283,12 +287,12 @@ function CoverShell({
   return (
     <header
       className="relative flex min-h-[75vh] items-center justify-center overflow-hidden text-center"
-      style={{ backgroundColor: bgColor ?? palette.ink, color: palette.surface }}
+      style={{ backgroundColor: bgColor ?? palette.ink, backgroundImage: !media && bgGradient ? bgGradient : undefined, color: palette.surface }}
     >
       {media}
       {media ? (
         <div className="absolute inset-0 bg-black" style={{ opacity: overlay / 100 }} />
-      ) : !bgColor ? (
+      ) : !bgColor && !bgGradient ? (
         <div className="absolute inset-0 opacity-[0.08]" style={{ backgroundColor: palette.accent }} />
       ) : null}
       <CornerDecor corners={opts.corners} {...shown} />

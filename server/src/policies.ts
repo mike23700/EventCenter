@@ -143,13 +143,13 @@ export const TABLES: Record<Table, TableDef> = {
     columns: [
       'id', 'wedding_id', 'parent_id', 'name', 'description', 'date',
       'location_title', 'location_address', 'location_image', 'location_maps_url',
-      'position', 'created_at',
+      'time_label', 'position', 'created_at',
     ],
     jsonColumns: [],
     anonRead: {
       columns: [
         'id', 'wedding_id', 'parent_id', 'name', 'description', 'date',
-        'location_title', 'location_address', 'location_image', 'location_maps_url', 'position',
+        'location_title', 'location_address', 'location_image', 'location_maps_url', 'time_label', 'position',
       ],
     },
     anonInsert: false,

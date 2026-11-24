@@ -7,11 +7,15 @@ function Swatch({ style }: { style: FrameConfig['style'] }) {
     rounded: `${base} rounded-md`,
     square: base,
     circle: 'block h-6 w-6 rounded-full bg-gradient-to-br from-gold/70 to-ink-secondary/60',
+    heart: 'block h-6 w-6 bg-gradient-to-br from-gold/70 to-ink-secondary/60',
     arch: `${base} rounded-t-full rounded-b-sm`,
     soft: `${base} rounded-full opacity-60 blur-[1.5px]`,
     polaroid: 'block h-7 w-6 border-2 border-b-[6px] border-white bg-gradient-to-br from-gold/70 to-ink-secondary/60 shadow',
     gold: `${base} outline outline-2 outline-offset-1 outline-gold`,
   };
+  if (style === 'heart') {
+    return <span className={map.heart} style={{ clipPath: 'path("M12 22C5 16 0 12 0 7C0 3 3 0 6.5 0C9 0 11 1.5 12 3.5C13 1.5 15 0 17.5 0C21 0 24 3 24 7C24 12 19 16 12 22Z")' }} />;
+  }
   return <span className={map[style]} />;
 }
 
@@ -42,7 +46,7 @@ export default function FrameOptions({
           ))}
         </div>
       </div>
-      {value.style !== 'circle' && (
+      {value.style !== 'circle' && value.style !== 'heart' && (
         <div>
           <p className="mb-1.5 text-xs font-semibold text-ink">Format (dimensions)</p>
           <div className="flex flex-wrap gap-1.5">

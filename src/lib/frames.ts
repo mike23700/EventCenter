@@ -4,7 +4,7 @@
  * dans le contenu de la section, ex. `image_frame: { style, ratio, size }`.
  */
 
-export type FrameStyle = 'rounded' | 'square' | 'circle' | 'arch' | 'soft' | 'polaroid' | 'gold';
+export type FrameStyle = 'rounded' | 'square' | 'circle' | 'heart' | 'arch' | 'soft' | 'polaroid' | 'gold';
 export type FrameRatio = 'auto' | '1:1' | '3:4' | '4:3' | '2:3' | '16:9' | '9:16';
 export type FrameSize = 'sm' | 'md' | 'lg' | 'full';
 
@@ -18,6 +18,7 @@ export const FRAME_STYLES: { id: FrameStyle; label: string }[] = [
   { id: 'rounded', label: 'Coins arrondis' },
   { id: 'square', label: 'Droit' },
   { id: 'circle', label: 'Rond' },
+  { id: 'heart', label: 'Cœur' },
   { id: 'arch', label: 'Arche' },
   { id: 'soft', label: 'Fondu (halo)' },
   { id: 'polaroid', label: 'Polaroid' },
@@ -54,6 +55,7 @@ export function readFrame(v: unknown, defaults: Partial<FrameConfig> = {}): Fram
 
 /** Dimensions conseillées à afficher à côté de l'envoi de photo. */
 export function frameHint(f: FrameConfig): string {
+  if (f.style === 'heart') return 'Cœur — photo carrée, visages au centre, idéalement 1200 × 1200 px (JPG, moins de 1 Mo)';
   const ratio = f.style === 'circle' ? '1:1' : f.ratio;
   const r = FRAME_RATIOS.find((x) => x.id === ratio);
   return r?.px ? `Format ${r.label} — idéalement ${r.px} (JPG, moins de 1 Mo)` : 'Format libre — 1600 px de large conseillé (JPG, moins de 1 Mo)';

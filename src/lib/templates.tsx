@@ -39,7 +39,7 @@ export interface TemplateDef {
   script?: string;
 }
 
-export type AmbientKind = 'petals' | 'roses' | 'hearts' | 'gold' | 'none';
+export type AmbientKind = 'petals' | 'roses' | 'hearts' | 'gold' | 'butterflies' | 'none';
 
 export const TEMPLATE_DEFS: TemplateDef[] = [
   {

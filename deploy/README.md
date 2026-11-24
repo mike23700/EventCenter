@@ -82,6 +82,10 @@ Performances + Modèles + Liens de partage » (novembre 2026), **adapté à l'h�
 - **Témoignages** en diaporama horizontal sur la page dédiée (plus de liste sous le formulaire du site) ;
   photos du **code vestimentaire** en diaporama.
 - **Frise des heures** : grande photo ronde, nom et description à côté, heure + bouton « Itinéraire » par étape.
+- Programme **« par jour »** : carte en dégradé, photo en cœur, étapes groupées par date ; horaire en texte libre
+  (« À la suite de la cérémonie ») pour chaque étape.
+- Fond de bloc en **dégradé**, cadre photo **cœur**, animation **papillons**, motif **feuilles**.
+- **Envoi groupé** des invitations personnelles sur WhatsApp (sélection multiple, envoi guidé).
 - Page d'accueil : « Six styles ».
 
 **Performances** : compression gzip, cache navigateur, admin chargée à la demande, images différées, index SQL.
@@ -220,7 +224,7 @@ unzip -o -q ~/sauvegardes-eventcenter/code-<DATE>.zip
 
 Ensuite, dans cPanel : **Run NPM Install**, puis **Restart**.
 
-La base **n'a pas besoin** d'être restaurée : les migrations 18 à 21 n'ajoutent que des types de section autorisés, des index, des colonnes facultatives (catégorie, code court) et une table (`share_links`), que l'ancienne version ignore. Attention : les liens courts `/i/…` déjà envoyés ne fonctionnent plus avec l'ancienne version. En dernier recours : phpPgAdmin → **Importer** `base-<DATE>.sql` dans une base vide.
+La base **n'a pas besoin** d'être restaurée : les migrations 18 à 21 n'ajoutent que des types de section autorisés, des index, des colonnes facultatives (catégorie, code court, horaire en texte libre) et une table (`share_links`), que l'ancienne version ignore. Attention : les liens courts `/i/…` déjà envoyés ne fonctionnent plus avec l'ancienne version. En dernier recours : phpPgAdmin → **Importer** `base-<DATE>.sql` dans une base vide.
 
 ---
 

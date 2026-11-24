@@ -63,6 +63,8 @@ export const TEXT_SLOTS: Record<string, TextSlot[]> = {
     { id: 'kicker', label: 'Sur-titre' },
     { id: 'title', label: 'Titre' },
     { id: 'subtitle', label: 'Sous-titre' },
+    { id: 'intro', label: 'Mot des familles (mise en page « par jour »)' },
+    { id: 'day', label: 'Dates des jours (mise en page « par jour »)' },
     { id: 'event_name', label: "Nom de l'étape" },
     { id: 'event_meta', label: 'Heure, date et lieu' },
     { id: 'event_text', label: 'Description' },

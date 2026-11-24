@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { AmbientKind } from '../../lib/templates';
 
 /**
- * Animation d'ambiance (pétales, roses, cœurs, paillettes) qui tombent
+ * Animation d'ambiance (pétales, roses, cœurs, paillettes, papillons) qui tombent
  * doucement sur tout le site. Dessinée sur un <canvas> : légère pour le
  * téléphone, en pause quand l'onglet est caché, coupée si l'utilisateur a
  * demandé à réduire les animations (réglage d'accessibilité du téléphone).
@@ -49,7 +49,7 @@ export default function AmbientPetals({ kind, colors }: { kind: AmbientKind; col
     resize();
 
     const count = Math.round(Math.min(26, Math.max(10, w / 45)) * (kind === 'gold' ? 1.4 : 1));
-    const base = kind === 'roses' ? 13 : kind === 'gold' ? 3 : kind === 'hearts' ? 9 : 10;
+    const base = kind === 'roses' ? 13 : kind === 'gold' ? 3 : kind === 'hearts' ? 9 : kind === 'butterflies' ? 11 : 10;
     const make = (initial: boolean): Particle => ({
       x: Math.random() * w,
       y: initial ? Math.random() * h : -20 - Math.random() * 60,
@@ -94,6 +94,33 @@ export default function AmbientPetals({ kind, colors }: { kind: AmbientKind; col
       ctx.fillStyle = p.color;
       ctx.fill();
     };
+    // Papillon : deux paires d'ailes (haut plus grandes) autour d'un corps fin.
+    const drawButterfly = (p: Particle) => {
+      const s = p.size;
+      const wing = (dir: 1 | -1) => {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.bezierCurveTo(dir * s * 0.9, -s * 1.3, dir * s * 1.6, -s * 0.5, dir * s * 0.35, -s * 0.05);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.bezierCurveTo(dir * s * 1.05, s * 0.2, dir * s * 0.8, s * 1.05, dir * s * 0.15, s * 0.35);
+        ctx.fill();
+      };
+      const g = ctx.createLinearGradient(-s, 0, s, 0);
+      g.addColorStop(0, shade(p.color, 25));
+      g.addColorStop(0.5, p.color);
+      g.addColorStop(1, shade(p.color, 25));
+      ctx.fillStyle = g;
+      wing(1);
+      wing(-1);
+      ctx.strokeStyle = shade(p.color, -60);
+      ctx.lineWidth = Math.max(0.8, s * 0.12);
+      ctx.beginPath();
+      ctx.moveTo(0, -s * 0.45);
+      ctx.lineTo(0, s * 0.45);
+      ctx.stroke();
+    };
     const drawSpark = (p: Particle) => {
       const s = p.size;
       ctx.beginPath();
@@ -114,8 +141,10 @@ export default function AmbientPetals({ kind, colors }: { kind: AmbientKind; col
       ctx.clearRect(0, 0, w, h);
       for (let i = 0; i < parts.length; i++) {
         const p = parts[i];
-        p.y += p.speed;
-        p.x += Math.sin(t * 0.01 + p.phase) * p.sway * 0.35;
+        // Les papillons volettent : chute lente, grands écarts de côté.
+        const fly = kind === 'butterflies';
+        p.y += fly ? p.speed * 0.55 : p.speed;
+        p.x += Math.sin(t * (fly ? 0.02 : 0.01) + p.phase) * p.sway * (fly ? 0.9 : 0.35);
         p.rot += p.spin + Math.sin(t * 0.008 + p.phase) * 0.004;
         if (p.y > h + 30 || p.x < -40 || p.x > w + 40) parts[i] = make(false);
         ctx.save();
@@ -124,6 +153,12 @@ export default function AmbientPetals({ kind, colors }: { kind: AmbientKind; col
         ctx.globalAlpha = kind === 'gold' ? p.alpha * (0.5 + 0.5 * Math.abs(Math.sin(t * 0.03 + p.phase))) : p.alpha;
         if (kind === 'hearts') drawHeart(p);
         else if (kind === 'gold') drawSpark(p);
+        else if (kind === 'butterflies') {
+          // battement d'ailes
+          ctx.rotate(Math.sin(t * 0.02 + p.phase) * 0.3 - p.rot);
+          ctx.scale(0.25 + 0.75 * Math.abs(Math.cos(t * 0.16 + p.phase)), 1);
+          drawButterfly(p);
+        }
         else {
           // effet 3D : le pétale « bascule » en tombant
           ctx.scale(1, 0.55 + 0.45 * Math.abs(Math.cos(t * 0.012 + p.phase)));

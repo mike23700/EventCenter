@@ -7,6 +7,9 @@ import { asRecord, str } from './types';
 import { SectionShell } from './shell';
 import { Crown, Flower } from '../../../lib/templates';
 import { useTextStyle } from '../../../lib/textStyles';
+import { readFrame } from '../../../lib/frames';
+import { renderRich } from '../../../lib/richText';
+import FramedImage from '../FramedImage';
 
 export interface ProgramProps extends SectionProps {
   events: WeddingEvent[];
@@ -40,6 +43,9 @@ export default function Program({ events, accent, tpl, content }: ProgramProps) 
   // la photo du lieu en fond plein cadre, quel que soit le template.
   if (str(asRecord(content), 'layout') === 'photo') {
     return <PhotoCards events={topLevel} childrenOf={childrenOf} accent={accent} tpl={tpl} title={str(asRecord(content), 'title')} />;
+  }
+  if (str(asRecord(content), 'layout') === 'days') {
+    return <DaysProgram events={topLevel} childrenOf={childrenOf} accent={accent} tpl={tpl} c={asRecord(content)} />;
   }
   if (str(asRecord(content), 'layout') === 'hours') {
     return (
@@ -434,10 +440,10 @@ function HoursTimeline({
                       </p>
                     )}
                     <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
-                      {ev.date && (
+                      {(ev.date || ev.time_label) && (
                         <span className="inline-flex items-center gap-1.5 font-display tpl-display text-2xl leading-none" style={{ color: accent, ...ts('event_meta') }}>
                           <Clock className="h-4 w-4" aria-hidden />
-                          {hhmm(ev.date)}
+                          {eventTime(ev)}
                         </span>
                       )}
                       {ev.location_maps_url && (
@@ -482,6 +488,142 @@ function HoursTimeline({
             )}
           </div>
         )}
+      </div>
+    </SectionShell>
+  );
+}
+
+/** Heure affichée : horaire en texte libre s'il existe, sinon l'heure de l'étape. */
+function eventTime(ev: WeddingEvent): string {
+  return ev.time_label?.trim() || hhmm(ev.date);
+}
+
+const HEX = /^#[0-9a-f]{6}$/i;
+
+/**
+ * Mise en page « par jour » : une carte en dégradé, photo du couple (cadre
+ * cœur par défaut), mot des familles, puis le programme regroupé par date —
+ * pour chaque étape : nom, lieu, bouton « Itinéraire » et horaire (heure ou
+ * texte libre, ex. « À la suite de la cérémonie »).
+ */
+function DaysProgram({
+  events,
+  childrenOf,
+  accent,
+  tpl,
+  c,
+}: {
+  events: WeddingEvent[];
+  childrenOf: (id: string) => WeddingEvent[];
+  accent: string;
+  tpl: SectionProps['tpl'];
+  c: Record<string, unknown>;
+}) {
+  const { palette } = tpl;
+  const ts = useTextStyle();
+  const from = typeof c.card_color1 === 'string' && HEX.test(c.card_color1) ? c.card_color1 : accent;
+  const to = typeof c.card_color2 === 'string' && HEX.test(c.card_color2) ? c.card_color2 : palette.ink;
+  const photo = storageUrl('media', str(c, 'photo') || null);
+  const intro = str(c, 'intro');
+  const script = tpl.script ?? undefined;
+
+  // Regroupement par jour (dans l'ordre du programme ; étapes sans date à la fin).
+  const days: { key: string; label: string; items: WeddingEvent[] }[] = [];
+  const sorted = [...events].sort((a, b) => (a.date && b.date ? a.date.localeCompare(b.date) : a.date ? -1 : b.date ? 1 : a.position - b.position));
+  for (const ev of sorted) {
+    const d = ev.date ? new Date(ev.date) : null;
+    const key = d ? d.toDateString() : 'sans-date';
+    let group = days.find((g) => g.key === key);
+    if (!group) {
+      group = { key, label: d ? d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '', items: [] };
+      days.push(group);
+    }
+    group.items.push(ev);
+  }
+
+  return (
+    <SectionShell tpl={tpl} accent={accent}>
+      <div className="mx-auto max-w-md px-5 py-16">
+        <div
+          className="overflow-hidden rounded-[1.75rem] px-6 pb-10 pt-8 text-center text-white shadow-2xl sm:px-8"
+          style={{ background: `linear-gradient(180deg, ${from} 0%, ${from} 22%, ${to} 62%, ${to} 100%)` }}
+        >
+          {/* Alliances */}
+          <svg viewBox="0 0 40 20" className="mx-auto h-5 w-10 opacity-90" aria-hidden>
+            <circle cx="15" cy="10" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+            <circle cx="25" cy="10" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+          </svg>
+          {photo && (
+            <div className="mt-4">
+              <FramedImage
+                src={photo}
+                frame={readFrame(c.photo_frame, { style: 'heart', size: 'sm' })}
+                tpl={{ ...tpl, palette: { ...palette, background: '#F6EFE6' } }}
+                accent={accent}
+              />
+            </div>
+          )}
+          {intro && (
+            <p className="mx-auto mt-5 max-w-xs whitespace-pre-line tpl-body text-sm leading-relaxed text-white/90" style={ts('intro')}>
+              {renderRich(intro, '#ffffff')}
+            </p>
+          )}
+          {(photo || intro) && <div className="mx-auto mt-6 h-px w-full bg-white/30" />}
+
+          <h2 className="mt-6 font-display tpl-display text-4xl leading-tight sm:text-5xl" style={{ fontFamily: script, ...ts('title') }}>
+            {str(c, 'title') || 'Programme de Cérémonie'}
+          </h2>
+
+          <div className="mt-8 space-y-9">
+            {days.map((day) => (
+              <div key={day.key}>
+                {day.label && (
+                  <p className="tpl-body text-lg font-semibold tracking-wide" style={ts('day')}>{day.label}</p>
+                )}
+                <ul className="mt-4 space-y-6">
+                  {day.items.map((ev) => {
+                    const kids = childrenOf(ev.id);
+                    const time = eventTime(ev);
+                    return (
+                      <li key={ev.id}>
+                        <p className="font-display tpl-display text-2xl italic leading-tight" style={{ fontFamily: script, ...ts('event_name') }}>{ev.name}</p>
+                        {ev.location_title && (
+                          <p className="mt-1 flex items-center justify-center gap-1.5 tpl-body text-sm text-white/90" style={ts('event_meta')}>
+                            <MapPin className="h-3.5 w-3.5 flex-none" aria-hidden /> {ev.location_title}
+                          </p>
+                        )}
+                        {ev.description && (
+                          <p className="mx-auto mt-1 max-w-xs whitespace-pre-line tpl-body text-xs text-white/80" style={ts('event_text')}>{ev.description}</p>
+                        )}
+                        {kids.length > 0 && (
+                          <p className="mt-1 tpl-body text-xs text-white/80" style={ts('sub_events')}>
+                            {kids.map((k) => `${eventTime(k)} ${k.name}`.trim()).join(' · ')}
+                          </p>
+                        )}
+                        {ev.location_maps_url && (
+                          <a
+                            href={ev.location_maps_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/70 px-4 py-1 tpl-body text-xs font-semibold transition hover:bg-white/10"
+                            style={ts('button')}
+                          >
+                            <Navigation className="h-3 w-3" /> Itinéraire
+                          </a>
+                        )}
+                        {time && (
+                          <p className="mt-2 flex items-center justify-center gap-1.5 tpl-body text-sm font-semibold" style={ts('event_meta')}>
+                            <Clock className="h-3.5 w-3.5" aria-hidden /> {time}
+                          </p>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </SectionShell>
   );

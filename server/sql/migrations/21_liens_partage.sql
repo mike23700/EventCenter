@@ -10,6 +10,8 @@
 --  - share_links : liens de partage « par étape » (ex. Dot + Mairie, sans
 --    l'Église). Celui qui ouvre /i/<code> ne voit que ces étapes du
 --    programme, et s'il s'inscrit, il n'est convié qu'à celles-ci.
+--  - wedding_events.time_label : horaire en texte libre affiché à la place
+--    de l'heure (ex. « À la suite de la cérémonie »), facultatif.
 -- Les réglages visuels (fond, motifs, styles de texte, décors des coins)
 -- sont rangés dans weddings.theme / sections.content (jsonb) : aucune autre
 -- modification de structure.
@@ -31,3 +33,5 @@ create table if not exists public.share_links (
 
 create unique index if not exists share_links_code_key on public.share_links (code);
 create index if not exists share_links_wedding_idx on public.share_links (wedding_id);
+
+alter table public.wedding_events add column if not exists time_label text;

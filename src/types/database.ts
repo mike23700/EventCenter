@@ -44,6 +44,8 @@ export interface WeddingEvent {
   location_address: string | null;
   location_image: string | null;
   location_maps_url: string | null;
+  /** Horaire en texte libre (« À la suite de la cérémonie »), à la place de l'heure. */
+  time_label?: string | null;
   position: number;
   created_at: string;
 }

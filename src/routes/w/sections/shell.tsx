@@ -36,6 +36,7 @@ export function SectionShell({
         color: tpl.palette.text,
         ['--accent' as string]: accent,
         ...(pattern && !bg ? PATTERN_STYLE : {}),
+        ...(bg?.gradient ? { backgroundImage: bg.gradient } : {}),
       }}
     >
       {bg?.image && (

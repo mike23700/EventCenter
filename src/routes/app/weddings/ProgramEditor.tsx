@@ -19,6 +19,7 @@ interface Draft {
   location_address: string;
   location_image: string;
   location_maps_url: string;
+  time_label: string;
 }
 
 const empty: Draft = {
@@ -30,6 +31,7 @@ const empty: Draft = {
   location_address: '',
   location_image: '',
   location_maps_url: '',
+  time_label: '',
 };
 
 /** Éditeur des sous-évènements (dot, mairie, église, soirée…), avec sous-parties. */
@@ -92,6 +94,7 @@ export default function ProgramEditor() {
       location_address: ev.location_address ?? '',
       location_image: ev.location_image ?? '',
       location_maps_url: ev.location_maps_url ?? '',
+      time_label: ev.time_label ?? '',
     });
   }
 
@@ -108,6 +111,7 @@ export default function ProgramEditor() {
       location_address: draft.location_address.trim() || null,
       location_image: draft.location_image || null,
       location_maps_url: draft.location_maps_url.trim() || null,
+      time_label: draft.time_label.trim().slice(0, 80) || null,
     };
     if (draft.id) {
       const { error } = await db.from('wedding_events').update(payload).eq('id', draft.id);
@@ -257,6 +261,11 @@ export default function ProgramEditor() {
             <div>
               <label className="label">Date</label>
               <input type="datetime-local" className="input" value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="label">Horaire affiché (facultatif)</label>
+              <input className="input" maxLength={80} value={draft.time_label} onChange={(e) => setDraft({ ...draft, time_label: e.target.value })} placeholder="À la suite de la cérémonie" />
+              <p className="mt-1 text-xs text-ink-secondary">Remplace l'heure sur le site (frise des heures et programme « par jour »). La date sert toujours au classement par jour.</p>
             </div>
             <div className="sm:col-span-2">
               <label className="label">Description</label>
