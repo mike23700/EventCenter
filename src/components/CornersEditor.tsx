@@ -93,7 +93,7 @@ export default function CornersEditor({
                 <input type="checkbox" checked={value.intro} onChange={(e) => set({ intro: e.target.checked })} /> Page de garde
               </label>
               <label className="flex items-center gap-2">
-                <input type="checkbox" checked={value.cover} onChange={(e) => set({ cover: e.target.checked })} /> Couverture
+                <input type="checkbox" checked={value.cover} onChange={(e) => set({ cover: e.target.checked })} /> Couverture (coins du haut uniquement)
               </label>
             </div>
           </div>

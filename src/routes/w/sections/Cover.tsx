@@ -35,6 +35,11 @@ function hhmm(iso: string): string {
   return `${String(d.getHours()).padStart(2, '0')}H${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
+/** Couverture : décors des coins en HAUT seulement (jamais en bas de la section). */
+function coverCorners(c: Parameters<typeof cornersAt>[0]) {
+  return { ...cornersAt(c, 'cover'), bottom: false };
+}
+
 function scrollToSection(type: string) {
   document.getElementById(`section-${type}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -195,7 +200,7 @@ function PaperCover({
   const opts = siteOptions((wedding as unknown as { theme?: Json }).theme ?? null, tpl);
   const script = tpl.script ?? undefined;
   const ts = useTextStyle();
-  const shown = cornersAt(opts.corners, 'cover');
+  const shown = coverCorners(opts.corners);
   // Apparence du bloc (fond image) et motif du Thème, comme les autres sections.
   const bg = useContext(SectionBackgroundContext);
   const pattern = useContext(SectionPatternContext);
@@ -273,7 +278,7 @@ function CoverShell({
   const hasExtras = !!(extras.tagline || extras.dateIso || extras.schedule || extras.btnRsvp || extras.btnProgram);
   const ts = useTextStyle();
   const opts = siteOptions((wedding as unknown as { theme?: Json }).theme ?? null, tpl);
-  const shown = cornersAt(opts.corners, 'cover');
+  const shown = coverCorners(opts.corners);
 
   return (
     <header
