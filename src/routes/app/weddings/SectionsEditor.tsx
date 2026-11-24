@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import SuccessModal from '../../../components/SuccessModal';
 import { useOutletContext, Link } from 'react-router-dom';
 import { Check, GripVertical, Pencil, Power, ArrowUp, ArrowDown, X, Trash2 } from 'lucide-react';
 import { db } from '../../../lib/db';
@@ -51,6 +52,8 @@ export default function SectionsEditor() {
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState<Section | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [success, setSuccess] = useState('');
+  const closeSuccess = useCallback(() => setSuccess(''), []);
 
   useEffect(() => {
     if (!wedding) return;
@@ -128,6 +131,7 @@ export default function SectionsEditor() {
     }
     setSections((prev) => prev.map((s) => (s.id === section.id ? { ...s, content } : s)));
     setEditingId(null);
+    setSuccess('Section enregistrée');
   }
 
   async function confirmDelete() {
@@ -310,6 +314,8 @@ export default function SectionsEditor() {
           </div>
         </div>
       )}
+
+      <SuccessModal open={!!success} message={success} onClose={closeSuccess} />
     </div>
   );
 }

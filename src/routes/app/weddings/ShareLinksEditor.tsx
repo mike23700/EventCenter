@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import SuccessModal from '../../../components/SuccessModal';
 import { useOutletContext } from 'react-router-dom';
 import { Check, Copy, Link2, MessageCircle, Pencil, Plus, Share2, Trash2, X } from 'lucide-react';
 import { db } from '../../../lib/db';
@@ -76,7 +77,8 @@ export default function ShareLinksEditor() {
   const generalUrl = weddingPublicUrl(wedding.slug);
   const savedGeneral = typeof themeRecord(wedding.theme).shareMessage === 'string' ? (themeRecord(wedding.theme).shareMessage as string) : '';
   const [generalMessage, setGeneralMessage] = useState(savedGeneral.trim() || DEFAULT_SHARE_MESSAGE);
-  const [generalSaved, setGeneralSaved] = useState(false);
+  const [success, setSuccess] = useState('');
+  const closeSuccess = useCallback(() => setSuccess(''), []);
 
   useEffect(() => {
     let active = true;
@@ -112,8 +114,7 @@ export default function ShareLinksEditor() {
       return;
     }
     setWedding?.({ ...wedding, theme } as Wedding);
-    setGeneralSaved(true);
-    setTimeout(() => setGeneralSaved(false), 2000);
+    setSuccess('Message enregistré');
   }
 
   function openCreate() {
@@ -146,6 +147,7 @@ export default function ShareLinksEditor() {
       else {
         setLinks((prev) => prev.map((l) => (l.id === draft.id ? { ...l, ...payload } : l)));
         setDraft(null);
+        setSuccess('Lien enregistré');
       }
     } else {
       const { data, error } = await db.from<ShareLink>('share_links').insert({ wedding_id: wedding.id, ...payload }).select('*').single();
@@ -153,6 +155,7 @@ export default function ShareLinksEditor() {
       else if (data) {
         setLinks((prev) => [...prev, data]);
         setDraft(null);
+        setSuccess('Lien créé');
       }
     }
     setSaving(false);
@@ -210,7 +213,7 @@ export default function ShareLinksEditor() {
           <CopyButton text={generalText} label="Copier le message" title="Copier le message complet" />
           {isAdmin && (
             <button type="button" onClick={saveGeneral} className="btn-outline">
-              <Check className="h-4 w-4" /> {generalSaved ? 'Enregistré !' : 'Enregistrer ce message'}
+              <Check className="h-4 w-4" /> Enregistrer ce message
             </button>
           )}
           {generalMessage !== DEFAULT_SHARE_MESSAGE && (
@@ -317,6 +320,8 @@ export default function ShareLinksEditor() {
           );
         })}
       </div>
+
+      <SuccessModal open={!!success} message={success} onClose={closeSuccess} />
     </div>
   );
 }

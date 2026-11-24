@@ -128,7 +128,8 @@ export const TEXT_SLOTS: Record<string, TextSlot[]> = {
     { id: 'theme_name', label: 'Thème' },
     { id: 'text', label: 'Description' },
     { id: 'color_names', label: 'Noms des couleurs' },
-    { id: 'button', label: 'Bouton « Voir des exemples »' },
+    { id: 'tab_labels', label: 'Titres « Pour elles » / « Pour eux »' },
+    { id: 'caption', label: 'Petite phrase sous les exemples' },
   ],
   snapchat: [
     { id: 'title', label: 'Titre' },

@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Plus, Pencil, Trash2, Check, X, ExternalLink, ArrowUp, ArrowDown, CornerDownRight } from 'lucide-react';
 import { db } from '../../../lib/db';
 import type { Wedding, WeddingEvent } from '../../../types/database';
 import { toIso, fromIsoForInput } from '../../../lib/format';
 import MediaUploader from '../../../components/MediaUploader';
+import SuccessModal from '../../../components/SuccessModal';
 import { storageUrl } from '../../../lib/media';
 import { programStepImageHint } from '../../../lib/imageHints';
 
@@ -39,6 +40,11 @@ export default function ProgramEditor() {
   const [error, setError] = useState('');
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState('');
+  const closeSuccess = useCallback(() => setSuccess(''), []);
+  // Étape en attente de confirmation de suppression.
+  const [confirmingDelete, setConfirmingDelete] = useState<WeddingEvent | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const imageHint = programStepImageHint();
 
@@ -106,7 +112,10 @@ export default function ProgramEditor() {
     if (draft.id) {
       const { error } = await db.from('wedding_events').update(payload).eq('id', draft.id);
       if (error) setError(error.message);
-      else setEvents((prev) => prev.map((e) => (e.id === draft.id ? { ...e, ...payload } : e)));
+      else {
+        setEvents((prev) => prev.map((e) => (e.id === draft.id ? { ...e, ...payload } : e)));
+        setSuccess('Étape enregistrée');
+      }
     } else {
       const { data, error } = await db
         .from('wedding_events')
@@ -114,14 +123,20 @@ export default function ProgramEditor() {
         .select('*')
         .single();
       if (error) setError(error.message);
-      else setEvents((prev) => [...prev, data]);
+      else {
+        setEvents((prev) => [...prev, data]);
+        setSuccess(payload.parent_id ? 'Sous-étape ajoutée' : 'Étape ajoutée');
+      }
     }
     setSaving(false);
     setDraft(null);
   }
 
   async function remove(id: string) {
+    setDeleting(true);
     const { error } = await db.from('wedding_events').delete().eq('id', id);
+    setDeleting(false);
+    setConfirmingDelete(null);
     if (error) setError(error.message);
     else setEvents((prev) => prev.filter((e) => e.id !== id && e.parent_id !== id));
   }
@@ -174,7 +189,7 @@ export default function ProgramEditor() {
                 <ArrowDown className="h-4 w-4" />
               </button>
               <button onClick={() => openEdit(ev)} className="btn-outline !px-2" title="Modifier"><Pencil className="h-4 w-4" /></button>
-              <button onClick={() => remove(ev.id)} className="btn-outline !px-2 hover:!border-red-300 hover:!text-red-600" title="Supprimer"><Trash2 className="h-4 w-4" /></button>
+              <button onClick={() => setConfirmingDelete(ev)} className="btn-outline !px-2 hover:!border-red-300 hover:!text-red-600" title="Supprimer"><Trash2 className="h-4 w-4" /></button>
             </div>
           </div>
           {ev.location_image && (
@@ -293,6 +308,31 @@ export default function ProgramEditor() {
           {topLevel.map((ev, i) => renderCard(ev, i, topLevel, 0))}
         </ul>
       )}
+
+      <SuccessModal open={!!success} message={success} onClose={closeSuccess} />
+
+      {confirmingDelete && (() => {
+        const kids = events.filter((e) => e.parent_id === confirmingDelete.id).length;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !deleting && setConfirmingDelete(null)}>
+            <div role="dialog" aria-modal="true" className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+              <h3 className="font-display text-lg font-bold text-ink">Supprimer cette étape ?</h3>
+              <p className="mt-2 text-sm text-ink-secondary">
+                « {confirmingDelete.name} » sera définitivement supprimée
+                {kids > 0 ? `, avec ses ${kids} sous-étape${kids > 1 ? 's' : ''}` : ''}, ainsi que les tables qui lui sont
+                rattachées. Les invités ne seront plus conviés à cette étape. Cette action est irréversible.
+              </p>
+              <div className="mt-6 flex justify-end gap-2">
+                <button onClick={() => setConfirmingDelete(null)} disabled={deleting} className="btn-outline">Annuler</button>
+                <button onClick={() => remove(confirmingDelete.id)} disabled={deleting} className="btn bg-red-600 text-white hover:bg-red-700">
+                  <Trash2 className="h-4 w-4" />
+                  {deleting ? 'Suppression…' : 'Supprimer'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

@@ -489,10 +489,13 @@ export default function SectionContentEditor({ type, content, onChange, folder =
         .filter((x): x is { hex: string; name: string } => !!x);
       const setColors = (v: { hex: string; name: string }[]) => set('colors', v);
       const photoGroup = (key: string, label: string) => {
-        const photos = strList(key);
+        // 3 photos maximum par groupe (les éventuelles photos en trop d'avant ne sont plus affichées).
+        const all = strList(key);
+        const photos = all.slice(0, 3);
         return (
           <div>
-            <label className="label">{label} (jusqu'à 9)</label>
+            <label className="label">{label} (3 photos maximum)</label>
+            {all.length > 3 && <p className="mb-2 text-xs text-amber-700">{all.length - 3} photo(s) en trop ne sont plus affichées sur le site ; elles seront retirées au prochain changement.</p>}
             <div className="grid gap-3 sm:grid-cols-3">
               {photos.map((p, i) => (
                 <MediaUploader
@@ -505,7 +508,7 @@ export default function SectionContentEditor({ type, content, onChange, folder =
                   onChange={(v) => set(key, v ? photos.map((x, j) => (j === i ? v : x)) : photos.filter((_, j) => j !== i))}
                 />
               ))}
-              {photos.length < 9 && (
+              {photos.length < 3 && (
                 <MediaUploader
                   key={`${key}-new-${photos.length}`}
                   bucket="media"
@@ -561,17 +564,15 @@ export default function SectionContentEditor({ type, content, onChange, folder =
             </div>
           </div>
           <div className="rounded-xl border border-borderlight p-4 space-y-4">
-            <p className="text-sm font-semibold text-ink">Exemples de tenues — bouton « Voir des exemples » <span className="font-normal text-ink-secondary">(facultatif)</span></p>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Field label="Texte du bouton"><input className="input" value={str('examples_label')} onChange={(e) => set('examples_label', e.target.value)} placeholder="Voir des exemples" /></Field>
-              <Field label="Onglet 1"><input className="input" value={str('label_women')} onChange={(e) => set('label_women', e.target.value)} placeholder="Pour elles" /></Field>
-              <Field label="Onglet 2"><input className="input" value={str('label_men')} onChange={(e) => set('label_men', e.target.value)} placeholder="Pour eux" /></Field>
+            <p className="text-sm font-semibold text-ink">Exemples de tenues <span className="font-normal text-ink-secondary">(facultatif) — affichés directement sur le site : une rangée de 3 photos par groupe</span></p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Groupe 1 (rangée du haut)"><input className="input" value={str('label_women')} onChange={(e) => set('label_women', e.target.value)} placeholder="Pour elles" /></Field>
+              <Field label="Groupe 2 (rangée du bas)"><input className="input" value={str('label_men')} onChange={(e) => set('label_men', e.target.value)} placeholder="Pour eux" /></Field>
             </div>
             {photoGroup('photos_women', str('label_women') || 'Photos « Pour elles »')}
             {photoGroup('photos_men', str('label_men') || 'Photos « Pour eux »')}
             <Field label="Petite phrase sous les exemples"><input className="input" value={str('examples_caption')} onChange={(e) => set('examples_caption', e.target.value)} placeholder="Terracotta, rouille, crème et touches dorées : laissez parler votre style !" /></Field>
           </div>
-          {strList('photos').length > 0 && photoGroup('photos', "Photos d'inspiration affichées directement")}
         </div>
       );
     }

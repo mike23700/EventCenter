@@ -1,4 +1,5 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import SuccessModal from '../../../components/SuccessModal';
 import { useOutletContext } from 'react-router-dom';
 import { Plus, Pencil, Trash2, Check, X, Users, Filter, ClipboardList, QrCode, Link2, MessageCircle, Download } from 'lucide-react';
 import { db } from '../../../lib/db';
@@ -176,6 +177,8 @@ export default function GuestsEditor() {
   // Invité en attente de confirmation de suppression (fenêtre de confirmation).
   const [confirmingDelete, setConfirmingDelete] = useState<Guest | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [success, setSuccess] = useState('');
+  const closeSuccess = useCallback(() => setSuccess(''), []);
 
   useEffect(() => {
     if (!wedding) return;
@@ -356,7 +359,10 @@ export default function GuestsEditor() {
     if (draft.id) {
       const { error } = await db.from('guests').update(payload).eq('id', draft.id);
       if (error) setError(error.message);
-      else setGuests((prev) => prev.map((g) => (g.id === draft.id ? { ...g, ...payload } : g)));
+      else {
+        setGuests((prev) => prev.map((g) => (g.id === draft.id ? { ...g, ...payload } : g)));
+        setSuccess('Invité enregistré');
+      }
     } else {
       const { data, error } = await db
         .from('guests')
@@ -364,7 +370,10 @@ export default function GuestsEditor() {
         .select('*')
         .single();
       if (error) setError(error.message);
-      else setGuests((prev) => [...prev, data]);
+      else {
+        setGuests((prev) => [...prev, data]);
+        setSuccess('Invité ajouté');
+      }
     }
     setSaving(false);
     setDraft(null);
@@ -730,6 +739,8 @@ export default function GuestsEditor() {
           </div>
         </div>
       )}
+
+      <SuccessModal open={!!success} message={success} onClose={closeSuccess} />
     </div>
   );
 }

@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import SuccessModal from '../../../components/SuccessModal';
 import { useOutletContext } from 'react-router-dom';
 import { Plus, Trash2, X, Users2, CheckCircle2 } from 'lucide-react';
 import { db } from '../../../lib/db';
@@ -31,6 +32,8 @@ export default function TablesEditor() {
   // Table en attente de confirmation de suppression (fenêtre de confirmation).
   const [confirmingDelete, setConfirmingDelete] = useState<TablePlan | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [success, setSuccess] = useState('');
+  const closeSuccess = useCallback(() => setSuccess(''), []);
 
   async function reload() {
     if (!wedding) return;
@@ -121,6 +124,7 @@ export default function TablesEditor() {
       return;
     }
     setTables((prev) => [...prev, data]);
+    setSuccess('Table créée');
     setNewTableName('');
     setNewTableCapacity('10');
     setNewTableEventId('');
@@ -366,6 +370,8 @@ export default function TablesEditor() {
           </div>
         );
       })()}
+
+      <SuccessModal open={!!success} message={success} onClose={closeSuccess} />
     </div>
   );
 }
