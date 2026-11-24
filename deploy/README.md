@@ -1,7 +1,7 @@
 # Mise à jour o2switch — events.etan237.com
 
 Guide de mise en ligne de la version « Invitation personnalisée + Sécurité +
-Performances » (novembre 2026), **adapté à l'hébergement actuel** :
+Performances + Modèles + Liens de partage » (novembre 2026), **adapté à l'hébergement actuel** :
 
 | Élément | Valeur sur o2switch |
 |---|---|
@@ -15,7 +15,8 @@ Performances » (novembre 2026), **adapté à l'hébergement actuel** :
 
 > **Avant la mise en ligne** : déroulez **en local** les deux guides de test :
 > `Guide_de_test_invitation_personnalisee.pdf` (validé, 98/98 OK) et
-> `Guide_de_test_modeles_personnalisation.pdf` (nouveautés : modèles, page de garde, réservation par catégorie…).
+> `Guide_de_test_modeles_personnalisation.pdf` (validé, 88/88 OK) et
+> `Guide_de_test_liens_et_style.pdf` (nouveautés : liens courts, onglet Partage, liens par étape, fond et motifs, styles de texte, décors des coins…).
 
 ---
 
@@ -27,12 +28,13 @@ Performances » (novembre 2026), **adapté à l'hébergement actuel** :
 | `maj-o2switch.sh` | **Script de mise à jour automatique** (sauvegardes, migrations, fichiers, dépendances, redémarrage, vérifications) |
 | `1-site.zip` | Site compilé → `~/eventcenter-repo/dist` |
 | `2-api.zip` | API compilée → `~/eventcenter-repo/server` (`dist/`, `app.js`, `package.json`, `package-lock.json`) |
-| `3-sql.zip` | Migrations 18, 19 et 20 (+ schéma complet pour une installation neuve) |
+| `3-sql.zip` | Migrations 18, 19, 20 et 21 (+ schéma complet pour une installation neuve) |
 | `uploads.htaccess` | Seulement si les photos étaient un jour servies par Apache (pas le cas actuellement) |
 | `build.sh` | Régénère tous les zips (sur le PC) |
 | `sql/` | Sources des migrations |
 | `Guide_de_test_invitation_personnalisee.pdf` | Guide de test n° 1 (invitation, sécurité, performances) — validé |
-| `Guide_de_test_modeles_personnalisation.pdf` | Guide de test n° 2 (modèles, page de garde, éléments communs, réservation) |
+| `Guide_de_test_modeles_personnalisation.pdf` | Guide de test n° 2 (modèles, page de garde, éléments communs, réservation) — validé |
+| `Guide_de_test_liens_et_style.pdf` | Guide de test n° 3 (liens courts, Partage, liens par étape, fond, styles de texte, décors) |
 
 ---
 
@@ -63,6 +65,24 @@ Performances » (novembre 2026), **adapté à l'hébergement actuel** :
 - Nouvelles sections : **Espace cadeaux** (message + lien) et **Clôture**.
 - Couverture « faire-part », programme « heures », code vestimentaire avec noms de couleurs et exemples Pour elles / Pour eux.
 - **Réservation par catégorie** (Famille, Amis, Collègues…) avec quotas et **jauge des places** ; livre d'or en **publication immédiate** (option).
+
+**Liens de partage et style (migration 21)**
+- **Liens courts** : le lien personnel devient `events.etan237.com/i/<code>` (8 caractères) au lieu de
+  `/w/<slug>?i=<long identifiant>`. Les anciens liens restent valables.
+- Nouvel onglet **Partage** (admin et couple) :
+  - **lien général** + message WhatsApp qui ne cite aucun invité ;
+  - **liens par étape** (ex. Dot + Mairie, sans l'Église) : le programme du site ne montre que ces
+    étapes, et une inscription par ce lien n'est conviée qu'à celles-ci.
+- Un invité identifié (lien personnel) ne voit que **ses** étapes dans le programme.
+- **Thème** : couleur de fond à la place de celle du modèle, **motifs** d'arrière-plan (pois, losanges, wax…).
+- **Décors des coins** : les bouquets dessinés sont remplacés par **vos images**, dans un cadre carré fixe
+  (taille, opacité, miroir, page de garde / couverture).
+- **Chaque texte de chaque section** : couleur, police, taille, épaisseur, italique, majuscules, alignement.
+- **Couverture** : « Apparence du bloc » comme les autres sections.
+- **Témoignages** en diaporama horizontal sur la page dédiée (plus de liste sous le formulaire du site) ;
+  photos du **code vestimentaire** en diaporama.
+- **Frise des heures** : grande photo ronde, nom et description à côté, heure + bouton « Itinéraire » par étape.
+- Page d'accueil : « Six styles ».
 
 **Performances** : compression gzip, cache navigateur, admin chargée à la demande, images différées, index SQL.
 
@@ -105,7 +125,7 @@ Le script affiche chaque étape :
 |---|---|
 | 0 | Vérifie les paquets, l'environnement Node et la connexion à la base (lit `DATABASE_URL` dans les variables cPanel ; s'il n'y arrive pas, il vous la demande) |
 | 1 | **Sauvegarde** la base (`pg_dump`) et le code dans `~/sauvegardes-eventcenter/` |
-| 2 | Applique les migrations **18**, **19** et **20** (elles peuvent être relancées sans risque) |
+| 2 | Applique les migrations **18**, **19**, **20** et **21** (elles peuvent être relancées sans risque) |
 | 3 | Remplace `dist/` et `server/dist/` (+ `app.js`, `package*.json`) |
 | 4 | Contrôle `SESSION_SECRET`, `COOKIE_SECURE`, `SITE_URL`. S'il faut corriger, il s'arrête et vous laisse modifier dans cPanel |
 | 5 | Vérifie le dossier des photos (servi par Node : rien à faire) |
@@ -137,6 +157,7 @@ cd ~/maj && unzip -o -q 3-sql.zip -d sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/18_invitation_personnalisee.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/19_securite_performances.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/20_modeles_reservation.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/21_liens_partage.sql
 
 # 3. Fichiers
 rm -rf ~/eventcenter-repo/dist ~/eventcenter-repo/server/dist
@@ -146,7 +167,9 @@ unzip -o -q ~/maj/2-api.zip  -d ~/eventcenter-repo
 
 Ensuite, dans cPanel → *Setup Node.js App* : **Run NPM Install**, puis **Restart**.
 
-Sans terminal, les migrations peuvent se faire dans phpPgAdmin → `sc2biro3703_eventcenter` → **SQL** : collez le contenu de chaque fichier, dans l'ordre 18, 19 puis 20.
+Sans terminal, les migrations peuvent se faire dans phpPgAdmin → `sc2biro3703_eventcenter` → **SQL** : collez le contenu de chaque fichier, dans l'ordre 18, 19, 20 puis 21.
+Au premier démarrage après la migration 21, l'API attribue un code court à chaque invité existant
+(visible dans `stderr.log` : « codes courts attribués à N invité(s) »).
 
 ---
 
@@ -163,6 +186,8 @@ Sans terminal, les migrations peuvent se faire dans phpPgAdmin → `sc2biro3703_
 | 7 | Navigation privée : https://events.etan237.com/api/db/guests | `{"data":null,"error":{"message":"Accès refusé."}}` |
 | 8 | Envoyer le lien personnel d'un invité de test à vous-même sur WhatsApp | Aperçu avec la photo, la date et « &lt;Prénom&gt;, vous êtes invité(e)… » |
 | 9 | Outils de développement → Réseau → un fichier `/assets/…js` | `Content-Encoding: gzip` et `Cache-Control: …max-age=31536000, immutable` |
+| 10 | Invités → 🔗 sur un invité | Lien court `https://events.etan237.com/i/xxxxxxxx` ; il ouvre l'invitation de l'invité |
+| 11 | Partage → créer un lien « Mairie » → l'ouvrir en navigation privée | Le programme ne montre que la Mairie |
 
 > WhatsApp garde un aperçu en cache plusieurs jours : pour retester, ajoutez `&v=2` à la fin du lien.
 
@@ -195,7 +220,7 @@ unzip -o -q ~/sauvegardes-eventcenter/code-<DATE>.zip
 
 Ensuite, dans cPanel : **Run NPM Install**, puis **Restart**.
 
-La base **n'a pas besoin** d'être restaurée : les migrations 18, 19 et 20 n'ajoutent que des types de section autorisés, des index et une colonne facultative (catégorie d'invité), que l'ancienne version ignore. En dernier recours : phpPgAdmin → **Importer** `base-<DATE>.sql` dans une base vide.
+La base **n'a pas besoin** d'être restaurée : les migrations 18 à 21 n'ajoutent que des types de section autorisés, des index, des colonnes facultatives (catégorie, code court) et une table (`share_links`), que l'ancienne version ignore. Attention : les liens courts `/i/…` déjà envoyés ne fonctionnent plus avec l'ancienne version. En dernier recours : phpPgAdmin → **Importer** `base-<DATE>.sql` dans une base vide.
 
 ---
 
@@ -217,11 +242,13 @@ cd ~/eventcenter-repo && git checkout -- server/package.json server/package-lock
   - `src/index.ts`, `src/security.ts` *(nouveau)*, `src/policies.ts` ;
   - `src/routes/db.ts`, `src/routes/public.ts` *(nouveau)*, `src/routes/upload.ts`, `src/routes/og.ts` *(nouveau)* ;
   - `src/auth/*`, `src/routes/admin.ts`, `src/seed.ts` ;
-  - `sql/migrations/18_…`, `19_…`, `sql/schema.sql` ;
+  - `sql/migrations/18_…` à `21_…`, `sql/schema.sql` ;
+  - `src/shortCode.ts` *(nouveau)*, `src/routes/shortLink.ts` *(nouveau)* ;
   - `package.json` (ajout de compression ; multer en version 2).
 - **Front** :
   - `src/lib/publicApi.ts`, `invitation.ts`, `passImage.ts` *(nouveaux)* ;
   - `src/routes/w/` (enveloppe, accueil, identification, sections) ;
-  - `src/routes/app/weddings/` (Invités, Thème, Sections) ;
+  - `src/routes/app/weddings/` (Invités, Thème, Sections, `ShareLinksEditor.tsx`, `TextStylesEditor.tsx` *(nouveaux)*) ;
+  - `src/lib/themeLook.ts`, `textStyles.ts`, `src/routes/w/useShareLink.ts`, `CornerDecor.tsx`, `Carousel.tsx`, `TestimonialSlides.tsx` *(nouveaux)* ;
   - `src/App.tsx` (chargement à la demande), `src/pages/Login.tsx` (redirection stricte) ;
   - `index.html`, `vite.config.ts`.
