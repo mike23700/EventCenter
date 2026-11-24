@@ -99,6 +99,24 @@ export default function ThemeEditor() {
     (f) => !activeTpl.fonts.body.includes(f.id),
   );
 
+  /**
+   * Changer de modèle remet tout le style à celui du nouveau modèle :
+   * couleur principale, fond et motif, polices et tailles, animation.
+   * Le contenu (page de garde, musique, messages, décors des coins) est gardé.
+   */
+  function chooseTemplate(id: string) {
+    if (id === template) return;
+    const next = getTemplate(id);
+    setTemplate(id);
+    setPrimaryColor(next.palette.accent);
+    setLook(readThemeLook({}));
+    setDisplayFont('');
+    setBodyFont('');
+    setDisplayFontScale(1);
+    setBodyFontScale(1);
+    setAmbient('auto');
+  }
+
   async function save() {
     setSaving(true);
     setError('');
@@ -188,11 +206,15 @@ export default function ThemeEditor() {
         {/* Choix du template avec aperçus */}
         <div>
           <label className="label">Modèle de design</label>
+          <p className="mb-2 text-xs text-ink-secondary">
+            Choisir un modèle remet ses couleurs, son fond, ses polices et son animation (la couleur principale,
+            le fond, les polices… se personnalisent ensuite). Pensez à enregistrer.
+          </p>
           <div className="grid gap-3 sm:grid-cols-2">
             {TEMPLATE_DEFS.map((t) => (
               <button
                 key={t.id}
-                onClick={() => setTemplate(t.id)}
+                onClick={() => chooseTemplate(t.id)}
                 className={`flex items-center gap-3 rounded-xl border p-3 text-left transition ${
                   template === t.id
                     ? 'border-gold bg-paper-cream'
