@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTextStyle } from '../../../lib/textStyles';
 import QRCode from 'qrcode';
 import { Camera, ExternalLink, Smartphone, Monitor } from 'lucide-react';
 import type { SectionProps } from './types';
@@ -25,6 +26,7 @@ export function isSnapchatUrl(raw: string): boolean {
 }
 
 export default function SnapchatSection({ content, accent, tpl }: SectionProps) {
+  const ts = useTextStyle();
   const c = asRecord(content);
   const { palette } = tpl;
   const url = str(c, 'url')?.trim() ?? '';
@@ -53,10 +55,10 @@ export default function SnapchatSection({ content, accent, tpl }: SectionProps) 
         >
           <div className="flex items-center justify-center gap-2" style={{ color: accent }}>
             <Camera className="h-5 w-5" />
-            <p className="tpl-body text-xs font-semibold uppercase tracking-[0.3em]">{str(c, 'title') || 'Filtre Snapchat'}</p>
+            <p className="tpl-body text-xs font-semibold uppercase tracking-[0.3em]" style={ts('title')}>{str(c, 'title') || 'Filtre Snapchat'}</p>
           </div>
           {str(c, 'text') && (
-            <p className="mx-auto mt-3 max-w-xs tpl-body text-sm leading-relaxed" style={{ color: palette.muted }}>{str(c, 'text')}</p>
+            <p className="mx-auto mt-3 max-w-xs tpl-body text-sm leading-relaxed" style={{ color: palette.muted, ...ts('text') }}>{str(c, 'text')}</p>
           )}
 
           <div className="mx-auto mt-6 w-fit rounded-2xl bg-white p-3" style={{ boxShadow: `0 0 0 1px ${palette.border}` }}>
@@ -72,7 +74,7 @@ export default function SnapchatSection({ content, accent, tpl }: SectionProps) 
             target="_blank"
             rel="noopener noreferrer"
             className="mt-6 inline-flex items-center gap-2 rounded-full px-6 py-3 tpl-body text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:opacity-90"
-            style={{ backgroundColor: accent }}
+            style={{ backgroundColor: accent, ...ts('button') }}
           >
             Ouvrir le filtre <ExternalLink className="h-3.5 w-3.5" />
           </a>

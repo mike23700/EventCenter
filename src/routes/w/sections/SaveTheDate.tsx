@@ -4,6 +4,7 @@ import type { WeddingEvent } from '../../../types/database';
 import type { SectionProps } from './types';
 import { asRecord, str } from './types';
 import { SectionShell, SectionTitle } from './shell';
+import { useTextStyle } from '../../../lib/textStyles';
 import { formatDateNoYear } from '../../../lib/format';
 import { getKnownGuestToken, onKnownGuestChange } from './guestSession';
 import { resolveGuest } from '../../../lib/publicApi';
@@ -42,6 +43,7 @@ export default function SaveTheDate({ content, accent, tpl, events, wedding }: S
   const manualDate = str(c, 'date');
 
   const [invitedEvents, setInvitedEvents] = useState<string[] | null>(null);
+  const ts = useTextStyle();
 
   useEffect(() => {
     let active = true;
@@ -131,7 +133,7 @@ export default function SaveTheDate({ content, accent, tpl, events, wedding }: S
               >
                 <div
                   className="py-3 text-sm font-medium uppercase tracking-[0.2em] tpl-body"
-                  style={{ backgroundColor: accent, color: onAccent }}
+                  style={{ backgroundColor: accent, color: onAccent, ...ts('calendar'), fontSize: undefined }}
                 >
                   {monthLabel}
                 </div>
@@ -182,11 +184,11 @@ export default function SaveTheDate({ content, accent, tpl, events, wedding }: S
           })}
         </div>
 
-        <p className="mt-6 font-display tpl-display text-base font-semibold" style={{ color: palette.ink }}>
+        <p className="mt-6 font-display tpl-display text-base font-semibold" style={{ color: palette.ink, ...ts('calendar') }}>
           {validDates.map((d) => formatDateNoYear(d.toISOString())).join(' · ')}
         </p>
         {message && (
-          <p className="mt-2 tpl-body" style={{ color: palette.muted }}>{message}</p>
+          <p className="mt-2 tpl-body" style={{ color: palette.muted, ...ts('text') }}>{message}</p>
         )}
       </div>
     </SectionShell>

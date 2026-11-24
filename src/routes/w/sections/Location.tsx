@@ -1,4 +1,5 @@
 import { MapPin, ExternalLink } from 'lucide-react';
+import { useTextStyle } from '../../../lib/textStyles';
 import { storageUrl } from '../../../lib/media';
 import type { SectionProps } from './types';
 import { asRecord, str } from './types';
@@ -6,6 +7,7 @@ import { SectionShell } from './shell';
 
 /** Section "lieu" : titre, adresse, image, lien Google Maps. */
 export default function Location({ content, accent, tpl }: SectionProps) {
+  const ts = useTextStyle();
   const c = asRecord(content);
   const title = str(c, 'title');
   const address = str(c, 'address');
@@ -21,7 +23,7 @@ export default function Location({ content, accent, tpl }: SectionProps) {
       <div className="mx-auto max-w-3xl px-6 py-16">
         <div className="text-center">
           <MapPin className="mx-auto h-6 w-6" style={{ color: accent }} />
-          <h2 className="mt-2 font-display tpl-display text-3xl sm:text-4xl font-bold" style={{ color: palette.ink }}>
+          <h2 className="mt-2 font-display tpl-display text-3xl sm:text-4xl font-bold" style={{ color: palette.ink, ...ts('title') }}>
             {title || 'Lieu de la cérémonie'}
           </h2>
         </div>
@@ -45,7 +47,7 @@ export default function Location({ content, accent, tpl }: SectionProps) {
           )}
           <div className="p-7">
             {address && (
-              <p className="text-lg tpl-body" style={{ color: palette.muted }}>
+              <p className="text-lg tpl-body" style={{ color: palette.muted, ...ts('text') }}>
                 {address}
               </p>
             )}
@@ -59,6 +61,7 @@ export default function Location({ content, accent, tpl }: SectionProps) {
                   backgroundColor: accent,
                   color: tpl.id === 'royal' ? palette.ink : '#fff',
                   boxShadow: tpl.id === 'royal' ? `0 0 0 1px ${palette.accent}, 0 6px 18px ${palette.accent}44` : undefined,
+                  ...ts('button'),
                 }}
               >
                 <ExternalLink className="h-4 w-4" />

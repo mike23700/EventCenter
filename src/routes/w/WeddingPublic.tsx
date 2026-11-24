@@ -12,8 +12,9 @@ import StickyHeader from './StickyHeader';
 import { siteOptions } from '../../lib/siteOptions';
 import WelcomeModal from './WelcomeModal';
 import { useInvitedGuest } from './useInvitedGuest';
+import { useShareLink, visibleEvents } from './useShareLink';
 import { PublicWeddingContext } from './publicContext';
-import { getTemplate } from '../../lib/templates';
+import { weddingTemplate } from '../../lib/themeLook';
 import { formatDate } from '../../lib/format';
 import { coupleInitials, coupleLabel } from '../../lib/invitation';
 
@@ -37,6 +38,7 @@ export default function WeddingPublic() {
   const [envelopeDone, setEnvelopeDone] = useState(false);
   const [welcomeClosed, setWelcomeClosed] = useState(false);
   const invited = useInvitedGuest(wedding?.id);
+  const share = useShareLink(wedding?.id);
   const closeEnvelope = useCallback(() => setEnvelopeDone(true), []);
 
   useEffect(() => {
@@ -59,30 +61,37 @@ export default function WeddingPublic() {
     };
   }, [wedding]);
 
+  // Programme montré : étapes de l'invité identifié, sinon du lien par
+  // étape, sinon tout (voir useShareLink.ts).
+  const shownEvents = useMemo(
+    () => visibleEvents(events, invited.guest?.invited_events?.length ? invited.guest.invited_events : share.link?.event_ids),
+    [events, invited.guest, share.link],
+  );
+
   const dateLabel = useMemo(() => {
     const cover = sections.find((x) => x.type === 'cover');
     const c = cover?.content && typeof cover.content === 'object' && !Array.isArray(cover.content)
       ? (cover.content as Record<string, unknown>)
       : {};
     if (typeof c['date'] === 'string' && c['date']) return c['date'] as string;
-    const first = events.find((e) => e.date);
+    const first = shownEvents.find((e) => e.date);
     return first?.date ? formatDate(first.date) : '';
-  }, [sections, events]);
+  }, [sections, shownEvents]);
 
   // Date courte du bandeau fixe : « 18 · 12 · 2026 ».
   const dateShort = useMemo(() => {
-    const first = events.find((e) => e.date && !e.parent_id) ?? events.find((e) => e.date);
+    const first = shownEvents.find((e) => e.date && !e.parent_id) ?? shownEvents.find((e) => e.date);
     if (!first?.date) return '';
     const d = new Date(first.date);
     const p = (n: number) => String(n).padStart(2, '0');
     return `${p(d.getDate())} · ${p(d.getMonth() + 1)} · ${d.getFullYear()}`;
-  }, [events]);
+  }, [shownEvents]);
 
   useEffect(() => {
     if (wedding) document.title = `${coupleLabel(wedding)} — Invitation`;
   }, [wedding]);
 
-  if (weddingLoading || (wedding && (loading || invited.loading))) return <p className="p-8 text-center text-ink-secondary">Chargement…</p>;
+  if (weddingLoading || (wedding && (loading || invited.loading || share.loading))) return <p className="p-8 text-center text-ink-secondary">Chargement…</p>;
 
   if (!wedding) {
     return (
@@ -94,7 +103,7 @@ export default function WeddingPublic() {
     );
   }
 
-  const tpl = getTemplate(wedding.template);
+  const tpl = weddingTemplate(wedding);
   const theme = wedding.theme && typeof wedding.theme === 'object' && !Array.isArray(wedding.theme)
     ? (wedding.theme as Record<string, unknown>)
     : {};
@@ -127,7 +136,7 @@ export default function WeddingPublic() {
   }
 
   return (
-    <PublicWeddingContext.Provider value={{ invitedGuest: guest, couple, dateLabel, tpl }}>
+    <PublicWeddingContext.Provider value={{ invitedGuest: guest, couple, dateLabel, tpl, linkCode: share.link?.code ?? null }}>
       {envelopeVisible && (
         <div style={{ ['--w-font' as string]: tpl.fonts.display, overflowWrap: 'anywhere' }}>
           <IntroScreen
@@ -174,7 +183,7 @@ export default function WeddingPublic() {
           <StickyHeader tpl={tpl} accent={accent} monogram={monogram} couple={couple} dateShort={dateShort} />
         )}
         {sections.map((section) => (
-          <SectionRenderer key={section.id} section={section} wedding={wedding} events={events} />
+          <SectionRenderer key={section.id} section={section} wedding={wedding} events={shownEvents} />
         ))}
       </WeddingThemeShell>
     </PublicWeddingContext.Provider>

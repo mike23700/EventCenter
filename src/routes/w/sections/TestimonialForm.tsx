@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Send } from 'lucide-react';
 import { db } from '../../../lib/db';
 import type { TemplateDef } from '../../../lib/templates';
+import { clampWords, countWords, TESTIMONIAL_MAX_WORDS } from '../../../lib/wordLimits';
 
 /**
  * Formulaire de dépôt d'un témoignage — mis en attente de modération.
@@ -70,9 +71,12 @@ export default function TestimonialForm({
             className="input min-h-24"
             placeholder="Votre message pour les mariés…"
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => setText(clampWords(e.target.value, TESTIMONIAL_MAX_WORDS))}
             style={{ backgroundColor: palette.background, borderColor: palette.border, color: palette.text }}
           />
+          <p className="text-right tpl-body text-xs" style={{ color: countWords(text) >= TESTIMONIAL_MAX_WORDS ? accent : palette.muted }}>
+            {countWords(text)} / {TESTIMONIAL_MAX_WORDS} mots
+          </p>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex justify-end">
             <button

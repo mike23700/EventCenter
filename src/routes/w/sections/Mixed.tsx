@@ -14,6 +14,7 @@ import { asRecord } from './types';
 import { SectionShell } from './shell';
 import { useGuestIdentity } from './useGuestIdentity';
 import GuestSelfRegister from './GuestSelfRegister';
+import { useTextStyle } from '../../../lib/textStyles';
 
 export interface MixedProps extends SectionProps {
   events: WeddingEvent[];
@@ -97,6 +98,7 @@ export default function Mixed({ content, accent, tpl, wedding, sectionId, events
 
 function TextView({ block, tpl }: { block: Block; tpl: SectionProps['tpl'] }) {
   const { palette, id } = tpl;
+  const ts = useTextStyle();
   const titleSize = normalizeTextSize(block.titleSize);
   const textSize = normalizeTextSize(block.textSize);
   return (
@@ -104,7 +106,7 @@ function TextView({ block, tpl }: { block: Block; tpl: SectionProps['tpl'] }) {
       {block.title && (
         <h3
           className="font-display tpl-display text-2xl sm:text-3xl font-bold"
-          style={{ color: palette.ink, fontSize: titleSize ? `${titleSize}px` : undefined }}
+          style={{ color: palette.ink, ...ts('block_title'), ...(titleSize ? { fontSize: `${titleSize}px` } : {}) }}
         >
           {block.title}
         </h3>
@@ -112,7 +114,7 @@ function TextView({ block, tpl }: { block: Block; tpl: SectionProps['tpl'] }) {
       {block.text && (
         <p
           className={`mt-3 whitespace-pre-line leading-relaxed tpl-body ${id === 'royal' ? 'text-base' : 'text-lg'}`}
-          style={{ color: palette.muted, fontSize: textSize ? `${textSize}px` : undefined }}
+          style={{ color: palette.muted, ...ts('block_text'), ...(textSize ? { fontSize: `${textSize}px` } : {}) }}
         >
           {renderRich(block.text, palette.accent)}
         </p>
@@ -123,6 +125,7 @@ function TextView({ block, tpl }: { block: Block; tpl: SectionProps['tpl'] }) {
 
 function ImageView({ block, tpl }: { block: Block; tpl: SectionProps['tpl'] }) {
   const { palette, id } = tpl;
+  const ts = useTextStyle();
   const src = storageUrl('media', block.src) ?? block.src;
   if (!src) return null;
   const pos = block.titlePosition ?? 'below';
@@ -130,7 +133,7 @@ function ImageView({ block, tpl }: { block: Block; tpl: SectionProps['tpl'] }) {
   return (
     <div>
       {block.title && pos === 'above' && (
-        <h3 className="mb-4 text-center font-display tpl-display text-2xl font-bold sm:text-3xl" style={{ color: palette.ink }}>{block.title}</h3>
+        <h3 className="mb-4 text-center font-display tpl-display text-2xl font-bold sm:text-3xl" style={{ color: palette.ink, ...ts('block_title') }}>{block.title}</h3>
       )}
       <FramedImage
         src={src}
@@ -140,12 +143,12 @@ function ImageView({ block, tpl }: { block: Block; tpl: SectionProps['tpl'] }) {
         accent={palette.accent}
         overlay={block.title && pos === 'over' ? (
           <div className="absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/70 via-black/15 to-transparent p-5 text-center">
-            <p className="font-display tpl-display text-2xl font-bold text-white drop-shadow sm:text-4xl">{block.title}</p>
+            <p className="font-display tpl-display text-2xl font-bold text-white drop-shadow sm:text-4xl" style={{ ...ts('block_title'), color: '#fff' }}>{block.title}</p>
           </div>
         ) : undefined}
       />
       {block.title && pos === 'below' && (
-        <p className="mt-3 text-center text-sm tracking-wide tpl-body italic" style={{ color: palette.muted }}>{block.title}</p>
+        <p className="mt-3 text-center text-sm tracking-wide tpl-body italic" style={{ color: palette.muted, ...ts('caption') }}>{block.title}</p>
       )}
       {accentMarker(tpl)}
     </div>
@@ -165,6 +168,7 @@ function accentMarker(tpl: SectionProps['tpl']): React.ReactNode {
 
 function VideoView({ block, tpl }: { block: Block; tpl: SectionProps['tpl'] }) {
   const { palette, id } = tpl;
+  const ts = useTextStyle();
   const src = storageUrl('media', block.src) ?? block.src;
   if (!src) return null;
   return (
@@ -180,7 +184,7 @@ function VideoView({ block, tpl }: { block: Block; tpl: SectionProps['tpl'] }) {
         }}
       />
       {block.title && (
-        <figcaption className="mt-3 text-center text-sm tracking-wide tpl-body italic" style={{ color: palette.muted }}>
+        <figcaption className="mt-3 text-center text-sm tracking-wide tpl-body italic" style={{ color: palette.muted, ...ts('caption') }}>
           {block.title}
         </figcaption>
       )}
@@ -218,6 +222,7 @@ function QuestionnaireView({
   const guestStatus = id.status;
   const { invitedGuest } = usePublicWedding();
   const rsvpCfg = useRsvpConfig(weddingId);
+  const ts = useTextStyle();
 
   // Invité arrivé par son lien personnel : pas besoin de s'identifier.
   useEffect(() => {
@@ -284,11 +289,11 @@ function QuestionnaireView({
       className="rounded-2xl p-7"
       style={{ backgroundColor: palette.accentSoft, border: `1px solid ${palette.border}` }}
     >
-      <h3 className="font-display tpl-display text-xl font-bold" style={{ color: palette.ink }}>
+      <h3 className="font-display tpl-display text-xl font-bold" style={{ color: palette.ink, ...ts('block_title') }}>
         {block.title || 'Questionnaire'}
       </h3>
       {block.text && (
-        <p className="mt-2 tpl-body" style={{ color: palette.muted }}>
+        <p className="mt-2 tpl-body" style={{ color: palette.muted, ...ts('block_text') }}>
           {block.text}
         </p>
       )}
@@ -370,7 +375,7 @@ function QuestionnaireView({
       <div className="mt-5 space-y-5">
         {questions.map((q, qi) => (
           <div key={q.id}>
-            <p className="tpl-body text-sm font-semibold" style={{ color: palette.ink }}>
+            <p className="tpl-body text-sm font-semibold" style={{ color: palette.ink, ...ts('question') }}>
               {qi + 1}. {q.label}
             </p>
             {q.type === 'open' ? (

@@ -10,7 +10,7 @@
 #   eventcenter-COMPLET.zip   tout ce qu'il faut (3 paquets + script maj-o2switch.sh + guide)
 #   1-site.zip                le site compilé            → ~/eventcenter/dist/
 #   2-api.zip                 l'API compilée             → ~/eventcenter/server/
-#   3-sql.zip                 les migrations 18 et 19    → à exécuter sur la base
+#   3-sql.zip                 les migrations 18 à 21     → à exécuter sur la base
 #   uploads.htaccess          protection du dossier      → public_html/uploads/.htaccess
 # =====================================================================
 set -euo pipefail

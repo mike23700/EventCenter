@@ -4,6 +4,7 @@ import { pool } from '../db';
 import { HttpError } from '../httpError';
 import { weddingIsAccessible } from '../policies';
 import { rateLimit } from '../security';
+import { GUEST_CODE_RE, LINK_CODE_RE, newGuestCode } from '../shortCode';
 
 /**
  * API publique des invités (site /w/:slug), en remplacement de l'accès
@@ -12,7 +13,7 @@ import { rateLimit } from '../security';
  *
  * Règle : un visiteur n'obtient jamais qu'UN invité, et seulement s'il
  * apporte une preuve :
- *  - son jeton personnel (lien `?i=` ou QR) ;
+ *  - son jeton personnel (lien `?i=` ou QR) ou son code court (lien /i/<code>) ;
  *  - ou son nom ET son téléphone (« Retrouver mon pass ») ;
  *  - ou il vient de s'inscrire lui-même.
  * Toutes les routes vérifient que le mariage est accessible publiquement
@@ -22,7 +23,7 @@ import { rateLimit } from '../security';
 const router = Router();
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const GUEST_COLS = 'id, name, phone, plus_ones, invited_events, qr_token, category';
+const GUEST_COLS = 'id, name, phone, plus_ones, invited_events, qr_token, category, short_code';
 
 // Recherches nom + téléphone : bornées pour empêcher de deviner des numéros.
 const lookupLimit = rateLimit({ name: 'guest-lookup', windowMs: 15 * 60 * 1000, max: 20, message: 'Trop de recherches. Réessayez dans 15 minutes.' });
@@ -99,12 +100,35 @@ async function assertAccessible(weddingId: string): Promise<void> {
   if (!(await weddingIsAccessible(weddingId))) throw new HttpError(404, "Ce mariage n'est pas disponible.");
 }
 
+/** Invité par jeton personnel (uuid du QR) ou par code court du lien /i/<code>. */
 async function guestByToken(weddingId: string, token: string) {
+  const byUuid = UUID_RE.test(token);
+  if (!byUuid && !GUEST_CODE_RE.test(token)) return null;
   const { rows } = await pool.query(
-    `select ${GUEST_COLS} from guests where wedding_id = $1 and qr_token = $2`,
+    `select ${GUEST_COLS} from guests where wedding_id = $1 and ${byUuid ? 'qr_token = $2::uuid' : 'short_code = $2'}`,
     [weddingId, token],
   );
   return rows[0] ?? null;
+}
+
+/**
+ * Étapes d'un lien de partage (ex. Dot + Mairie) : uniquement des étapes
+ * existantes de CE mariage. `null` si le code est inconnu ; tableau vide =
+ * tout le programme.
+ */
+async function shareLinkEvents(weddingId: string, code: unknown): Promise<string[] | null> {
+  if (typeof code !== 'string' || !LINK_CODE_RE.test(code)) return null;
+  const { rows } = await pool.query(
+    `select coalesce(array(
+        select e.id from wedding_events e
+         where e.wedding_id = l.wedding_id and e.id = any(l.event_ids)
+         order by e.position
+      ), '{}'::uuid[]) as event_ids
+       from share_links l
+      where l.wedding_id = $1 and l.code = $2`,
+    [weddingId, code],
+  );
+  return rows[0] ? (rows[0].event_ids as string[]) : null;
 }
 
 // ---------------------------------------------------------------------
@@ -113,10 +137,27 @@ async function guestByToken(weddingId: string, token: string) {
 router.post('/guest/resolve', tokenLimit, async (req, res, next) => {
   try {
     const weddingId = uuidOrThrow(req.body?.weddingId, 'Mariage');
-    const token = typeof req.body?.token === 'string' && UUID_RE.test(req.body.token) ? req.body.token : null;
+    const token = typeof req.body?.token === 'string' && (UUID_RE.test(req.body.token) || GUEST_CODE_RE.test(req.body.token))
+      ? req.body.token
+      : null;
     await assertAccessible(weddingId);
     const guest = token ? await guestByToken(weddingId, token) : null;
     res.json({ data: guest, error: null });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ---------------------------------------------------------------------
+// POST /api/public/link/resolve { weddingId, code } — lien de partage par étape
+// ---------------------------------------------------------------------
+router.post('/link/resolve', tokenLimit, async (req, res, next) => {
+  try {
+    const weddingId = uuidOrThrow(req.body?.weddingId, 'Mariage');
+    await assertAccessible(weddingId);
+    const events = await shareLinkEvents(weddingId, req.body?.code);
+    // Ni le nom interne du lien ni son message ne sont exposés : seulement les étapes.
+    res.json({ data: events === null ? null : { code: req.body.code as string, event_ids: events }, error: null });
   } catch (e) {
     next(e);
   }
@@ -161,7 +202,7 @@ router.post('/guest/lookup', lookupLimit, async (req, res, next) => {
 });
 
 // ---------------------------------------------------------------------
-// POST /api/public/guest/register { weddingId, name, phone, invitedEvents, category }
+// POST /api/public/guest/register { weddingId, name, phone, invitedEvents, category, linkCode }
 // ---------------------------------------------------------------------
 router.post('/guest/register', registerLimit, async (req, res, next) => {
   try {
@@ -188,6 +229,14 @@ router.post('/guest/register', registerLimit, async (req, res, next) => {
         [weddingId, requested],
       );
       invitedEvents = rows.map((r: { id: string }) => r.id);
+    }
+    // Arrivé par un lien de partage par étape : il n'est convié qu'aux étapes
+    // de ce lien, quoi que le formulaire envoie.
+    const linkEvents = await shareLinkEvents(weddingId, req.body?.linkCode);
+    if (linkEvents && linkEvents.length > 0) {
+      const allowed = new Set(linkEvents);
+      const kept = invitedEvents.filter((id) => allowed.has(id));
+      invitedEvents = kept.length > 0 ? kept : linkEvents;
     }
 
     const client = await pool.connect();
@@ -220,10 +269,10 @@ router.post('/guest/register', registerLimit, async (req, res, next) => {
       }
 
       const { rows } = await client.query(
-        `insert into guests (id, wedding_id, name, phone, plus_ones, invited_events, qr_token, category)
-         values ($1, $2, $3, $4, 0, $5::uuid[], $6, $7)
+        `insert into guests (id, wedding_id, name, phone, plus_ones, invited_events, qr_token, category, short_code)
+         values ($1, $2, $3, $4, 0, $5::uuid[], $6, $7, $8)
          returning ${GUEST_COLS}`,
-        [randomUUID(), weddingId, name, phone, invitedEvents, randomUUID(), category?.id ?? null],
+        [randomUUID(), weddingId, name, phone, invitedEvents, randomUUID(), category?.id ?? null, newGuestCode()],
       );
       await client.query('commit');
       res.json({ data: rows[0], error: null });

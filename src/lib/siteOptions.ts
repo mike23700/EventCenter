@@ -23,10 +23,64 @@ export interface IntroConfig {
   tagline: string;
 }
 
+/**
+ * Décors des coins (remplace les bouquets dessinés) : images envoyées par
+ * l'admin, posées dans un cadre carré fixe à chaque coin. Le côté droit est
+ * le miroir du côté gauche ; le bas reprend l'image du haut retournée si
+ * aucune image propre n'est fournie.
+ */
+export interface CornersConfig {
+  top: string;        // image des coins du haut (orientée vers le coin haut-gauche)
+  bottom: string;     // image des coins du bas (facultative)
+  showTop: boolean;
+  showBottom: boolean;
+  mirror: boolean;    // des deux côtés (droite = miroir)
+  size: 'sm' | 'md' | 'lg';
+  opacity: number;    // 30 à 100 (%)
+  intro: boolean;     // sur la page de garde
+  cover: boolean;     // sur la couverture
+}
+
+export const DEFAULT_CORNERS: CornersConfig = {
+  top: '',
+  bottom: '',
+  showTop: true,
+  showBottom: true,
+  mirror: true,
+  size: 'md',
+  opacity: 100,
+  intro: true,
+  cover: true,
+};
+
+export function readCorners(v: unknown): CornersConfig {
+  const c = rec(v);
+  const b = (k: keyof CornersConfig) => (typeof c[k] === 'boolean' ? (c[k] as boolean) : (DEFAULT_CORNERS[k] as boolean));
+  const op = typeof c.opacity === 'number' ? c.opacity : 100;
+  return {
+    top: s(c, 'top'),
+    bottom: s(c, 'bottom'),
+    showTop: b('showTop'),
+    showBottom: b('showBottom'),
+    mirror: b('mirror'),
+    size: c.size === 'sm' || c.size === 'lg' ? c.size : 'md',
+    opacity: Math.max(30, Math.min(100, Math.round(op))),
+    intro: b('intro'),
+    cover: b('cover'),
+  };
+}
+
+/** Coins réellement affichés à un endroit donné (rien si aucune image). */
+export function cornersAt(c: CornersConfig, where: 'intro' | 'cover'): { top: boolean; bottom: boolean } {
+  if (!c.top && !c.bottom) return { top: false, bottom: false };
+  if (!c[where]) return { top: false, bottom: false };
+  return { top: c.showTop && !!c.top, bottom: c.showBottom && !!(c.bottom || c.top) };
+}
+
 export interface SiteOptions {
   ambient: AmbientKind;
   ambientColors: string[];
-  decor: 'floral-corners' | 'none';
+  corners: CornersConfig;
   stickyHeader: boolean;
   intro: IntroConfig;
   inviteMessage: string;
@@ -61,8 +115,6 @@ export function siteOptions(theme: Json, tpl: TemplateDef): SiteOptions {
     : (['petals', 'roses', 'hearts', 'gold', 'none'].includes(ambientRaw) ? ambientRaw as AmbientKind : 'none');
   const ambientColors = ambientRaw === 'auto' && tpl.ambient ? tpl.ambient.colors : DEFAULT_COLORS[ambient] ?? [];
 
-  const decorRaw = s(t, 'decor') || 'auto';
-  const decor = decorRaw === 'auto' ? tpl.decor ?? 'none' : decorRaw === 'floral-corners' ? 'floral-corners' : 'none';
 
   // Page de garde : nouveau réglage `intro`, ou reprise de l'ancienne enveloppe.
   const i = rec(t['intro']);
@@ -85,7 +137,7 @@ export function siteOptions(theme: Json, tpl: TemplateDef): SiteOptions {
   return {
     ambient,
     ambientColors,
-    decor,
+    corners: readCorners(t['corners']),
     stickyHeader: t['stickyHeader'] === true,
     intro,
     inviteMessage: s(t, 'inviteMessage'),

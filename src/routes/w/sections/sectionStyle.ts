@@ -1,6 +1,7 @@
 import { createContext } from 'react';
 import type { TemplateDef } from '../../../lib/templates';
 import { storageUrl } from '../../../lib/media';
+import { DARK_TEXT, LIGHT_TEXT, luminance } from '../../../lib/themeLook';
 
 /**
  * Fond de bloc (commun à toutes les sections et à tous les modèles) :
@@ -39,34 +40,12 @@ export interface SectionBackground {
 
 export const SectionBackgroundContext = createContext<SectionBackground | null>(null);
 
-function luminance(hex: string): number {
-  const h = hex.replace('#', '');
-  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h.slice(0, 6);
-  const n = parseInt(full, 16);
-  if (Number.isNaN(n)) return 0.5;
-  const ch = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
-    const c = v / 255;
-    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-  });
-  return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
-}
-
-const LIGHT_TEXT = {
-  text: '#F4EEE6',
-  muted: '#E4D9CD',
-  ink: '#FFFFFF',
-  surface: '#FFFFFF17',
-  border: '#FFFFFF33',
-  accentSoft: '#FFFFFF1F',
-};
-const DARK_TEXT = {
-  text: '#2B211C',
-  muted: '#5E4F46',
-  ink: '#1E1612',
-  surface: '#FFFFFFB8',
-  border: '#0000001A',
-  accentSoft: '#FFFFFF8C',
-};
+/**
+ * Motif de fond du Thème (voir lib/themeLook.ts) : appliqué aux sections qui
+ * gardent le fond du modèle ; une section avec sa propre couleur ou image de
+ * fond ne le reçoit pas.
+ */
+export const SectionPatternContext = createContext<boolean>(false);
 
 /** Modèle « recoloré » pour la section + fond à peindre par SectionShell. */
 export function applySectionStyle(tpl: TemplateDef, style: SectionStyle): { tpl: TemplateDef; background: SectionBackground | null } {

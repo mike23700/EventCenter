@@ -13,6 +13,8 @@ export interface PublicWeddingContextValue {
   couple: string;
   dateLabel: string;
   tpl: TemplateDef | null;
+  /** Lien de partage par étape ouvert (inscription limitée à ses étapes). */
+  linkCode: string | null;
 }
 
 export const PublicWeddingContext = createContext<PublicWeddingContextValue>({
@@ -20,6 +22,7 @@ export const PublicWeddingContext = createContext<PublicWeddingContextValue>({
   couple: '',
   dateLabel: '',
   tpl: null,
+  linkCode: null,
 });
 
 export function usePublicWedding(): PublicWeddingContextValue {

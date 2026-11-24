@@ -9,11 +9,16 @@ import {
   weddingIdOfRow,
   canWriteWedding,
   refBelongsToWedding,
+  refsBelongToWedding,
   weddingSlug,
   type Table,
   type TableDef,
 } from '../policies';
 import { hitRateLimit, clientKey } from '../security';
+import { newGuestCode, newLinkCode } from '../shortCode';
+
+/** Livre d'or : longueur maximale d'un message déposé depuis le site. */
+const TESTIMONIAL_MAX_WORDS = 150;
 import type { CurrentUser } from '../types';
 
 const router = Router();
@@ -145,6 +150,28 @@ async function assertRefs(def: TableDef, row: Record<string, unknown>, weddingId
       throw new HttpError(403, 'Référence vers un autre mariage refusée.');
     }
   }
+  await assertArrayRefs(def, row, weddingId);
+}
+
+/** Tableaux d'identifiants (ex. étapes d'un lien de partage) : tous du même mariage. */
+async function assertArrayRefs(def: TableDef, row: Record<string, unknown>, weddingId: string): Promise<void> {
+  for (const ref of def.sameWeddingArrayRefs ?? []) {
+    if (!(ref.column in row)) continue;
+    if (!(await refsBelongToWedding(ref.table, row[ref.column], weddingId))) {
+      throw new HttpError(400, 'Étape inconnue ou d\'un autre mariage.');
+    }
+  }
+}
+
+/** Bornes des textes libres des liens de partage (affichés dans l'admin et envoyés par WhatsApp). */
+function assertShareLinkTexts(t: Table, row: Record<string, unknown>): void {
+  if (t !== 'share_links') return;
+  if ('label' in row && (typeof row.label !== 'string' || row.label.length > 80)) {
+    throw new HttpError(400, 'Nom du lien invalide (80 caractères maximum).');
+  }
+  if ('message' in row && row.message !== null && (typeof row.message !== 'string' || row.message.length > 2000)) {
+    throw new HttpError(400, 'Message trop long (2000 caractères maximum).');
+  }
 }
 
 /** Ligne envoyée par un visiteur anonyme : colonnes autorisées, valeurs forcées, longueurs bornées. */
@@ -174,6 +201,9 @@ async function prepareAnonRow(t: Table, def: TableDef, raw: Record<string, unkno
   }
   if (t === 'testimonials') {
     if (typeof row.content !== 'string' || !row.content.trim()) throw new HttpError(400, 'Message vide.');
+    if (row.content.trim().split(/\s+/).length > TESTIMONIAL_MAX_WORDS) {
+      throw new HttpError(400, `Message trop long (${TESTIMONIAL_MAX_WORDS} mots maximum).`);
+    }
     if (await guestbookAutoPublish(row.wedding_id)) row.status = 'published';
   }
   return row;
@@ -275,6 +305,7 @@ router.post('/:table', async (req, res, next) => {
     for (const raw of bodyRows) {
       const source = user ? (raw as Record<string, unknown>) : await prepareAnonRow(t, def, raw as Record<string, unknown>);
       const row = prepareRowForWrite(t, source);
+      assertShareLinkTexts(t, row);
       // Message écrit depuis le site par un utilisateur connecté (ex. l'admin
       // qui teste) : même règle que pour un invité.
       if (user && t === 'testimonials' && (row.status === undefined || row.status === 'pending') && (await guestbookAutoPublish(row.wedding_id))) {
@@ -286,13 +317,17 @@ router.post('/:table', async (req, res, next) => {
         const allowed = await canWriteWedding(user, weddingId, !!def.anonInsert);
         if (!allowed) throw new HttpError(403, 'Accès refusé.');
         if (!admin) await assertRefs(def, row, weddingId);
+        else await assertArrayRefs(def, row, weddingId);
       }
       row.id = randomUUID();
       if (t === 'guests') {
         row.qr_token = randomUUID();
+        row.short_code = newGuestCode();
         delete row.checked_in_at;
         delete row.checked_in_by;
       }
+      // Code court du lien /i/<code> : toujours généré par le serveur.
+      if (t === 'share_links') row.code = newLinkCode();
       prepared.push(row);
     }
 
@@ -350,6 +385,10 @@ router.patch('/:table', async (req, res, next) => {
 
     const row = prepareRowForWrite(t, req.body as Record<string, unknown>);
     delete row.id;
+    // Codes courts : générés par le serveur, jamais modifiables (format garanti).
+    if (t === 'share_links') delete row.code;
+    if (t === 'guests') delete row.short_code;
+    assertShareLinkTexts(t, row);
     if (!admin) {
       for (const c of def.immutable) {
         if (c in row) throw new HttpError(403, `Champ non modifiable : ${c}`);
@@ -376,14 +415,18 @@ router.patch('/:table', async (req, res, next) => {
     }
 
     // Références modifiées : elles doivent rester dans le mariage de chaque ligne visée.
-    if (!admin && def.sameWeddingRefs.some((r) => r.column in row)) {
+    const touchesRefs = def.sameWeddingRefs.some((r) => r.column in row);
+    const touchesArrayRefs = (def.sameWeddingArrayRefs ?? []).some((r) => r.column in row);
+    if ((!admin && touchesRefs) || touchesArrayRefs) {
       const w2 = buildWhere(filters, 1);
       const s2 = scopeClause(t, user, w2.params.length + 1);
       const p2 = s2.sql ? [w2.sql, s2.sql] : [w2.sql];
       const { rows: targets } = await pool.query(`select * from ${t} where ${p2.join(' and ')}`, [...w2.params, ...s2.params]);
       for (const target of targets) {
         const weddingId = await weddingIdOfRow(t, target);
-        if (weddingId) await assertRefs(def, row, weddingId);
+        if (!weddingId) continue;
+        if (!admin) await assertRefs(def, row, weddingId);
+        else await assertArrayRefs(def, row, weddingId);
       }
     }
 

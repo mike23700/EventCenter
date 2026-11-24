@@ -157,6 +157,7 @@ create table if not exists public.guests (
   checked_in_at  timestamptz,
   checked_in_by  uuid references public.users(id) on delete set null,
   category       text,
+  short_code     text,
   created_at     timestamptz not null default now()
 );
 
@@ -267,3 +268,19 @@ create index if not exists testimonials_wedding_status_idx on public.testimonial
 create index if not exists sessions_expires_idx         on public.sessions (expires_at);
 create index if not exists guests_wedding_phone_idx     on public.guests (wedding_id, phone);
 create index if not exists guests_wedding_category_idx  on public.guests (wedding_id, category);
+
+-- Liens courts et liens de partage par étape (migration 21)
+create unique index if not exists guests_short_code_key on public.guests (short_code);
+
+create table if not exists public.share_links (
+  id         uuid primary key,
+  wedding_id uuid not null references public.weddings(id) on delete cascade,
+  code       text not null,
+  label      text not null default '',
+  event_ids  uuid[] not null default '{}'::uuid[],
+  message    text,
+  created_at timestamptz not null default now()
+);
+
+create unique index if not exists share_links_code_key on public.share_links (code);
+create index if not exists share_links_wedding_idx on public.share_links (wedding_id);

@@ -5,7 +5,8 @@ import type { SiteOptions } from '../../lib/siteOptions';
 import { storageUrl } from '../../lib/media';
 import EnvelopeIntro, { INVITATION_OPENED_EVENT } from './EnvelopeIntro';
 import AmbientPetals from './AmbientPetals';
-import FloralCorner from './FloralCorner';
+import CornerDecor from './CornerDecor';
+import { cornersAt } from '../../lib/siteOptions';
 
 /**
  * Page de garde du site public (facultative, réglée dans Thème) :
@@ -56,7 +57,7 @@ export default function IntroScreen({
         customImage={intro.mediaType === 'image' ? media : null}
         ambient={options.ambient}
         ambientColors={options.ambientColors}
-        decor={options.decor}
+        corners={options.corners}
         onDone={onDone}
       />
     );
@@ -142,13 +143,7 @@ function MediaIntro({
       }}
     >
       <AmbientPetals kind={options.ambient} colors={options.ambientColors} />
-      {options.decor === 'floral-corners' && (
-        <>
-          <FloralCorner accent={accent} className="absolute -bottom-2 -left-6 w-48 sm:w-72" />
-          <FloralCorner accent={accent} flip className="absolute -bottom-2 -right-6 w-48 sm:w-72" />
-          <FloralCorner accent={accent} flip className="absolute -left-8 -top-6 w-40 rotate-180 opacity-80 sm:w-60" />
-        </>
-      )}
+      <CornerDecor corners={options.corners} {...cornersAt(options.corners, 'intro')} />
 
       <div className="relative z-10 flex max-h-full w-full max-w-md flex-col items-center overflow-y-auto py-6">
         <p className="tpl-body text-[11px] font-semibold uppercase tracking-[0.35em] sm:text-xs" style={{ color: palette.muted }}>

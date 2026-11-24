@@ -16,6 +16,7 @@ const AppLayout = lazy(() => import('./routes/app/AppLayout'));
 const ClientDashboard = lazy(() => import('./routes/app/ClientDashboard'));
 const WeddingConfigLayout = lazy(() => import('./routes/app/weddings/WeddingConfigLayout'));
 const GuestsEditor = lazy(() => import('./routes/app/weddings/GuestsEditor'));
+const ShareLinksEditor = lazy(() => import('./routes/app/weddings/ShareLinksEditor'));
 const TablesEditor = lazy(() => import('./routes/app/weddings/TablesEditor'));
 const ResponsesEditor = lazy(() => import('./routes/app/weddings/ResponsesEditor'));
 const GalleryModerationEditor = lazy(() => import('./routes/app/weddings/GalleryModerationEditor'));
@@ -71,6 +72,7 @@ export default function App() {
           <Route path="theme" element={<ThemeEditor />} />
           <Route path="programme" element={<ProgramEditor />} />
           <Route path="invites" element={<GuestsEditor />} />
+          <Route path="partage" element={<ShareLinksEditor />} />
           <Route path="tables" element={<TablesEditor />} />
           <Route path="apercu" element={<SitePreview />} />
         </Route>
@@ -80,6 +82,7 @@ export default function App() {
         <Route index element={<ClientDashboard />} />
         <Route path=":weddingId" element={<WeddingConfigLayout />}>
           <Route path="invites" element={<GuestsEditor />} />
+          <Route path="partage" element={<ShareLinksEditor />} />
           <Route path="tables" element={<TablesEditor />} />
           <Route path="reponses" element={<ResponsesEditor />} />
           <Route path="galerie" element={<GalleryModerationEditor />} />

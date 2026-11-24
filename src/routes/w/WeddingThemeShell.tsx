@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { Wedding } from '../../types/database';
-import { getTemplate } from '../../lib/templates';
+import { weddingTemplate, readThemeLook, patternBackground } from '../../lib/themeLook';
 import { DISPLAY_FONTS, BODY_FONTS } from '../../lib/format';
 import AudioToggle from './AudioToggle';
 import { storageUrl } from '../../lib/media';
@@ -21,7 +21,10 @@ export default function WeddingThemeShell({ wedding, children }: { wedding: Wedd
   const footerText = (theme['footerText'] as string) || '';
   const displayFontScale = typeof theme['displayFontScale'] === 'number' ? (theme['displayFontScale'] as number) : 1;
   const bodyFontScale = typeof theme['bodyFontScale'] === 'number' ? (theme['bodyFontScale'] as number) : 1;
-  const tpl = getTemplate(wedding.template);
+  // Modèle + couleur de fond choisie dans le Thème (textes adaptés).
+  const tpl = weddingTemplate(wedding);
+  const look = readThemeLook(wedding.theme);
+  const pattern = patternBackground(look, tpl);
   const overrideFont = DISPLAY_FONTS.find((f) => f.id === displayFont && !tpl.fonts.display.includes(f.id));
   const overrideBodyFont = BODY_FONTS.find((f) => f.id === bodyFont && !tpl.fonts.body.includes(f.id));
   const {
@@ -51,6 +54,15 @@ export default function WeddingThemeShell({ wedding, children }: { wedding: Wedd
         ['--tpl-muted' as string]: muted,
         ['--tpl-ink' as string]: ink,
         ['--tpl-border' as string]: border,
+        // Motif de fond (Thème) : repris par chaque section au fond du modèle.
+        ...(pattern
+          ? {
+              ['--w-pattern' as string]: pattern.image,
+              ['--w-pattern-size' as string]: pattern.size,
+              backgroundImage: pattern.image,
+              backgroundSize: pattern.size,
+            }
+          : {}),
       }}
     >
       {/* Typographies du template */}
@@ -62,8 +74,8 @@ export default function WeddingThemeShell({ wedding, children }: { wedding: Wedd
         .tpl-body { font-family: ${overrideBodyFont?.stack ?? tpl.fonts.body}; --w-text-scale: var(--w-body-scale, 1); }
       `}</style>
 
-      {/* Fond ambiance selon le template (subtile) */}
-      {tpl.id === 'africain' && (
+      {/* Fond ambiance selon le template (subtile) — motif « Selon le modèle » */}
+      {look.pattern === 'auto' && tpl.id === 'africain' && (
         <div
           aria-hidden
           className="pointer-events-none fixed inset-0 z-0 opacity-[0.05]"
@@ -73,7 +85,7 @@ export default function WeddingThemeShell({ wedding, children }: { wedding: Wedd
           }}
         />
       )}
-      {tpl.id === 'florale' && (
+      {look.pattern === 'auto' && tpl.id === 'florale' && (
         <div
           aria-hidden
           className="pointer-events-none fixed inset-0 z-0 opacity-[0.045]"

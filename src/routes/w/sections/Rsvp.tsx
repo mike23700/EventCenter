@@ -10,6 +10,7 @@ import GuestQrCard from './GuestQrCard';
 import GuestQrLookup from './GuestQrLookup';
 import { usePublicWedding } from '../publicContext';
 import CapacityGauge, { useRsvpConfig } from './CapacityGauge';
+import { useTextStyle } from '../../../lib/textStyles';
 
 type Mode = 'register' | 'lookup';
 
@@ -31,6 +32,7 @@ export default function Rsvp({ content, accent, tpl, wedding, events }: RsvpProp
   const title = str(c, 'title') || 'Confirmez votre invitation';
   const intro = str(c, 'intro') || "Inscrivez-vous pour recevoir votre QR d'invitation, à présenter le jour J.";
   const { palette } = tpl;
+  const ts = useTextStyle();
 
   const [mode, setMode] = useState<Mode>('register');
   const id = useGuestIdentity(wedding.id);
@@ -60,10 +62,10 @@ export default function Rsvp({ content, accent, tpl, wedding, events }: RsvpProp
       <div className="mx-auto max-w-2xl px-4 py-14 sm:px-6 sm:py-16">
         <div className="text-center">
           <PartyPopper className="mx-auto h-6 w-6" style={{ color: accent }} />
-          <h2 className="mt-2 font-display tpl-display text-3xl sm:text-4xl font-bold" style={{ color: palette.ink }}>
+          <h2 className="mt-2 font-display tpl-display text-3xl sm:text-4xl font-bold" style={{ color: palette.ink, ...ts('title') }}>
             {title}
           </h2>
-          <p className="mt-2 tpl-body" style={{ color: palette.muted }}>{intro}</p>
+          <p className="mt-2 tpl-body" style={{ color: palette.muted, ...ts('subtitle') }}>{intro}</p>
         </div>
 
         {rsvp.config?.gauge && (

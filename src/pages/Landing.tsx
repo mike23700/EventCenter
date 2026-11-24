@@ -49,7 +49,7 @@ function WeddingCardPreview({ t, className = '' }: { t: TemplateDef; className?:
     >
       <div className="flex flex-col items-center gap-2.5 px-6 py-9" style={{ backgroundColor: palette.ink }}>
         <TemplateOrnament id={id} color={badge} className="h-5 w-5" />
-        <p className="text-center text-xl font-bold leading-tight" style={{ fontFamily: t.fonts.display, color: badge }}>
+        <p className="text-center text-xl font-bold leading-tight" style={{ fontFamily: t.script ?? t.fonts.display, color: badge }}>
           Camille &amp; Jean
         </p>
       </div>
@@ -100,7 +100,7 @@ export default function Landing() {
             Le site de votre mariage, dans le style qui vous ressemble.
           </h1>
           <p className="mt-6 max-w-xl text-lg text-ink-secondary">
-            Floral, royal, minimaliste ou héritage africain — quatre univers complets, chacun avec sa
+            Floral, royal, minimaliste, héritage africain, ivoire & rose ou terracotta — six univers complets, chacun avec sa
             palette, ses polices et ses ornements. Vous choisissez le style ; le programme, les
             invités et les souvenirs suivent.
           </p>
@@ -122,17 +122,17 @@ export default function Landing() {
         </div>
       </main>
 
-      {/* Les 4 styles, avec leur vraie identité visuelle */}
+      {/* Les 6 styles, avec leur vraie identité visuelle */}
       <section className="border-t border-borderlight bg-paper-cream/60 py-20">
         <div className="mx-auto max-w-6xl px-6">
           <div className="max-w-xl">
-            <h2 className="font-display text-3xl font-bold text-ink sm:text-4xl">Quatre styles, un seul site</h2>
+            <h2 className="font-display text-3xl font-bold text-ink sm:text-4xl">Six styles, un seul site</h2>
             <p className="mt-3 text-ink-secondary">
               Pas une couleur qu'on change sur un modèle unique : chaque style est pensé comme une
               identité à part entière.
             </p>
           </div>
-          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {TEMPLATE_DEFS.map((t) => (
               <WeddingCardPreview key={t.id} t={t} className="w-full" />
             ))}

@@ -7,6 +7,7 @@ import FrameOptions from '../../../components/FrameOptions';
 import { readFrame, frameHint, type FrameConfig } from '../../../lib/frames';
 import { isSnapchatUrl } from '../../w/sections/SnapchatSection';
 import { coverImageHint, locationImageHint } from '../../../lib/imageHints';
+import { clampWords, countWords, STORY_MAX_WORDS } from '../../../lib/wordLimits';
 
 export interface SectionContentEditorProps {
   type: string;
@@ -278,15 +279,21 @@ export default function SectionContentEditor({ type, content, onChange, folder =
             <select className="input" value={str('layout')} onChange={(e) => set('layout', e.target.value)}>
               <option value="">Selon le modèle de design (frise / cartes alternées)</option>
               <option value="photo">Cartes photo plein cadre + bouton « Itinéraire »</option>
-              <option value="hours">Frise des heures (heure en grand + photo ronde) + carte « Lieu »</option>
+              <option value="hours">Frise des heures (grande photo ronde, nom, description, heure + itinéraire)</option>
             </select>
           </Field>
+          <Field label="Titre (vide = titre par défaut)"><input className="input" value={str('title')} onChange={(e) => set('title', e.target.value)} placeholder={str('layout') === 'hours' ? 'Le programme' : 'Notre programme'} /></Field>
           {str('layout') === 'hours' && (
-            <Field label="Titre"><input className="input" value={str('title')} onChange={(e) => set('title', e.target.value)} placeholder="Le programme" /></Field>
+            <label className="flex items-center gap-2 text-sm text-ink-secondary">
+              <input type="checkbox" checked={bool('show_venue')} onChange={(e) => set('show_venue', e.target.checked)} />
+              Ajouter en bas la carte « Lieu » (dernier lieu du programme)
+            </label>
           )}
           <p className="text-sm text-ink-secondary">
             Le programme est alimenté par l'onglet « Programme » (sous-évènements :
             dot, mairie, église, soirée), chacun avec sa date, son lieu, sa photo et son lien Maps.
+            Un invité arrivé par son lien personnel ou par un lien « par étape » (onglet Partage) ne voit que
+            les étapes auxquelles il est convié.
             En mise en page « cartes photo », la photo du lieu sert de fond à la carte et la
             première ligne de la description s'affiche comme sur-titre (ex. « Mariage civil »).
           </p>
@@ -353,9 +360,9 @@ export default function SectionContentEditor({ type, content, onChange, folder =
                     </div>
                     <div>
                       <label className="label">Récit</label>
-                      <RichTextarea value={(v.text as string) ?? ''} onChange={(t) => update({ ...v, text: t })} placeholder="Tout commence pendant les vacances de 2013…" className="min-h-40" />
+                      <RichTextarea value={(v.text as string) ?? ''} onChange={(t) => update({ ...v, text: clampWords(t, STORY_MAX_WORDS) })} placeholder="Tout commence pendant les vacances de 2013…" className="min-h-40" />
                     </div>
-                    <p className="text-xs text-ink-secondary">{((v.text as string) ?? '').length} caractères — la carte affiche les ~200 premiers ; le reste s'ouvre avec « Voir plus ».</p>
+                    <p className={`text-xs ${countWords(v.text as string) >= STORY_MAX_WORDS ? 'font-medium text-amber-700' : 'text-ink-secondary'}`}>{countWords(v.text as string)} / {STORY_MAX_WORDS} mots — la carte affiche le début ; le reste s'ouvre avec « Voir plus ».</p>
                   </div>
                 </div>
               )}

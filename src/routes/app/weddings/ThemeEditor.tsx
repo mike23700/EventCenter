@@ -8,7 +8,10 @@ import { TEMPLATE_DEFS, getTemplate } from '../../../lib/templates';
 import { storageUrl, uploadFile, deleteFile, validateAudioFile } from '../../../lib/media';
 import MediaUploader from '../../../components/MediaUploader';
 import { DEFAULT_INVITE_MESSAGE, coupleInitials, invitationTheme } from '../../../lib/invitation';
-import { AMBIENT_CHOICES, siteOptions, type IntroConfig } from '../../../lib/siteOptions';
+import { AMBIENT_CHOICES, siteOptions, type CornersConfig, type IntroConfig } from '../../../lib/siteOptions';
+import { readThemeLook, type ThemeLook } from '../../../lib/themeLook';
+import LookEditor from '../../../components/LookEditor';
+import CornersEditor from '../../../components/CornersEditor';
 
 function themeRecord(theme: Json): Record<string, unknown> {
   return theme && typeof theme === 'object' && !Array.isArray(theme)
@@ -46,7 +49,7 @@ function TemplateMiniature({ id, selected }: { id: string; selected: boolean }) 
   );
 }
 
-/** Éditeur du thème : template (4 modèles), couleur, polices. */
+/** Éditeur du thème : modèle (6), couleur, polices, fond et motif, décors des coins… */
 export default function ThemeEditor() {
   const { wedding, setWedding } = useOutletContext<{ wedding: Wedding; setWedding?: (w: Wedding) => void }>();
   const [primaryColor, setPrimaryColor] = useState<string>(
@@ -72,7 +75,8 @@ export default function ThemeEditor() {
   const [intro, setIntro] = useState<IntroConfig>(initialOpts.intro);
   const setIntroField = (patch: Partial<IntroConfig>) => setIntro((prev) => ({ ...prev, ...patch }));
   const [ambient, setAmbient] = useState<string>((themeRecord(wedding.theme)['ambient'] as string) || 'auto');
-  const [decor, setDecor] = useState<string>((themeRecord(wedding.theme)['decor'] as string) || 'auto');
+  const [corners, setCorners] = useState<CornersConfig>(initialOpts.corners);
+  const [look, setLook] = useState<ThemeLook>(readThemeLook(wedding.theme));
   const [stickyHeader, setStickyHeader] = useState<boolean>(themeRecord(wedding.theme)['stickyHeader'] === true);
   const [inviteMessage, setInviteMessage] = useState<string>(initialInv.inviteMessage.trim() || DEFAULT_INVITE_MESSAGE);
   const [ogImage, setOgImage] = useState<string>((themeRecord(wedding.theme)['ogImage'] as string) ?? '');
@@ -97,11 +101,14 @@ export default function ThemeEditor() {
     setSaving(true);
     setError('');
     setSaved(false);
+    // L'ancien réglage « Décor fleuri » (bouquets dessinés) est retiré.
+    const { decor: _oldDecor, ...previousTheme } = themeRecord(wedding.theme);
+    void _oldDecor;
     const patch = {
         template,
         audio_url: audioPath || null,
         theme: {
-          ...themeRecord(wedding.theme),
+          ...previousTheme,
           primaryColor,
           displayFont,
           bodyFont,
@@ -112,7 +119,8 @@ export default function ThemeEditor() {
           // compatibilité avec les anciens réglages d'enveloppe
           envelopeEnabled: intro.enabled && intro.mode === 'envelope',
           ambient,
-          decor,
+          corners: { ...corners },
+          look: { ...look },
           stickyHeader,
           inviteMessage: inviteMessage.trim(),
           ogImage,
@@ -461,9 +469,15 @@ export default function ThemeEditor() {
           )}
         </div>
 
-        {/* Animations et décor */}
+        {/* Fond du site : couleur et motif */}
+        <LookEditor value={look} onChange={setLook} tpl={activeTpl} />
+
+        {/* Décors des coins : images envoyées (remplacent les bouquets dessinés) */}
+        <CornersEditor value={corners} onChange={setCorners} folder={`weddings/${wedding.slug}`} />
+
+        {/* Animations */}
         <div className="space-y-4 rounded-xl border border-borderlight p-4">
-          <p className="font-medium text-ink">Animations et décor</p>
+          <p className="font-medium text-ink">Animations et bandeau</p>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="label">Animation qui tombe</label>
@@ -473,14 +487,6 @@ export default function ThemeEditor() {
                     {a.label}{a.id === 'auto' && activeTpl.ambient ? ` (${AMBIENT_CHOICES.find((x) => x.id === activeTpl.ambient?.kind)?.label.toLowerCase() ?? ''})` : a.id === 'auto' ? ' (aucune)' : ''}
                   </option>
                 ))}
-              </select>
-            </div>
-            <div>
-              <label className="label">Décor fleuri (bouquets dans les coins)</label>
-              <select className="input" value={decor} onChange={(e) => setDecor(e.target.value)}>
-                <option value="auto">Selon le modèle{activeTpl.decor === 'floral-corners' ? ' (oui)' : ' (non)'}</option>
-                <option value="floral-corners">Oui</option>
-                <option value="none">Non</option>
               </select>
             </div>
           </div>

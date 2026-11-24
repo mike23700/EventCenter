@@ -1,5 +1,5 @@
 import { useParams } from 'react-router-dom';
-import { LayoutGrid, Palette, CalendarDays, Users, Table2, Eye } from 'lucide-react';
+import { LayoutGrid, Palette, CalendarDays, Users, Table2, Eye, Share2 } from 'lucide-react';
 import WeddingConfigShell, { type ConfigTab } from '../../../components/WeddingConfigShell';
 
 const tabs: ConfigTab[] = [
@@ -7,6 +7,7 @@ const tabs: ConfigTab[] = [
   { to: 'theme', label: 'Thème', icon: Palette },
   { to: 'programme', label: 'Programme', icon: CalendarDays },
   { to: 'invites', label: 'Invités', icon: Users },
+  { to: 'partage', label: 'Partage', icon: Share2 },
   { to: 'tables', label: 'Tables', icon: Table2 },
   { to: 'apercu', label: 'Aperçu', icon: Eye },
 ];

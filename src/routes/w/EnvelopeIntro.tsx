@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { AmbientKind, TemplateDef } from '../../lib/templates';
 import AmbientPetals from './AmbientPetals';
-import FloralCorner from './FloralCorner';
+import CornerDecor from './CornerDecor';
+import { cornersAt, type CornersConfig } from '../../lib/siteOptions';
 
 export const INVITATION_OPENED_EVENT = 'etan:invitation-opened';
 
@@ -32,7 +33,7 @@ export default function EnvelopeIntro({
   customImage,
   ambient,
   ambientColors = [],
-  decor,
+  corners,
   onDone,
 }: {
   tpl: TemplateDef;
@@ -51,7 +52,8 @@ export default function EnvelopeIntro({
   customImage?: string | null;
   ambient?: AmbientKind;
   ambientColors?: string[];
-  decor?: 'floral-corners' | 'none';
+  /** Décors des coins (images du Thème). */
+  corners?: CornersConfig;
   onDone: () => void;
 }) {
   const [phase, setPhase] = useState<Phase>('closed');
@@ -120,12 +122,7 @@ export default function EnvelopeIntro({
       ) : (
         <div aria-hidden className="etan-env-dust pointer-events-none absolute inset-0" style={{ ['--dust' as string]: accent }} />
       )}
-      {decor === 'floral-corners' && (
-        <>
-          <FloralCorner accent={accent} className="absolute -bottom-2 -left-6 w-48 opacity-95 sm:w-72" />
-          <FloralCorner accent={accent} flip className="absolute -bottom-2 -right-6 w-48 opacity-95 sm:w-72" />
-        </>
-      )}
+      {corners && <CornerDecor corners={corners} {...cornersAt(corners, 'intro')} />}
 
       <div className={`relative z-10 mb-8 text-center transition-opacity duration-500 ${opening ? 'opacity-0' : 'opacity-100'}`}>
         <p className="tpl-body text-[11px] font-semibold uppercase tracking-[0.35em] sm:text-xs" style={{ color: kickerColor }}>

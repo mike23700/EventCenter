@@ -4,6 +4,7 @@ import { storageUrl } from '../../../lib/media';
 import type { SectionProps } from './types';
 import { asRecord, str } from './types';
 import { SectionShell, SectionTitle } from './shell';
+import { useTextStyle } from '../../../lib/textStyles';
 import { renderRich, stripRich } from '../../../lib/richText';
 
 /**
@@ -87,6 +88,7 @@ function VoiceRow({
   onOpen: () => void;
 }) {
   const { palette } = tpl;
+  const ts = useTextStyle();
   const { short, cut } = excerpt(voice.text);
   return (
     <div className={`flex items-start gap-3 sm:gap-6 md:gap-8 ${reversed ? 'flex-row-reverse' : ''}`}>
@@ -97,7 +99,7 @@ function VoiceRow({
         className="min-w-0 flex-1 rounded-2xl px-4 py-4 min-[400px]:px-5 min-[400px]:py-5 sm:px-7 sm:py-6"
         style={{ backgroundColor: palette.surface, border: `1px solid ${palette.border}`, boxShadow: '0 14px 34px -24px rgba(0,0,0,.35)' }}
       >
-        <p className="tpl-body text-[14px] italic leading-[1.7] [overflow-wrap:anywhere] min-[400px]:text-[14.5px] sm:text-base sm:leading-[1.75]" style={{ color: palette.text }}>
+        <p className="tpl-body text-[14px] italic leading-[1.7] [overflow-wrap:anywhere] min-[400px]:text-[14.5px] sm:text-base sm:leading-[1.75]" style={{ color: palette.text, ...ts('text') }}>
           {'«\u00a0'}{short}{cut ? '…' : ''}{'\u00a0»'}
           {cut && (
             <>
@@ -105,7 +107,7 @@ function VoiceRow({
               <button
                 onClick={onOpen}
                 className="not-italic tpl-body text-[11px] font-semibold uppercase tracking-[0.18em] underline decoration-1 underline-offset-4 transition hover:opacity-75"
-                style={{ color: accent }}
+                style={{ color: accent, ...ts('button') }}
               >
                 Voir plus
               </button>
@@ -113,12 +115,12 @@ function VoiceRow({
           )}
         </p>
         {voice.name && (
-          <p className={`mt-3 break-words font-display tpl-display text-xl leading-tight sm:mt-4 sm:text-2xl ${reversed ? 'text-left' : 'text-right'}`} style={{ color: accent }}>
+          <p className={`mt-3 break-words font-display tpl-display text-xl leading-tight sm:mt-4 sm:text-2xl ${reversed ? 'text-left' : 'text-right'}`} style={{ color: accent, ...ts('name') }}>
             — {voice.name}
           </p>
         )}
         {voice.label && (
-          <p className={`tpl-body text-[10px] uppercase tracking-[0.3em] ${reversed ? 'text-left' : 'text-right'}`} style={{ color: palette.muted }}>
+          <p className={`tpl-body text-[10px] uppercase tracking-[0.3em] ${reversed ? 'text-left' : 'text-right'}`} style={{ color: palette.muted, ...ts('label') }}>
             {voice.label}
           </p>
         )}
@@ -130,6 +132,7 @@ function VoiceRow({
 /** Récit complet : panneau qui monte du bas (mobile) ou fenêtre centrée (ordinateur). */
 function StoryReader({ voice, accent, tpl, onClose }: { voice: Voice; accent: string; tpl: SectionProps['tpl']; onClose: () => void }) {
   const { palette } = tpl;
+  const ts = useTextStyle();
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -158,8 +161,8 @@ function StoryReader({ voice, accent, tpl, onClose }: { voice: Voice; accent: st
         <header className="flex items-center gap-3 px-6 pb-4 pt-4" style={{ borderBottom: `1px solid ${palette.border}` }}>
           {voice.photo && <img src={voice.photo} alt="" className="h-10 w-10 rounded-full object-cover" />}
           <div className="min-w-0 flex-1">
-            <p className="truncate font-display tpl-display text-2xl leading-tight" style={{ color: palette.ink }}>{voice.name || 'Notre histoire'}</p>
-            {voice.label && <p className="tpl-body text-[10px] uppercase tracking-[0.3em]" style={{ color: accent }}>{voice.label}</p>}
+            <p className="truncate font-display tpl-display text-2xl leading-tight" style={{ color: palette.ink, ...ts('name') }}>{voice.name || 'Notre histoire'}</p>
+            {voice.label && <p className="tpl-body text-[10px] uppercase tracking-[0.3em]" style={{ color: accent, ...ts('label') }}>{voice.label}</p>}
           </div>
           <button
             onClick={onClose}
@@ -172,12 +175,12 @@ function StoryReader({ voice, accent, tpl, onClose }: { voice: Voice; accent: st
         </header>
         <div className="overflow-y-auto overscroll-contain px-6 pb-10 pt-5">
           {voice.text.split(/\n{2,}/).map((para, i) => (
-            <p key={i} className="mb-5 whitespace-pre-line tpl-body text-[15.5px] leading-[1.8] [overflow-wrap:anywhere] last:mb-0" style={{ color: palette.text }}>
+            <p key={i} className="mb-5 whitespace-pre-line tpl-body text-[15.5px] leading-[1.8] [overflow-wrap:anywhere] last:mb-0" style={{ color: palette.text, ...ts('text') }}>
               {renderRich(para, accent)}
             </p>
           ))}
           {voice.name && (
-            <p className="mt-6 text-right font-display tpl-display text-2xl" style={{ color: accent }}>— {voice.name}</p>
+            <p className="mt-6 text-right font-display tpl-display text-2xl" style={{ color: accent, ...ts('name') }}>— {voice.name}</p>
           )}
         </div>
       </div>
@@ -187,6 +190,7 @@ function StoryReader({ voice, accent, tpl, onClose }: { voice: Voice; accent: st
 
 function Timeline({ items, accent, tpl }: { items: Milestone[]; accent: string; tpl: SectionProps['tpl'] }) {
   const { palette } = tpl;
+  const ts = useTextStyle();
   return (
     <div className="mx-auto mt-16 max-w-2xl">
       <div className="mb-8 flex items-center justify-center gap-3" style={{ color: accent }}>
@@ -206,9 +210,9 @@ function Timeline({ items, accent, tpl }: { items: Milestone[]; accent: string; 
               <Heart className="h-3 w-3" style={{ color: accent, fill: accent }} />
             </span>
             <div className={i % 2 ? 'sm:col-start-2' : 'sm:text-right'}>
-              {m.date && <p className="tpl-body text-[11px] font-semibold uppercase tracking-[0.25em]" style={{ color: accent }}>{m.date}</p>}
-              {m.title && <p className="mt-1 font-display tpl-display text-2xl leading-snug" style={{ color: palette.ink }}>{m.title}</p>}
-              {m.text && <p className="mt-1 whitespace-pre-line tpl-body text-sm leading-relaxed" style={{ color: palette.muted }}>{m.text}</p>}
+              {m.date && <p className="tpl-body text-[11px] font-semibold uppercase tracking-[0.25em]" style={{ color: accent, ...ts('milestone_date') }}>{m.date}</p>}
+              {m.title && <p className="mt-1 font-display tpl-display text-2xl leading-snug" style={{ color: palette.ink, ...ts('milestone_title') }}>{m.title}</p>}
+              {m.text && <p className="mt-1 whitespace-pre-line tpl-body text-sm leading-relaxed" style={{ color: palette.muted, ...ts('milestone_text') }}>{m.text}</p>}
             </div>
           </li>
         ))}
@@ -221,6 +225,7 @@ export default function StorySection({ content, accent, tpl }: SectionProps) {
   const c = asRecord(content);
   const { palette } = tpl;
   const [reading, setReading] = useState<Voice | null>(null);
+  const ts = useTextStyle();
 
   const voices: Voice[] = records(c['voices'])
     .map((v) => ({ name: s(v.name), label: s(v.label), photo: storageUrl('media', s(v.photo) || null), text: s(v.text) }))
@@ -238,7 +243,7 @@ export default function StorySection({ content, accent, tpl }: SectionProps) {
       <div className="mx-auto max-w-3xl px-4 py-14 min-[400px]:px-5 sm:px-8 sm:py-20">
         <SectionTitle tpl={tpl} accent={accent}>{str(c, 'title') || 'Notre histoire'}</SectionTitle>
         {str(c, 'subtitle') && (
-          <p className="mt-3 text-center tpl-body italic" style={{ color: palette.muted }}>{str(c, 'subtitle')}</p>
+          <p className="mt-3 text-center tpl-body italic" style={{ color: palette.muted, ...ts('subtitle') }}>{str(c, 'subtitle')}</p>
         )}
 
         {couplePhoto && (
@@ -254,13 +259,13 @@ export default function StorySection({ content, accent, tpl }: SectionProps) {
               />
             </div>
             {str(c, 'photo_caption') && (
-              <figcaption className="mt-2 text-center font-display tpl-display text-lg" style={{ color: accent }}>{str(c, 'photo_caption')}</figcaption>
+              <figcaption className="mt-2 text-center font-display tpl-display text-lg" style={{ color: accent, ...ts('caption') }}>{str(c, 'photo_caption')}</figcaption>
             )}
           </figure>
         )}
 
         {intro && (
-          <p className="mx-auto mt-8 max-w-xl whitespace-pre-line text-center tpl-body leading-relaxed" style={{ color: palette.text }}>{intro}</p>
+          <p className="mx-auto mt-8 max-w-xl whitespace-pre-line text-center tpl-body leading-relaxed" style={{ color: palette.text, ...ts('intro') }}>{intro}</p>
         )}
 
         {voices.length > 0 && (

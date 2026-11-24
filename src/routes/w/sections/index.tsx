@@ -1,7 +1,9 @@
 import type { ComponentType } from 'react';
 import type { Section, WeddingEvent, Wedding } from '../../../types/database';
-import { getTemplate } from '../../../lib/templates';
-import { applySectionStyle, readSectionStyle, SectionBackgroundContext } from './sectionStyle';
+import { weddingTemplate } from '../../../lib/themeLook';
+import { readTextStyles, textStyleFontHrefs, TextStyleContext } from '../../../lib/textStyles';
+import { applySectionStyle, readSectionStyle, SectionBackgroundContext, SectionPatternContext } from './sectionStyle';
+import { asRecord } from './types';
 import Cover from './Cover';
 import Countdown from './Countdown';
 import SaveTheDate from './SaveTheDate';
@@ -58,18 +60,29 @@ export default function SectionRenderer({ section, wedding, events }: SectionRen
     : {};
   const accent = (theme['primaryColor'] as string) ?? '#C9A34A';
   // Fond de bloc (couleur / image) : modèle recoloré pour cette section.
-  const styled = section.type === 'cover'
-    ? { tpl: getTemplate(wedding.template), background: null }
-    : applySectionStyle(getTemplate(wedding.template), readSectionStyle(section.content));
+  // Couverture « photo plein écran » : le fond se règle dans Cover.tsx
+  // (la photo reste le fond, les textes restent clairs par-dessus).
+  const blockStyle = readSectionStyle(section.content);
+  const baseTpl = weddingTemplate(wedding);
+  const photoCover = section.type === 'cover' && asRecord(section.content)['layout'] !== 'paper';
+  const styled = photoCover ? { tpl: baseTpl, background: null } : applySectionStyle(baseTpl, blockStyle);
   const tpl = styled.tpl;
   const shared = { accent, tpl, wedding, sectionId: section.id };
+  // Styles des zones de texte (couleur, police, taille…) réglés dans l'éditeur.
+  const textStyles = readTextStyles(section.content);
+  const fontHrefs = textStyleFontHrefs(textStyles);
 
   if (!C) return null;
 
   // Ancre (« Réserver ma place », « Le programme »…) + fond éventuel.
   const wrap = (node: React.ReactNode) => (
     <div id={`section-${section.type}`} className="scroll-mt-16">
-      <SectionBackgroundContext.Provider value={styled.background}>{node}</SectionBackgroundContext.Provider>
+      {fontHrefs.map((href) => <link key={href} rel="stylesheet" href={href} />)}
+      <TextStyleContext.Provider value={textStyles}>
+        <SectionPatternContext.Provider value={blockStyle.bg === 'default'}>
+          <SectionBackgroundContext.Provider value={styled.background}>{node}</SectionBackgroundContext.Provider>
+        </SectionPatternContext.Provider>
+      </TextStyleContext.Provider>
     </div>
   );
 

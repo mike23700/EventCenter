@@ -10,7 +10,7 @@ import { buildInviteMessage, coupleLabel, guestRef, invitationTheme, personalInv
 /** Copier le lien personnel / l'envoyer par WhatsApp. */
 function GuestInviteActions({ wedding, guest }: { wedding: Wedding; guest: Guest }) {
   const [copied, setCopied] = useState(false);
-  const link = personalInviteUrl(wedding.slug, guest.qr_token);
+  const link = personalInviteUrl(wedding.slug, guest);
   const message = buildInviteMessage(invitationTheme(wedding.theme).inviteMessage, {
     nom: guest.name,
     couple: coupleLabel(wedding),
@@ -372,7 +372,7 @@ export default function GuestsEditor() {
     const tpl = invitationTheme(wedding.theme).inviteMessage;
     const rows = [['Nom', 'Téléphone', 'Places', 'Catégorie', 'Référence', 'Lien personnel', 'Message']];
     for (const g of filteredGuests) {
-      const link = personalInviteUrl(wedding.slug, g.qr_token);
+      const link = personalInviteUrl(wedding.slug, g);
       rows.push([
         g.name,
         g.phone ?? '',

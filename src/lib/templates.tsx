@@ -32,11 +32,10 @@ export interface TemplateDef {
   /**
    * Éléments PROPRES au modèle (les réglages, eux, sont communs à tous) :
    *  - ambient : animation d'ambiance par défaut (pétales, roses…) ;
-   *  - decor   : ornement dessiné (bouquets dans les coins…) ;
    *  - script  : police manuscrite pour les noms / signatures.
+   * (Les décors des coins sont des images envoyées par l'admin : Thème.)
    */
   ambient?: { kind: AmbientKind; colors: string[] };
-  decor?: 'floral-corners' | 'none';
   script?: string;
 }
 
@@ -179,12 +178,11 @@ export const TEMPLATE_DEFS: TemplateDef[] = [
       { bg: '#EFE1D8', accent: '#7A5444', name: 'Moka' },
     ],
     ambient: { kind: 'petals', colors: ['#E8B7B0', '#D99A92', '#F2D3CD', '#C98C84'] },
-    decor: 'none',
   },
   {
     id: 'terracotta',
     label: 'Terracotta fleuri',
-    tagline: 'Terracotta, rouille & crème, bouquets et roses qui tombent',
+    tagline: 'Terracotta, rouille & crème, roses qui tombent',
     palette: {
       background: '#FBF5EE',
       surface: '#FFFFFF',
@@ -209,7 +207,6 @@ export const TEMPLATE_DEFS: TemplateDef[] = [
       { bg: '#FFFFFF', accent: '#C9A34A', name: 'Doré' },
     ],
     ambient: { kind: 'roses', colors: ['#B8452C', '#D0613F', '#E9A07F', '#8E2F1D'] },
-    decor: 'floral-corners',
   },
 ];
 

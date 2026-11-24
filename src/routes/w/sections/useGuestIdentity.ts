@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { clearKnownGuest, saveKnownGuestToken } from './guestSession';
 import { lookupGuest, registerGuest, type PublicGuest } from '../../../lib/publicApi';
+import { usePublicWedding } from '../publicContext';
 
 export type GuestIdentity = PublicGuest;
 
@@ -20,6 +21,8 @@ export function useGuestIdentity(weddingId: string) {
   const [guest, setGuest] = useState<GuestIdentity | null>(null);
   const [registering, setRegistering] = useState(false);
   const [error, setError] = useState('');
+  // Arrivé par un lien par étape : l'inscription est limitée à ses étapes (contrôlé par le serveur).
+  const { linkCode } = usePublicWedding();
 
   function found(g: GuestIdentity) {
     setGuest(g);
@@ -51,7 +54,7 @@ export function useGuestIdentity(weddingId: string) {
     setError('');
     setRegistering(true);
     try {
-      found(await registerGuest(weddingId, { name, phone: payload.phone, invitedEvents: payload.invitedEvents ?? [], category: payload.category }));
+      found(await registerGuest(weddingId, { name, phone: payload.phone, invitedEvents: payload.invitedEvents ?? [], category: payload.category, linkCode: linkCode ?? undefined }));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Inscription impossible');
     } finally {

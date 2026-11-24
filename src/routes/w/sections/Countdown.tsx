@@ -3,6 +3,7 @@ import type { WeddingEvent } from '../../../types/database';
 import type { SectionProps } from './types';
 import { asRecord, str } from './types';
 import { SectionShell } from './shell';
+import { useTextStyle } from '../../../lib/textStyles';
 
 function diff(target: Date) {
   const ms = target.getTime() - Date.now();
@@ -28,6 +29,7 @@ export default function Countdown({ content, accent, tpl, events }: CountdownPro
   const c = asRecord(content);
   const dateStr = str(c, 'date') || events?.[0]?.date || null;
   const [, setTick] = useState(0);
+  const ts = useTextStyle();
 
   useEffect(() => {
     const t = setInterval(() => setTick((v) => v + 1), 1000);
@@ -50,21 +52,21 @@ export default function Countdown({ content, accent, tpl, events }: CountdownPro
   return (
     <SectionShell tpl={tpl} accent={accent}>
       <div className="mx-auto max-w-3xl px-6 py-16 text-center">
-        <p className="font-display tpl-display text-2xl sm:text-3xl font-bold" style={{ color: accent }}>
+        <p className="font-display tpl-display text-2xl sm:text-3xl font-bold" style={{ color: accent, ...ts('title') }}>
           Le compte à rebours
         </p>
-        <p className="mt-2 tpl-body opacity-70">Nos derniers instants avant le « oui »</p>
+        <p className="mt-2 tpl-body opacity-70" style={ts('subtitle')}>Nos derniers instants avant le « oui »</p>
         <div className="mt-10 inline-flex items-start justify-center">
           {units.map((unit, i) => (
             <div key={unit.label} className="flex items-start">
               <div className="flex flex-col items-center px-1 min-[380px]:px-1.5 sm:px-3">
                 <span
                   className="font-display tpl-display text-[2rem] font-bold leading-none min-[380px]:text-4xl sm:text-6xl"
-                  style={{ color: palette.ink, fontVariantNumeric: 'tabular-nums' }}
+                  style={{ color: palette.ink, fontVariantNumeric: 'tabular-nums', ...ts('numbers') }}
                 >
                   {pad(unit.value)}
                 </span>
-                <span className="mt-3 text-[9px] tracking-[0.12em] uppercase tpl-body min-[380px]:text-[10px] min-[380px]:tracking-[0.25em] sm:text-[11px]" style={{ color: palette.muted }}>
+                <span className="mt-3 text-[9px] tracking-[0.12em] uppercase tpl-body min-[380px]:text-[10px] min-[380px]:tracking-[0.25em] sm:text-[11px]" style={{ color: palette.muted, ...ts('labels') }}>
                   {unit.label}
                 </span>
               </div>

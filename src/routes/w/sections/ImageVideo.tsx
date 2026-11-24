@@ -1,4 +1,5 @@
 import { storageUrl } from '../../../lib/media';
+import { useTextStyle } from '../../../lib/textStyles';
 import type { SectionProps } from './types';
 import { asRecord, str } from './types';
 import { SectionShell } from './shell';
@@ -16,6 +17,7 @@ export default function ImageVideo({ content, accent, tpl }: SectionProps) {
   const image = str(c, 'image');
   const video = str(c, 'video');
   const { palette, id } = tpl;
+  const ts = useTextStyle();
   // Titre au-dessus de l'image (par défaut), par-dessus l'image, ou masqué.
   const titlePos = str(c, 'title_position') === 'over' ? 'over' : str(c, 'title_position') === 'none' ? 'none' : 'above';
   const caption = str(c, 'caption');
@@ -32,7 +34,7 @@ export default function ImageVideo({ content, accent, tpl }: SectionProps) {
         <div className="text-center">
           <h2
             className="font-display tpl-display text-3xl sm:text-4xl font-bold"
-            style={{ color: palette.ink }}
+            style={{ color: palette.ink, ...ts('title') }}
           >
             {title || 'Souvenirs'}
           </h2>
@@ -66,13 +68,13 @@ export default function ImageVideo({ content, accent, tpl }: SectionProps) {
                 frame={readFrame(c.image_frame, { style: id === 'minimal' ? 'square' : 'rounded' })}
                 overlay={titlePos === 'over' && title ? (
                   <div className="absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/70 via-black/20 to-transparent p-6 text-center">
-                    <h2 className="font-display tpl-display text-3xl font-bold text-white drop-shadow sm:text-5xl">{title}</h2>
+                    <h2 className="font-display tpl-display text-3xl font-bold text-white drop-shadow sm:text-5xl" style={ts('title')}>{title}</h2>
                   </div>
                 ) : undefined}
               />
             )}
             {caption && (
-              <p className="mt-4 whitespace-pre-line text-center tpl-body italic" style={{ color: palette.muted }}>{renderRich(caption, accent)}</p>
+              <p className="mt-4 whitespace-pre-line text-center tpl-body italic" style={{ color: palette.muted, ...ts('caption') }}>{renderRich(caption, accent)}</p>
             )}
           </div>
         )}

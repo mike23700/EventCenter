@@ -7,6 +7,7 @@ import type { SectionProps } from './types';
 import { asRecord, str } from './types';
 import { SectionShell } from './shell';
 import FramedImage from '../FramedImage';
+import { useTextStyle } from '../../../lib/textStyles';
 
 /** Lien sûr (https/http uniquement) vers la liste de cadeaux. */
 function safeUrl(raw: string | undefined): string | null {
@@ -20,10 +21,11 @@ function safeUrl(raw: string | undefined): string | null {
 }
 
 function Heading({ kicker, title, tpl, accent }: { kicker: string; title: string; tpl: SectionProps['tpl']; accent: string }) {
+  const ts = useTextStyle();
   return (
     <div className="text-center">
-      <p className="tpl-body text-[11px] font-semibold uppercase tracking-[0.35em]" style={{ color: accent }}>{kicker}</p>
-      <h2 className="mt-2 font-display tpl-display text-4xl leading-tight sm:text-5xl" style={{ color: tpl.palette.ink }}>{title}</h2>
+      <p className="tpl-body text-[11px] font-semibold uppercase tracking-[0.35em]" style={{ color: accent, ...ts('kicker') }}>{kicker}</p>
+      <h2 className="mt-2 font-display tpl-display text-4xl leading-tight sm:text-5xl" style={{ color: tpl.palette.ink, ...ts('title') }}>{title}</h2>
       <div className="mx-auto mt-3 flex w-32 items-center gap-2">
         <span className="h-px flex-1" style={{ backgroundColor: `${accent}99` }} />
         <span className="h-1.5 w-1.5 rotate-45" style={{ backgroundColor: accent }} />
@@ -45,6 +47,7 @@ export function GiftsSection({ content, accent, tpl }: SectionProps) {
   const message = str(c, 'message') ||
     "Votre présence sera pour nous le plus beau des cadeaux. Toutefois, si vous souhaitez nous témoigner votre affection d'une attention particulière, nous l'accueillerons avec beaucoup de gratitude.";
   const image = storageUrl('media', str(c, 'image') || null);
+  const ts = useTextStyle();
   return (
     <SectionShell tpl={tpl} accent={accent}>
       <div className="mx-auto max-w-xl px-5 py-16 sm:px-6">
@@ -58,14 +61,14 @@ export function GiftsSection({ content, accent, tpl }: SectionProps) {
               <FramedImage src={image} frame={readFrame(c.image_frame, { style: 'rounded', ratio: '4:3', size: 'full' })} tpl={tpl} accent={accent} />
             </div>
           )}
-          <p className="mt-5 whitespace-pre-line tpl-body leading-relaxed" style={{ color: palette.text }}>{renderRich(message, accent)}</p>
+          <p className="mt-5 whitespace-pre-line tpl-body leading-relaxed" style={{ color: palette.text, ...ts('text') }}>{renderRich(message, accent)}</p>
           {url && (
             <a
               href={url}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-7 inline-flex items-center gap-2 rounded-full px-7 py-3 tpl-body text-[11px] font-semibold uppercase tracking-[0.25em] text-white shadow-md transition hover:opacity-90"
-              style={{ backgroundColor: accent }}
+              style={{ backgroundColor: accent, ...ts('button') }}
             >
               {str(c, 'button') || 'Voir la liste de cadeaux'} <ExternalLink className="h-3.5 w-3.5" />
             </a>
@@ -85,6 +88,7 @@ export function ClosingSection({ content, accent, tpl, wedding, events = [] }: S
   const c = asRecord(content);
   const { palette } = tpl;
   const photo = storageUrl('media', str(c, 'photo') || null);
+  const ts = useTextStyle();
   const first = events.filter((e) => !e.parent_id && e.date).sort((a, b) => String(a.date).localeCompare(String(b.date)))[0];
   let date = str(c, 'date') ?? '';
   if (!date && first?.date) {
@@ -99,20 +103,20 @@ export function ClosingSection({ content, accent, tpl, wedding, events = [] }: S
         {photo && (
           <FramedImage src={photo} frame={readFrame(c.photo_frame, { style: 'soft', ratio: '3:4', size: 'md' })} tpl={tpl} accent={accent} className="mb-10" />
         )}
-        <p className="font-display tpl-display text-5xl leading-tight sm:text-6xl" style={{ color: palette.ink, fontFamily: tpl.script ?? undefined }}>
+        <p className="font-display tpl-display text-5xl leading-tight sm:text-6xl" style={{ color: palette.ink, fontFamily: tpl.script ?? undefined, ...ts('names') }}>
           {wedding.name}
           {wedding.secondary_name && <span style={{ color: accent }}> &amp; </span>}
           {wedding.secondary_name}
         </p>
         {date && (
-          <p className="mt-4 whitespace-pre tpl-body text-xs font-semibold uppercase tracking-[0.35em]" style={{ color: palette.muted }}>{date}</p>
+          <p className="mt-4 whitespace-pre tpl-body text-xs font-semibold uppercase tracking-[0.35em]" style={{ color: palette.muted, ...ts('date') }}>{date}</p>
         )}
         <div className="mx-auto mt-5 flex w-32 items-center gap-2">
           <span className="h-px flex-1" style={{ backgroundColor: `${accent}99` }} />
           <span className="h-1.5 w-1.5 rotate-45" style={{ backgroundColor: accent }} />
           <span className="h-px flex-1" style={{ backgroundColor: `${accent}99` }} />
         </div>
-        <p className="mx-auto mt-5 max-w-sm whitespace-pre-line tpl-body text-base italic leading-relaxed" style={{ color: palette.text }}>
+        <p className="mx-auto mt-5 max-w-sm whitespace-pre-line tpl-body text-base italic leading-relaxed" style={{ color: palette.text, ...ts('text') }}>
           {renderRich(str(c, 'signature') || "Avec toute l'affection de nos familles", accent)}
         </p>
       </div>

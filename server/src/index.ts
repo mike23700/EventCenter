@@ -12,6 +12,8 @@ import uploadRoutes from './routes/upload';
 import dbRoutes from './routes/db';
 import publicRoutes from './routes/public';
 import { weddingPreviewHandler } from './routes/og';
+import { shortLinkHandler, shortLinkLimit } from './routes/shortLink';
+import { backfillGuestShortCodes } from './shortCode';
 import { HttpError } from './httpError';
 import { securityHeaders, sameOriginWrites } from './security';
 import './types';
@@ -53,6 +55,10 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/db', dbRoutes);
+
+// Liens courts /i/<code> (invitation personnelle ou lien par étape).
+// Hors du bloc « front compilé » : en développement, Vite les relaie ici.
+app.get('/i/:code', shortLinkLimit, shortLinkHandler);
 
 // Fichiers uploadés : en prod, Apache sert directement public_html/uploads
 // (voir deploy/uploads.htaccess) ; ce middleware sert de filet de sécurité et
@@ -125,6 +131,8 @@ process.on('uncaughtException', (err) => {
 
 // Purge des sessions expirées : au démarrage puis toutes les 6 heures.
 purgeExpiredSessions().catch(() => {});
+// Codes courts des invités créés avant la migration 21.
+backfillGuestShortCodes().catch(() => {});
 setInterval(() => purgeExpiredSessions().catch(() => {}), 6 * 60 * 60 * 1000).unref();
 
 const port = Number(process.env.PORT ?? 4000);

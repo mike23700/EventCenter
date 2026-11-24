@@ -62,7 +62,8 @@ export type Table =
   | 'tables_plan'
   | 'table_assignments'
   | 'media'
-  | 'testimonials';
+  | 'testimonials'
+  | 'share_links';
 
 interface DirectTableDef {
   kind: 'direct';
@@ -109,6 +110,8 @@ export interface TableDef {
   immutable: string[];
   /** Références à vérifier (même mariage) à l'insert et à l'update. */
   sameWeddingRefs: SameWeddingRef[];
+  /** Colonnes tableau d'identifiants (uuid[]) : chaque élément doit appartenir au même mariage. */
+  sameWeddingArrayRefs?: SameWeddingRef[];
   location: DirectTableDef | IndirectTableDef;
 }
 
@@ -168,7 +171,7 @@ export const TABLES: Record<Table, TableDef> = {
   guests: {
     columns: [
       'id', 'wedding_id', 'name', 'phone', 'plus_ones', 'invited_events',
-      'response', 'qr_token', 'checked_in_at', 'checked_in_by', 'category', 'created_at',
+      'response', 'qr_token', 'checked_in_at', 'checked_in_by', 'category', 'short_code', 'created_at',
     ],
     jsonColumns: ['response'],
     // Plus AUCUNE lecture/écriture anonyme : le site public passe par
@@ -177,7 +180,7 @@ export const TABLES: Record<Table, TableDef> = {
     anonRead: false,
     anonInsert: false,
     ownerWrite: true,
-    immutable: ['id', 'wedding_id', 'qr_token'],
+    immutable: ['id', 'wedding_id', 'qr_token', 'short_code'],
     sameWeddingRefs: [],
     location: { kind: 'direct', weddingIdColumn: 'wedding_id' },
   },
@@ -249,6 +252,20 @@ export const TABLES: Record<Table, TableDef> = {
     ownerWrite: true,
     immutable: ['id', 'wedding_id'],
     sameWeddingRefs: [{ column: 'guest_id', table: 'guests' }],
+    location: { kind: 'direct', weddingIdColumn: 'wedding_id' },
+  },
+  // Liens de partage « par étape » (migration 21) : gérés par l'admin et le
+  // couple. Jamais lus directement par le public : le site passe par
+  // /api/public/link/resolve, qui ne renvoie que les étapes concernées.
+  share_links: {
+    columns: ['id', 'wedding_id', 'code', 'label', 'event_ids', 'message', 'created_at'],
+    jsonColumns: [],
+    anonRead: false,
+    anonInsert: false,
+    ownerWrite: true,
+    immutable: ['id', 'wedding_id', 'code'],
+    sameWeddingRefs: [],
+    sameWeddingArrayRefs: [{ column: 'event_ids', table: 'wedding_events' }],
     location: { kind: 'direct', weddingIdColumn: 'wedding_id' },
   },
 };
@@ -336,6 +353,16 @@ export async function refBelongsToWedding(table: SameWeddingRef['table'], id: un
   if (typeof id !== 'string') return false;
   const { rows } = await pool.query(`select 1 from ${table} where id = $1 and wedding_id = $2`, [id, weddingId]);
   return rows.length > 0;
+}
+
+/** Vérifie que tous les identifiants d'un tableau appartiennent au mariage `weddingId`. */
+export async function refsBelongToWedding(table: SameWeddingRef['table'], ids: unknown, weddingId: string): Promise<boolean> {
+  if (ids === null || ids === undefined) return true;
+  if (!Array.isArray(ids) || ids.length > 200 || !ids.every((x) => typeof x === 'string')) return false;
+  if (ids.length === 0) return true;
+  const unique = Array.from(new Set(ids as string[]));
+  const { rows } = await pool.query(`select count(*)::int as n from ${table} where wedding_id = $1 and id::text = any($2::text[])`, [weddingId, unique]);
+  return rows[0]?.n === unique.length;
 }
 
 /** Slug d'un mariage (contrôle des dossiers d'upload). */

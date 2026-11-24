@@ -69,6 +69,8 @@ export const TEMPLATES = [
   { id: 'royal', label: 'Royal or' },
   { id: 'minimal', label: 'Minimal épuré' },
   { id: 'africain', label: 'Héritage africain' },
+  { id: 'ivoire', label: 'Ivoire & Rose' },
+  { id: 'terracotta', label: 'Terracotta fleuri' },
 ] as const;
 
 /** Polices "titre" (noms des mariés, titres de section) — style mariage. */

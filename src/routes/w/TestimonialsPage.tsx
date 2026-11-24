@@ -6,10 +6,13 @@ import type { Testimonial } from '../../types/database';
 import { useWeddingBySlug } from './useWeddingBySlug';
 import WeddingThemeShell from './WeddingThemeShell';
 import TestimonialForm from './sections/TestimonialForm';
-import { getTemplate } from '../../lib/templates';
+import { weddingTemplate } from '../../lib/themeLook';
+import { readTextStyles, textStyleCss, textStyleFontHrefs, TextStyleContext } from '../../lib/textStyles';
+import TestimonialSlides from './TestimonialSlides';
 
 /**
- * Page dédiée listant tous les témoignages validés : /w/:slug/temoignages.
+ * Page dédiée : tous les témoignages validés en diaporama horizontal
+ * (/w/:slug/temoignages), avec les styles de texte de la section Livre d'or.
  * Accessible depuis le bouton « Voir tous les témoignages » du site
  * principal ou directement via le QR code généré côté client/admin.
  */
@@ -72,15 +75,19 @@ export default function TestimonialsPage() {
     );
   }
 
-  const tpl = getTemplate(wedding.template);
+  const tpl = weddingTemplate(wedding);
   const { palette } = tpl;
   const accent = (wedding.theme && typeof wedding.theme === 'object'
     ? (wedding.theme as Record<string, unknown>)['primaryColor'] as string
     : undefined) ?? palette.accent;
 
+  const textStyles = readTextStyles(section);
+
   return (
     <WeddingThemeShell wedding={wedding}>
-      <div className="mx-auto max-w-2xl px-6 py-14">
+      <TextStyleContext.Provider value={textStyles}>
+      {textStyleFontHrefs(textStyles).map((href) => <link key={href} rel="stylesheet" href={href} />)}
+      <div className="mx-auto max-w-2xl px-6 pt-14">
         <Link
           to={`/w/${wedding.slug}`}
           className="inline-flex items-center gap-2 text-sm tpl-body"
@@ -91,10 +98,10 @@ export default function TestimonialsPage() {
 
         <div className="mt-6 text-center">
           <MessageCircleHeart className="mx-auto h-6 w-6" style={{ color: accent }} />
-          <h1 className="mt-2 font-display tpl-display text-3xl sm:text-4xl font-bold" style={{ color: palette.ink }}>
+          <h1 className="mt-2 font-display tpl-display text-3xl sm:text-4xl font-bold" style={{ color: palette.ink, ...textStyleCss(textStyles.title) }}>
             {title}
           </h1>
-          <p className="mt-2 tpl-body" style={{ color: palette.muted }}>
+          <p className="mt-2 tpl-body" style={{ color: palette.muted, ...textStyleCss(textStyles.subtitle) }}>
             {intro}
           </p>
         </div>
@@ -109,25 +116,23 @@ export default function TestimonialsPage() {
           />
         </div>
 
+      </div>
+
+      <div className="mx-auto max-w-5xl pb-14 pt-10">
         {items.length === 0 ? (
-          <p className="mt-10 text-center text-sm tpl-body" style={{ color: palette.muted }}>
+          <p className="text-center text-sm tpl-body" style={{ color: palette.muted }}>
             Aucun témoignage publié pour l'instant.
           </p>
         ) : (
-          <div className="mt-10 space-y-4">
-            {items.map((t) => (
-              <div key={t.id} className="rounded-2xl p-5" style={{ backgroundColor: palette.accentSoft }}>
-                <p className="whitespace-pre-line tpl-body italic" style={{ color: palette.ink }}>“{t.content}”</p>
-                {t.author && (
-                  <p className="mt-2 text-right text-xs font-medium uppercase tracking-wide" style={{ color: accent }}>
-                    — {t.author}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
+          <>
+            <p className="mb-4 text-center tpl-body text-xs uppercase tracking-[0.25em]" style={{ color: palette.muted }}>
+              {items.length} message{items.length > 1 ? 's' : ''} — faites glisser
+            </p>
+            <TestimonialSlides items={items} tpl={tpl} accent={accent} label={title as string} />
+          </>
         )}
       </div>
+      </TextStyleContext.Provider>
     </WeddingThemeShell>
   );
 }

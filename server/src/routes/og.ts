@@ -1,6 +1,7 @@
 import fs from 'fs';
 import type { Request, Response, NextFunction } from 'express';
 import { pool } from '../db';
+import { GUEST_CODE_RE, LINK_CODE_RE } from '../shortCode';
 
 /**
  * Aperçu des liens partagés (WhatsApp, Facebook, SMS…) pour /w/:slug.
@@ -8,8 +9,9 @@ import { pool } from '../db';
  * Le front est une application React (SPA) : les robots d'aperçu ne
  * l'exécutent pas et ne voient que index.html. On injecte donc côté serveur,
  * dans index.html, le titre, la description et la photo de couverture du
- * mariage (balises Open Graph). Avec un lien personnel (?i=<qr_token>),
- * l'aperçu s'adresse à l'invité par son prénom.
+ * mariage (balises Open Graph). Avec un lien personnel (?i=<qr_token> ou
+ * ?i=<code court>), l'aperçu s'adresse à l'invité par son prénom ; avec un
+ * lien par étape (?l=<code>), il cite les étapes auxquelles on est convié.
  */
 
 const ACCESSIBLE = `
@@ -98,9 +100,27 @@ export function weddingPreviewHandler(indexPath: string) {
         ? `${dateLabel}. Vous êtes invité(e) : ouvrez votre invitation.`
         : 'Vous êtes invité(e) : ouvrez votre invitation.';
 
+      const linkCode = typeof req.query.l === 'string' ? req.query.l : '';
+      if (LINK_CODE_RE.test(linkCode)) {
+        const { rows: le } = await pool.query(
+          `select e.name from share_links l join wedding_events e on e.id = any(l.event_ids) and e.wedding_id = l.wedding_id
+            where l.wedding_id = $1 and l.code = $2 order by e.position`,
+          [w.id, linkCode],
+        );
+        if (le.length > 0) {
+          const names = le.map((r: { name: string }) => String(r.name));
+          const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} et ${names[names.length - 1]}` : names[0];
+          description = `${dateLabel ? `${dateLabel}. ` : ''}Vous êtes invité(e) : ${list}. Ouvrez votre invitation.`;
+        }
+      }
+
       const token = typeof req.query.i === 'string' ? req.query.i : '';
-      if (UUID_RE.test(token)) {
-        const { rows: g } = await pool.query('select name from guests where wedding_id = $1 and qr_token = $2 limit 1', [w.id, token]);
+      const byUuid = UUID_RE.test(token);
+      if (byUuid || GUEST_CODE_RE.test(token)) {
+        const { rows: g } = await pool.query(
+          `select name from guests where wedding_id = $1 and ${byUuid ? 'qr_token = $2::uuid' : 'short_code = $2'} limit 1`,
+          [w.id, token],
+        );
         if (g[0]?.name) {
           const first = String(g[0].name).trim().split(/\s+/)[0];
           title = `${first}, vous êtes invité(e) au mariage de ${couple}`;

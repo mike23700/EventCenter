@@ -1,9 +1,10 @@
 import { useParams } from 'react-router-dom';
-import { Eye, Users, Table2, ClipboardList, Image as ImageIcon, ScanLine } from 'lucide-react';
+import { Eye, Users, Table2, ClipboardList, Image as ImageIcon, ScanLine, Share2 } from 'lucide-react';
 import WeddingConfigShell, { type ConfigTab } from '../../../components/WeddingConfigShell';
 
 const tabs: ConfigTab[] = [
   { to: 'invites', label: 'Invités', icon: Users },
+  { to: 'partage', label: 'Partage', icon: Share2 },
   { to: 'tables', label: 'Tables', icon: Table2 },
   { to: 'checkin', label: 'Entrée', icon: ScanLine },
   { to: 'reponses', label: 'Réponses', icon: ClipboardList },

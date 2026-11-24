@@ -92,6 +92,20 @@ export interface Guest {
   checked_in_at: string | null;
   checked_in_by: string | null;
   category?: string | null;
+  /** Code du lien court /i/<code> (migration 21). */
+  short_code?: string | null;
+  created_at: string;
+}
+
+/** Lien de partage « par étape » (migration 21) : /i/<code>. */
+export interface ShareLink {
+  id: string;
+  wedding_id: string;
+  code: string;
+  label: string;
+  /** Étapes du programme concernées ; vide = tout le programme. */
+  event_ids: string[];
+  message: string | null;
   created_at: string;
 }
 

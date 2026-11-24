@@ -7,7 +7,7 @@ import type { Media } from '../../types/database';
 import { useWeddingBySlug } from './useWeddingBySlug';
 import WeddingThemeShell from './WeddingThemeShell';
 import GalleryUploadButton from './sections/GalleryUploadButton';
-import { getTemplate } from '../../lib/templates';
+import { weddingTemplate } from '../../lib/themeLook';
 import Lightbox from './Lightbox';
 
 /**
@@ -53,7 +53,7 @@ export default function GalleryPage() {
     );
   }
 
-  const tpl = getTemplate(wedding.template);
+  const tpl = weddingTemplate(wedding);
   const { palette } = tpl;
   const accent = (wedding.theme && typeof wedding.theme === 'object'
     ? (wedding.theme as Record<string, unknown>)['primaryColor'] as string

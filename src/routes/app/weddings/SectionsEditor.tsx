@@ -5,6 +5,7 @@ import { db } from '../../../lib/db';
 import type { Wedding, Section, Json, SectionType } from '../../../types/database';
 import SectionContentEditor from './SectionContentEditor';
 import SectionStyleEditor from './SectionStyleEditor';
+import TextStylesEditor from './TextStylesEditor';
 
 const SECTION_LABELS: Record<string, string> = {
   cover: 'Photo de couverture',
@@ -246,15 +247,23 @@ export default function SectionsEditor() {
                   folder={`weddings/${wedding.slug}`}
                   onChange={(content) => setSections((prev) => prev.map((s) => (s.id === section.id ? { ...s, content } : s)))}
                 />
-                {section.type !== 'cover' && (
-                  <SectionStyleEditor
-                    content={section.content}
-                    folder={`weddings/${wedding.slug}`}
-                    onChange={(style) => setSections((prev) => prev.map((s) => (s.id === section.id
-                      ? { ...s, content: { ...(s.content && typeof s.content === 'object' && !Array.isArray(s.content) ? s.content : {}), style } as unknown as Json }
-                      : s)))}
-                  />
-                )}
+                <SectionStyleEditor
+                  content={section.content}
+                  folder={`weddings/${wedding.slug}`}
+                  note={section.type === 'cover'
+                    ? "Mise en page « photo plein écran » : la couleur sert de fond quand il n'y a pas de photo, l'image remplace une photo absente et le voile règle l'assombrissement. Mise en page « faire-part » : comme les autres sections."
+                    : undefined}
+                  onChange={(style) => setSections((prev) => prev.map((s) => (s.id === section.id
+                    ? { ...s, content: { ...(s.content && typeof s.content === 'object' && !Array.isArray(s.content) ? s.content : {}), style } as unknown as Json }
+                    : s)))}
+                />
+                <TextStylesEditor
+                  type={section.type}
+                  content={section.content}
+                  onChange={(text_styles) => setSections((prev) => prev.map((s) => (s.id === section.id
+                    ? { ...s, content: { ...(s.content && typeof s.content === 'object' && !Array.isArray(s.content) ? s.content : {}), text_styles } as unknown as Json }
+                    : s)))}
+                />
                 <button onClick={() => saveContent(section, section.content)} disabled={saving} className="btn-primary">
                   <Check className="h-4 w-4" />
                   {saving ? 'Enregistrement…' : 'Enregistrer le contenu'}

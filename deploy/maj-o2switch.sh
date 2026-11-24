@@ -7,7 +7,7 @@
 #
 #     cd ~/maj && bash maj-o2switch.sh
 #
-# Étapes : sauvegardes (base + code) → migrations SQL 18, 19 et 20 → remplace le
+# Étapes : sauvegardes (base + code) → migrations SQL 18 à 21 → remplace le
 # site et l'API → contrôle les variables de l'application → installe les
 # dépendances → redémarre → vérifie que tout répond.
 # Le script s'arrête à la première erreur.
@@ -96,7 +96,7 @@ ok "Code : code-$STAMP.zip"
 # ---------------------------------------------------------------------
 say "2/8 Migrations SQL"
 rm -rf "$MAJ/sql" && mkdir -p "$MAJ/sql" && unzip -o -q "$MAJ/3-sql.zip" -d "$MAJ/sql"
-for m in 18_invitation_personnalisee 19_securite_performances 20_modeles_reservation; do
+for m in 18_invitation_personnalisee 19_securite_performances 20_modeles_reservation 21_liens_partage; do
   psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -f "$MAJ/sql/$m.sql" >/dev/null 2>"$MAJ/sql/$m.log" \
     || { cat "$MAJ/sql/$m.log"; die "Migration $m en erreur (rien n'a été remplacé ; sauvegardes dans $BACKUP)."; }
   ok "$m"

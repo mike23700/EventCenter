@@ -16,6 +16,8 @@ export default defineConfig({
     proxy: {
       '/api': { target: 'http://localhost:4000', changeOrigin: false, xfwd: true },
       '/uploads': { target: 'http://localhost:4000', changeOrigin: false },
+      // Liens courts /i/<code> : redirection faite par l'API (server/src/routes/shortLink.ts).
+      '^/i/[A-Za-z0-9]+$': { target: 'http://localhost:4000', changeOrigin: false },
     },
   },
 });

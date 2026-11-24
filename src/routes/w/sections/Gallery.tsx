@@ -4,6 +4,7 @@ import type { SectionProps } from './types';
 import { asRecord, str } from './types';
 import { SectionShell } from './shell';
 import GalleryUploadButton from './GalleryUploadButton';
+import { useTextStyle } from '../../../lib/textStyles';
 
 /**
  * Section « Galerie » : teaser sur le site principal — aucun média affiché
@@ -16,15 +17,16 @@ export default function Gallery({ content, accent, tpl, wedding }: SectionProps)
   const title = str(c, 'title') || 'Galerie';
   const intro = str(c, 'intro') || "Photos et vidéos de l'évènement — ajoutez les vôtres !";
   const { palette } = tpl;
+  const ts = useTextStyle();
 
   return (
     <SectionShell tpl={tpl} accent={accent}>
       <div className="mx-auto max-w-3xl px-6 py-16 text-center">
         <ImageIcon className="mx-auto h-6 w-6" style={{ color: accent }} />
-        <h2 className="mt-2 font-display tpl-display text-3xl sm:text-4xl font-bold" style={{ color: palette.ink }}>
+        <h2 className="mt-2 font-display tpl-display text-3xl sm:text-4xl font-bold" style={{ color: palette.ink, ...ts('title') }}>
           {title}
         </h2>
-        <p className="mt-2 tpl-body" style={{ color: palette.muted }}>{intro}</p>
+        <p className="mt-2 tpl-body" style={{ color: palette.muted, ...ts('subtitle') }}>{intro}</p>
 
         <div className="mt-8 flex flex-col items-center gap-4">
           <GalleryUploadButton weddingId={wedding.id} weddingSlug={wedding.slug} accent={accent} />
@@ -32,7 +34,7 @@ export default function Gallery({ content, accent, tpl, wedding }: SectionProps)
           <Link
             to={`/w/${wedding.slug}/galerie`}
             className="inline-flex items-center gap-2 rounded-full border px-6 py-2.5 text-sm font-medium transition hover:opacity-75"
-            style={{ borderColor: accent, color: accent }}
+            style={{ borderColor: accent, color: accent, ...ts('button') }}
           >
             Voir la galerie
             <ArrowRight className="h-4 w-4" />

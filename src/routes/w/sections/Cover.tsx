@@ -6,8 +6,12 @@ import type { SectionProps } from './types';
 import { asRecord, str, bool } from './types';
 import { Flower, Feather } from '../../../lib/templates';
 import FramedImage from '../FramedImage';
-import FloralCorner from '../FloralCorner';
-import { siteOptions } from '../../../lib/siteOptions';
+import CornerDecor from '../CornerDecor';
+import { cornersAt, siteOptions } from '../../../lib/siteOptions';
+import { useTextStyle } from '../../../lib/textStyles';
+import { readSectionStyle, SectionBackgroundContext, SectionPatternContext } from './sectionStyle';
+import { PATTERN_STYLE } from './shell';
+import { useContext } from 'react';
 
 /**
  * Section « cover » : couverture du site.
@@ -15,7 +19,8 @@ import { siteOptions } from '../../../lib/siteOptions';
  *  - layout « paper » : page claire façon faire-part, noms calligraphiés,
  *    photo encadrée en dessous (facultative).
  * Options communes : phrase des familles, bloc date « jour | 18 | mois »,
- * résumé des horaires, boutons « Réserver ma place » / « Le programme ».
+ * résumé des horaires, boutons « Réserver ma place » / « Le programme »,
+ * décors des coins (images du Thème), apparence du bloc et style des textes.
  */
 
 interface CoverProps extends SectionProps {
@@ -77,13 +82,31 @@ export default function Cover({ content, wedding, accent, tpl, events = [] }: Co
     );
   }
 
+  // Apparence du bloc (mise en page photo) : couleur = fond sans photo ;
+  // image = remplace la photo absente ; le voile règle l'assombrissement.
+  const block = readSectionStyle(content);
+  const blockImage = block.bg === 'image' ? storageUrl('media', block.image || null) : null;
   const media = showVideo && video ? (
     <video className="absolute inset-0 h-full w-full object-cover" src={storageUrl('covers', video) ?? video} autoPlay muted loop playsInline />
   ) : coverImage ? (
     <img src={storageUrl('covers', coverImage) ?? coverImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
+  ) : blockImage ? (
+    <img src={blockImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
   ) : null;
 
-  return <CoverShell accent={accent} wedding={wedding} tpl={tpl} date={str(c, 'date')} media={media} showNames={showNames} extras={extras} />;
+  return (
+    <CoverShell
+      accent={accent}
+      wedding={wedding}
+      tpl={tpl}
+      date={str(c, 'date')}
+      media={media}
+      showNames={showNames}
+      extras={extras}
+      bgColor={block.bg === 'color' ? block.color : null}
+      overlay={block.bg === 'default' ? 60 : block.overlay}
+    />
+  );
 }
 
 interface Extras {
@@ -96,27 +119,28 @@ interface Extras {
 
 /** Phrase des familles, bloc date, horaires et boutons (communs aux deux mises en page). */
 function CoverExtras({ extras, accent, ink, muted, line, onDark }: { extras: Extras; accent: string; ink: string; muted: string; line: string; onDark?: boolean }) {
+  const ts = useTextStyle();
   const d = extras.dateIso ? new Date(extras.dateIso) : null;
   const valid = d && !Number.isNaN(d.getTime());
   return (
     <>
       {extras.tagline && (
-        <p className="mx-auto mt-5 max-w-md whitespace-pre-line tpl-body text-base italic leading-relaxed sm:text-lg" style={{ color: muted }}>
+        <p className="mx-auto mt-5 max-w-md whitespace-pre-line tpl-body text-base italic leading-relaxed sm:text-lg" style={{ color: muted, ...ts('tagline') }}>
           {renderRich(extras.tagline, accent)}
         </p>
       )}
       {valid && d && (
-        <div className="mx-auto mt-7 w-full max-w-sm">
+        <div className="mx-auto mt-7 w-full max-w-sm" style={ts('date_block')}>
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-            <span className="border-y py-1.5 tpl-body text-[11px] uppercase tracking-[0.3em] sm:text-xs" style={{ borderColor: line, color: ink }}>{DAYS[d.getDay()]}</span>
-            <span className="font-display tpl-display text-5xl leading-none sm:text-6xl" style={{ color: accent }}>{d.getDate()}</span>
-            <span className="border-y py-1.5 tpl-body text-[11px] uppercase tracking-[0.3em] sm:text-xs" style={{ borderColor: line, color: ink }}>{MONTHS[d.getMonth()]}</span>
+            <span className="border-y py-1.5 tpl-body text-[11px] uppercase tracking-[0.3em] sm:text-xs" style={{ borderColor: line, color: ink, ...ts('date_block'), fontSize: undefined }}>{DAYS[d.getDay()]}</span>
+            <span className="font-display tpl-display text-5xl leading-none sm:text-6xl" style={{ color: accent, fontFamily: ts('date_block').fontFamily }}>{d.getDate()}</span>
+            <span className="border-y py-1.5 tpl-body text-[11px] uppercase tracking-[0.3em] sm:text-xs" style={{ borderColor: line, color: ink, ...ts('date_block'), fontSize: undefined }}>{MONTHS[d.getMonth()]}</span>
           </div>
           <p className="mt-2 tpl-body text-xs tracking-[0.5em]" style={{ color: muted }}>{d.getFullYear()}</p>
         </div>
       )}
       {extras.schedule && (
-        <p className="mx-auto mt-5 max-w-md tpl-body text-[11px] font-semibold uppercase leading-relaxed tracking-[0.2em] sm:text-xs" style={{ color: accent }}>
+        <p className="mx-auto mt-5 max-w-md tpl-body text-[11px] font-semibold uppercase leading-relaxed tracking-[0.2em] sm:text-xs" style={{ color: accent, ...ts('schedule') }}>
           {extras.schedule}
         </p>
       )}
@@ -127,7 +151,7 @@ function CoverExtras({ extras, accent, ink, muted, line, onDark }: { extras: Ext
               type="button"
               onClick={() => scrollToSection('rsvp')}
               className="min-w-[13rem] rounded-full px-7 py-3 tpl-body text-[11px] font-semibold uppercase tracking-[0.25em] text-white shadow-lg transition hover:opacity-90"
-              style={{ backgroundColor: accent }}
+              style={{ backgroundColor: accent, ...ts('button') }}
             >
               {extras.btnRsvp}
             </button>
@@ -137,7 +161,7 @@ function CoverExtras({ extras, accent, ink, muted, line, onDark }: { extras: Ext
               type="button"
               onClick={() => scrollToSection('program')}
               className="min-w-[13rem] rounded-full border px-7 py-3 tpl-body text-[11px] font-semibold uppercase tracking-[0.25em] transition hover:opacity-80"
-              style={{ borderColor: onDark ? '#ffffffaa' : `${accent}99`, color: onDark ? '#fff' : accent }}
+              style={{ borderColor: onDark ? '#ffffffaa' : `${accent}99`, color: onDark ? '#fff' : accent, ...ts('button') }}
             >
               {extras.btnProgram}
             </button>
@@ -170,20 +194,29 @@ function PaperCover({
   const { palette } = tpl;
   const opts = siteOptions((wedding as unknown as { theme?: Json }).theme ?? null, tpl);
   const script = tpl.script ?? undefined;
+  const ts = useTextStyle();
+  const shown = cornersAt(opts.corners, 'cover');
+  // Apparence du bloc (fond image) et motif du Thème, comme les autres sections.
+  const bg = useContext(SectionBackgroundContext);
+  const pattern = useContext(SectionPatternContext);
   return (
-    <header className={`relative overflow-hidden px-5 pb-16 text-center ${opts.decor === 'floral-corners' ? 'pt-32 sm:pt-36' : 'pt-20 sm:pt-24'}`} style={{ backgroundColor: palette.background, color: palette.text }}>
-      {opts.decor === 'floral-corners' && (
+    <header
+      className={`relative isolate overflow-hidden px-5 pb-16 text-center ${shown.top ? 'pt-32 sm:pt-44' : 'pt-20 sm:pt-24'}`}
+      style={{ backgroundColor: palette.background, color: palette.text, ...(pattern && !bg ? PATTERN_STYLE : {}) }}
+    >
+      {bg?.image && (
         <>
-          <FloralCorner accent={accent} className="absolute -left-10 -top-8 w-44 rotate-180 sm:w-64" flip />
-          <FloralCorner accent={accent} className="absolute -right-10 -top-8 w-44 rotate-180 sm:w-64" />
+          <img src={bg.image} alt="" aria-hidden decoding="async" className="absolute inset-0 -z-10 h-full w-full object-cover" />
+          <div aria-hidden className="absolute inset-0 -z-10" style={{ backgroundColor: bg.overlayColor, opacity: bg.overlay / 100 }} />
         </>
       )}
-      <div className="relative mx-auto max-w-2xl">
-        <p className="tpl-body text-[11px] font-semibold uppercase tracking-[0.35em] sm:text-xs" style={{ color: palette.muted }}>
+      <CornerDecor corners={opts.corners} {...shown} />
+      <div className="relative z-[2] mx-auto max-w-2xl">
+        <p className="tpl-body text-[11px] font-semibold uppercase tracking-[0.35em] sm:text-xs" style={{ color: palette.muted, ...ts('kicker') }}>
           {str(c, 'kicker') || 'Invitation au mariage de'}
         </p>
         {showNames && (
-          <h1 className="mt-4 font-display tpl-display text-5xl leading-[1.05] sm:text-7xl" style={{ color: palette.ink, fontFamily: script }}>
+          <h1 className="mt-4 font-display tpl-display text-5xl leading-[1.05] sm:text-7xl" style={{ color: palette.ink, fontFamily: script, ...ts('names') }}>
             {wedding.name}
             {wedding.secondary_name && (
               <>
@@ -199,7 +232,7 @@ function PaperCover({
           <span className="h-px flex-1" style={{ backgroundColor: `${accent}99` }} />
         </div>
         {date && !extras.dateIso && (
-          <p className="mt-4 tpl-body text-xs font-medium uppercase tracking-[0.3em] sm:text-sm" style={{ color: palette.text }}>{date}</p>
+          <p className="mt-4 tpl-body text-xs font-medium uppercase tracking-[0.3em] sm:text-sm" style={{ color: palette.text, ...ts('date') }}>{date}</p>
         )}
         <CoverExtras extras={extras} accent={accent} ink={palette.ink} muted={palette.muted} line={palette.border} />
         {photo && (
@@ -220,30 +253,40 @@ function CoverShell({
   media,
   showNames,
   extras,
+  bgColor,
+  overlay,
 }: {
   accent: string;
-  wedding: { name: string; secondary_name: string | null; logo: string | null };
+  wedding: SectionProps['wedding'];
   tpl: SectionProps['tpl'];
   date?: string;
   media: React.ReactNode;
   showNames: boolean;
   extras: Extras;
+  /** Apparence du bloc : couleur de fond (sans photo). */
+  bgColor: string | null;
+  /** Assombrissement de la photo, en %. */
+  overlay: number;
 }) {
   const logoUrl = storageUrl('logos', wedding.logo);
   const { palette, id } = tpl;
   const hasExtras = !!(extras.tagline || extras.dateIso || extras.schedule || extras.btnRsvp || extras.btnProgram);
+  const ts = useTextStyle();
+  const opts = siteOptions((wedding as unknown as { theme?: Json }).theme ?? null, tpl);
+  const shown = cornersAt(opts.corners, 'cover');
 
   return (
     <header
       className="relative flex min-h-[75vh] items-center justify-center overflow-hidden text-center"
-      style={{ backgroundColor: palette.ink, color: palette.surface }}
+      style={{ backgroundColor: bgColor ?? palette.ink, color: palette.surface }}
     >
-      {media ? (
-        <div className="absolute inset-0 bg-black/60" />
-      ) : (
-        <div className="absolute inset-0 opacity-[0.08]" style={{ backgroundColor: palette.accent }} />
-      )}
       {media}
+      {media ? (
+        <div className="absolute inset-0 bg-black" style={{ opacity: overlay / 100 }} />
+      ) : !bgColor ? (
+        <div className="absolute inset-0 opacity-[0.08]" style={{ backgroundColor: palette.accent }} />
+      ) : null}
+      <CornerDecor corners={opts.corners} {...shown} />
 
       {/* Ornements spécifiques au template */}
       {id === 'florale' && (
@@ -287,10 +330,10 @@ function CoverShell({
                   </div>
                 )}
 
-                <h1 className="font-display tpl-display text-5xl font-bold leading-tight sm:text-7xl" style={{ color: accent, fontFamily: tpl.script ?? undefined }}>
+                <h1 className="font-display tpl-display text-5xl font-bold leading-tight sm:text-7xl" style={{ color: accent, fontFamily: tpl.script ?? undefined, ...ts('names') }}>
                   {wedding.name}
                   {wedding.secondary_name && (
-                    <span className="mt-3 block text-5xl sm:text-7xl" style={{ color: accent }}>
+                    <span className="mt-3 block text-5xl sm:text-7xl" style={{ color: accent, ...ts('names') }}>
                       &amp; {wedding.secondary_name}
                     </span>
                   )}
@@ -299,7 +342,7 @@ function CoverShell({
             )}
 
             {date && !extras.dateIso && (
-              <p className="mt-6 text-sm tracking-widest uppercase tpl-body" style={{ color: media ? '#f3ece2' : palette.muted }}>
+              <p className="mt-6 text-sm tracking-widest uppercase tpl-body" style={{ color: media ? '#f3ece2' : palette.muted, ...ts('date') }}>
                 {date}
               </p>
             )}

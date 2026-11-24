@@ -12,10 +12,13 @@ export default function SectionStyleEditor({
   content,
   onChange,
   folder,
+  note,
 }: {
   content: unknown;
   onChange: (style: SectionStyle) => void;
   folder: string;
+  /** Précision propre à la section (ex. couverture). */
+  note?: string;
 }) {
   const st = readSectionStyle(content);
   const [open, setOpen] = useState(st.bg !== 'default');
@@ -35,6 +38,7 @@ export default function SectionStyleEditor({
       </button>
       {open && (
         <div className="space-y-4 border-t border-borderlight px-4 py-4">
+          {note && <p className="text-xs text-ink-secondary">{note}</p>}
           <div className="flex flex-wrap gap-2">
             <button type="button" className={chip(st.bg === 'default')} onClick={() => set({ bg: 'default' })}>Fond du modèle</button>
             <button type="button" className={chip(st.bg === 'color')} onClick={() => set({ bg: 'color' })}>Couleur unie</button>

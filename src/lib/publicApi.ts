@@ -13,6 +13,14 @@ export interface PublicGuest {
   invited_events: string[];
   qr_token: string;
   category?: string | null;
+  short_code?: string | null;
+}
+
+/** Lien de partage par étape ouvert par le visiteur (/i/<code> → ?l=<code>). */
+export interface PublicShareLink {
+  code: string;
+  /** Étapes visibles ; vide = tout le programme. */
+  event_ids: string[];
 }
 
 export interface RsvpGauge {
@@ -56,7 +64,12 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return json.data as T;
 }
 
-/** Invité correspondant à un jeton personnel (null si inconnu). */
+/** Étapes d'un lien de partage (null si le code est inconnu). */
+export function resolveShareLink(weddingId: string, code: string): Promise<PublicShareLink | null> {
+  return post('/link/resolve', { weddingId, code });
+}
+
+/** Invité correspondant à un jeton personnel ou à un code court (null si inconnu). */
 export function resolveGuest(weddingId: string, token: string): Promise<PublicGuest | null> {
   return post('/guest/resolve', { weddingId, token });
 }
@@ -68,7 +81,7 @@ export function lookupGuest(weddingId: string, name: string, phone: string): Pro
 
 export function registerGuest(
   weddingId: string,
-  payload: { name: string; phone: string; invitedEvents: string[]; category?: string },
+  payload: { name: string; phone: string; invitedEvents: string[]; category?: string; linkCode?: string },
 ): Promise<PublicGuest> {
   return post('/guest/register', { weddingId, ...payload });
 }
