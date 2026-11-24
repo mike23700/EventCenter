@@ -28,6 +28,9 @@ export default function TablesEditor() {
   const [newTableCapacity, setNewTableCapacity] = useState('10');
   const [newTableEventId, setNewTableEventId] = useState('');
   const [addGuestFor, setAddGuestFor] = useState<string | null>(null);
+  // Table en attente de confirmation de suppression (fenêtre de confirmation).
+  const [confirmingDelete, setConfirmingDelete] = useState<TablePlan | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   async function reload() {
     if (!wedding) return;
@@ -124,7 +127,10 @@ export default function TablesEditor() {
   }
 
   async function removeTable(id: string) {
+    setDeleting(true);
     const { error } = await db.from('tables_plan').delete().eq('id', id);
+    setDeleting(false);
+    setConfirmingDelete(null);
     if (error) {
       setError(error.message);
       return;
@@ -187,7 +193,7 @@ export default function TablesEditor() {
                 <CheckCircle2 className="h-3.5 w-3.5" /> Table complète
               </span>
             )}
-            <button onClick={() => removeTable(t.id)} className="btn-outline !px-2 hover:!border-red-300 hover:!text-red-600" title="Supprimer la table">
+            <button onClick={() => setConfirmingDelete(t)} className="btn-outline !px-2 hover:!border-red-300 hover:!text-red-600" title="Supprimer la table">
               <Trash2 className="h-4 w-4" />
             </button>
           </div>
@@ -332,6 +338,34 @@ export default function TablesEditor() {
           ))}
         </div>
       )}
+
+      {confirmingDelete && (() => {
+        const seated = assignments.filter((a) => a.table_id === confirmingDelete.id).length;
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+            onClick={() => !deleting && setConfirmingDelete(null)}
+          >
+            <div role="dialog" aria-modal="true" className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+              <h3 className="font-display text-lg font-bold text-ink">Supprimer cette table ?</h3>
+              <p className="mt-2 text-sm text-ink-secondary">
+                « {confirmingDelete.name} » sera définitivement supprimée.
+                {seated > 0
+                  ? ` ${seated} invité${seated > 1 ? 's y sont assis : ils' : ' y est assis : il'} n'aur${seated > 1 ? 'ont' : 'a'} plus de table (les invités eux-mêmes ne sont pas supprimés).`
+                  : ' Aucun invité n\'y est assis.'}
+                {' '}Cette action est irréversible.
+              </p>
+              <div className="mt-6 flex justify-end gap-2">
+                <button onClick={() => setConfirmingDelete(null)} disabled={deleting} className="btn-outline">Annuler</button>
+                <button onClick={() => removeTable(confirmingDelete.id)} disabled={deleting} className="btn bg-red-600 text-white hover:bg-red-700">
+                  <Trash2 className="h-4 w-4" />
+                  {deleting ? 'Suppression…' : 'Supprimer'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

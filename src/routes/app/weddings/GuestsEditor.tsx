@@ -173,6 +173,9 @@ export default function GuestsEditor() {
   const [viewingResponsesFor, setViewingResponsesFor] = useState<string | null>(null);
   const [categories, setCategories] = useState<GuestCategory[]>([]);
   const [categoryFilter, setCategoryFilter] = useState('');
+  // Invité en attente de confirmation de suppression (fenêtre de confirmation).
+  const [confirmingDelete, setConfirmingDelete] = useState<Guest | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!wedding) return;
@@ -396,7 +399,10 @@ export default function GuestsEditor() {
   }
 
   async function remove(id: string) {
+    setDeleting(true);
     const { error } = await db.from('guests').delete().eq('id', id);
+    setDeleting(false);
+    setConfirmingDelete(null);
     if (error) setError(error.message);
     else setGuests((prev) => prev.filter((g) => g.id !== id));
   }
@@ -669,7 +675,7 @@ export default function GuestsEditor() {
                         <GuestInviteActions wedding={wedding} guest={g} />
                         <GuestQrDownload wedding={wedding} guest={g} />
                         <button onClick={() => openEdit(g)} className="btn-outline !px-2" title="Modifier"><Pencil className="h-4 w-4" /></button>
-                        <button onClick={() => remove(g.id)} className="btn-outline !px-2 hover:!border-red-300 hover:!text-red-600" title="Supprimer"><Trash2 className="h-4 w-4" /></button>
+                        <button onClick={() => setConfirmingDelete(g)} className="btn-outline !px-2 hover:!border-red-300 hover:!text-red-600" title="Supprimer"><Trash2 className="h-4 w-4" /></button>
                       </div>
                     </td>
                   </tr>
@@ -702,6 +708,28 @@ export default function GuestsEditor() {
         {eventFilter || selectedQuestion ? ' correspondant' + (filteredGuests.length > 1 ? 's' : '') : ' enregistré' + (filteredGuests.length > 1 ? 's' : '')}
         {eventFilter || selectedQuestion ? ` (sur ${guests.length} au total).` : '.'}
       </p>
+
+      {confirmingDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => !deleting && setConfirmingDelete(null)}
+        >
+          <div role="dialog" aria-modal="true" className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-display text-lg font-bold text-ink">Supprimer cet invité ?</h3>
+            <p className="mt-2 text-sm text-ink-secondary">
+              « {confirmingDelete.name} » sera définitivement supprimé(e), avec sa place à table, ses réponses
+              et son pointage. Son lien personnel et son QR ne fonctionneront plus. Cette action est irréversible.
+            </p>
+            <div className="mt-6 flex justify-end gap-2">
+              <button onClick={() => setConfirmingDelete(null)} disabled={deleting} className="btn-outline">Annuler</button>
+              <button onClick={() => remove(confirmingDelete.id)} disabled={deleting} className="btn bg-red-600 text-white hover:bg-red-700">
+                <Trash2 className="h-4 w-4" />
+                {deleting ? 'Suppression…' : 'Supprimer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
