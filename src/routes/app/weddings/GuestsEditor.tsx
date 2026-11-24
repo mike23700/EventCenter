@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import SuccessModal from '../../../components/SuccessModal';
+import BulkWhatsAppSender, { readSent } from './BulkWhatsAppSender';
 import { useOutletContext } from 'react-router-dom';
 import { Plus, Pencil, Trash2, Check, X, Users, Filter, ClipboardList, QrCode, Link2, MessageCircle, Download } from 'lucide-react';
 import { db } from '../../../lib/db';
@@ -177,6 +178,10 @@ export default function GuestsEditor() {
   // Invité en attente de confirmation de suppression (fenêtre de confirmation).
   const [confirmingDelete, setConfirmingDelete] = useState<Guest | null>(null);
   const [deleting, setDeleting] = useState(false);
+  // Sélection multiple → envoi groupé guidé sur WhatsApp.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [waSent, setWaSent] = useState<Record<string, string>>(() => readSent(wedding.id));
   const [success, setSuccess] = useState('');
   const closeSuccess = useCallback(() => setSuccess(''), []);
 
@@ -413,7 +418,14 @@ export default function GuestsEditor() {
     setDeleting(false);
     setConfirmingDelete(null);
     if (error) setError(error.message);
-    else setGuests((prev) => prev.filter((g) => g.id !== id));
+    else {
+      setGuests((prev) => prev.filter((g) => g.id !== id));
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
   }
 
   return (
@@ -630,10 +642,44 @@ export default function GuestsEditor() {
       )}
 
       {filteredGuests.length > 0 && !draft && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-borderlight bg-white px-3 py-2 text-sm">
+          <span className="text-ink-secondary">
+            {selected.size > 0 ? `${selected.size} invité${selected.size > 1 ? 's' : ''} sélectionné${selected.size > 1 ? 's' : ''}` : 'Cochez des invités pour leur envoyer leur invitation sur WhatsApp, un par un.'}
+          </span>
+          <div className="ml-auto flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="btn-outline !py-1.5 text-xs"
+              onClick={() => setSelected(new Set(filteredGuests.filter((g) => !waSent[g.id]).map((g) => g.id)))}
+              title="Sélectionner les invités affichés qui n'ont pas encore reçu leur invitation"
+            >
+              Pas encore envoyés
+            </button>
+            {selected.size > 0 && (
+              <>
+                <button type="button" className="btn-outline !py-1.5 text-xs" onClick={() => setSelected(new Set())}>Désélectionner</button>
+                <button type="button" className="btn !py-1.5 bg-emerald-600 text-xs text-white hover:bg-emerald-700" onClick={() => setBulkOpen(true)}>
+                  <MessageCircle className="h-4 w-4" /> Envoyer sur WhatsApp ({selected.size})
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {filteredGuests.length > 0 && !draft && (
         <div className="overflow-x-auto rounded-2xl border border-borderlight bg-white shadow-sm">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="border-b border-borderlight bg-paper-cream text-xs uppercase tracking-wide text-ink-secondary">
               <tr>
+                <th className="w-10 py-3 pl-4">
+                  <input
+                    type="checkbox"
+                    aria-label="Tout sélectionner"
+                    checked={filteredGuests.length > 0 && filteredGuests.every((g) => selected.has(g.id))}
+                    onChange={(e) => setSelected(e.target.checked ? new Set(filteredGuests.map((g) => g.id)) : new Set())}
+                  />
+                </th>
                 <th className="px-4 py-3">Nom</th>
                 <th className="px-4 py-3">Téléphone</th>
                 <th className="px-4 py-3">Convié à</th>
@@ -647,8 +693,21 @@ export default function GuestsEditor() {
             <tbody>
               {filteredGuests.map((g) => (
                 <Fragment key={g.id}>
-                  <tr className="border-b border-borderlight/60 last:border-0">
-                    <td className="px-4 py-3 font-medium text-ink">{g.name}{(g.plus_ones ?? 0) > 0 && <span className="ml-1 rounded-full bg-paper-cream px-1.5 text-xs text-ink-secondary" title="Accompagnants">+{g.plus_ones}</span>}{g.category && categories.find((c) => c.id === g.category) && <span className="ml-1 rounded-full border border-gold/40 px-1.5 text-[10px] text-gold">{categories.find((c) => c.id === g.category)!.label}</span>}</td>
+                  <tr className={`border-b border-borderlight/60 last:border-0 ${selected.has(g.id) ? 'bg-paper-cream/50' : ''}`}>
+                    <td className="py-3 pl-4">
+                      <input
+                        type="checkbox"
+                        aria-label={`Sélectionner ${g.name}`}
+                        checked={selected.has(g.id)}
+                        onChange={() => setSelected((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(g.id)) next.delete(g.id);
+                          else next.add(g.id);
+                          return next;
+                        })}
+                      />
+                    </td>
+                    <td className="px-4 py-3 font-medium text-ink">{g.name}{waSent[g.id] && <span className="ml-1 rounded-full bg-emerald-50 px-1.5 text-[10px] font-medium text-emerald-700" title={`Invitation envoyée sur WhatsApp le ${new Date(waSent[g.id]).toLocaleString('fr-FR')} (depuis cet appareil)`}>WhatsApp ✓</span>}{(g.plus_ones ?? 0) > 0 && <span className="ml-1 rounded-full bg-paper-cream px-1.5 text-xs text-ink-secondary" title="Accompagnants">+{g.plus_ones}</span>}{g.category && categories.find((c) => c.id === g.category) && <span className="ml-1 rounded-full border border-gold/40 px-1.5 text-[10px] text-gold">{categories.find((c) => c.id === g.category)!.label}</span>}</td>
                     <td className="px-4 py-3 text-ink-secondary">{g.phone ?? '—'}</td>
                     <td className="px-4 py-3">
                       {(g.invited_events ?? []).length === 0 ? (
@@ -690,7 +749,7 @@ export default function GuestsEditor() {
                   </tr>
                   {viewingResponsesFor === g.id && (
                     <tr className="border-b border-borderlight/60 bg-paper-cream/60 last:border-0">
-                      <td colSpan={6} className="px-4 py-3">
+                      <td colSpan={7} className="px-4 py-3">
                         <div className="space-y-2">
                           {guestAnswers(g.id).map(({ question, answer }) => (
                             <div key={question.key} className="text-sm">
@@ -717,6 +776,15 @@ export default function GuestsEditor() {
         {eventFilter || selectedQuestion ? ' correspondant' + (filteredGuests.length > 1 ? 's' : '') : ' enregistré' + (filteredGuests.length > 1 ? 's' : '')}
         {eventFilter || selectedQuestion ? ` (sur ${guests.length} au total).` : '.'}
       </p>
+
+      {bulkOpen && (
+        <BulkWhatsAppSender
+          wedding={wedding}
+          guests={guests.filter((g) => selected.has(g.id))}
+          onClose={() => setBulkOpen(false)}
+          onSentChange={setWaSent}
+        />
+      )}
 
       {confirmingDelete && (
         <div
