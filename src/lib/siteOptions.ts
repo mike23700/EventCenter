@@ -26,55 +26,96 @@ export interface IntroConfig {
 /**
  * Décors des coins (remplace les bouquets dessinés) : images envoyées par
  * l'admin, posées dans un cadre carré fixe à chaque coin. Le côté droit est
- * le miroir du côté gauche ; le bas reprend l'image du haut retournée si
- * aucune image propre n'est fournie.
+ * le miroir du côté gauche ; le bas reprend la même image, retournée.
+ * (Une ancienne « image des coins du bas » éventuellement enregistrée est ignorée.)
  */
 export interface CornersConfig {
-  top: string;        // image des coins du haut (orientée vers le coin haut-gauche)
-  bottom: string;     // image des coins du bas (facultative)
-  showTop: boolean;
-  showBottom: boolean;
+  top: string;        // image des coins (orientée vers le coin haut-gauche)
+  rotateTop: CornerRotation; // rotation de l'image (sens horaire)
+  introTop: boolean;    // page de garde : coins du haut
+  introBottom: boolean; // page de garde : coins du bas
+  siteTop: boolean;     // site : coins du haut du premier bloc (couverture)
+  siteBottom: boolean;  // site : coins du bas du dernier bloc (pied de page)
   mirror: boolean;    // des deux côtés (droite = miroir)
   size: 'sm' | 'md' | 'lg';
   opacity: number;    // 30 à 100 (%)
-  intro: boolean;     // sur la page de garde
-  cover: boolean;     // sur la couverture
 }
+
+export type CornerRotation = 0 | 90 | 180 | 270;
+
+const readRotation = (v: unknown): CornerRotation => (v === 90 || v === 180 || v === 270 ? v : 0);
 
 export const DEFAULT_CORNERS: CornersConfig = {
   top: '',
-  bottom: '',
-  showTop: true,
-  showBottom: true,
+  rotateTop: 0,
+  introTop: false,
+  introBottom: true,
+  siteTop: true,
+  siteBottom: false,
   mirror: true,
   size: 'md',
   opacity: 100,
-  intro: true,
-  cover: true,
 };
 
 export function readCorners(v: unknown): CornersConfig {
   const c = rec(v);
-  const b = (k: keyof CornersConfig) => (typeof c[k] === 'boolean' ? (c[k] as boolean) : (DEFAULT_CORNERS[k] as boolean));
+  // Booléen enregistré, sinon `fallback` (anciens réglages), sinon la valeur par défaut.
+  const b = (k: string, fallback?: boolean) =>
+    typeof c[k] === 'boolean' ? (c[k] as boolean) : fallback ?? (DEFAULT_CORNERS[k as keyof CornersConfig] as boolean);
+  // Anciens réglages (avant la séparation page de garde / site) :
+  // showTop/showBottom + intro/cover, la page de garde n'ayant que le bas et la couverture que le haut.
+  const old = (k: string) => (typeof c[k] === 'boolean' ? (c[k] as boolean) : true);
+  const legacy = 'showTop' in c || 'intro' in c || 'cover' in c;
   const op = typeof c.opacity === 'number' ? c.opacity : 100;
   return {
     top: s(c, 'top'),
-    bottom: s(c, 'bottom'),
-    showTop: b('showTop'),
-    showBottom: b('showBottom'),
+    rotateTop: readRotation(c.rotateTop),
+    introTop: b('introTop', legacy ? false : undefined),
+    introBottom: b('introBottom', legacy ? old('intro') && old('showBottom') : undefined),
+    siteTop: b('siteTop', legacy ? old('cover') && old('showTop') : undefined),
+    siteBottom: b('siteBottom', legacy ? false : undefined),
     mirror: b('mirror'),
     size: c.size === 'sm' || c.size === 'lg' ? c.size : 'md',
     opacity: Math.max(30, Math.min(100, Math.round(op))),
-    intro: b('intro'),
-    cover: b('cover'),
   };
 }
 
-/** Coins réellement affichés à un endroit donné (rien si aucune image). */
-export function cornersAt(c: CornersConfig, where: 'intro' | 'cover'): { top: boolean; bottom: boolean } {
-  if (!c.top && !c.bottom) return { top: false, bottom: false };
-  if (!c[where]) return { top: false, bottom: false };
-  return { top: c.showTop && !!c.top, bottom: c.showBottom && !!(c.bottom || c.top) };
+/**
+ * Coins réellement affichés à un endroit donné (rien sans image) :
+ *   - intro  : la page de garde (haut et/ou bas, au choix) ;
+ *   - cover  : le premier bloc du site (coins du haut seulement) ;
+ *   - footer : le dernier bloc du site, le pied de page (coins du bas seulement).
+ */
+export function cornersAt(c: CornersConfig, where: 'intro' | 'cover' | 'footer'): { top: boolean; bottom: boolean } {
+  const hasTop = !!c.top;
+  const hasBottom = hasTop;
+  if (where === 'intro') return { top: c.introTop && hasTop, bottom: c.introBottom && hasBottom };
+  if (where === 'cover') return { top: c.siteTop && hasTop, bottom: false };
+  return { top: false, bottom: c.siteBottom && hasBottom };
+}
+
+/**
+ * Style de l'image d'un coin : rotation (quart de tour), puis retournement
+ * vertical (bas sans image propre) et miroir (côté droit). L'image reste
+ * calée contre son coin : on choisit, avant rotation, le coin du cadre
+ * qui atterrira sur le bon coin une fois l'image tournée.
+ */
+export function cornerImageStyle(pos: 'tl' | 'tr' | 'bl' | 'br', flipY: boolean, rotation: CornerRotation): { objectPosition: string; transform?: string } {
+  const right = pos === 'tr' || pos === 'br';
+  const isBottom = pos === 'bl' || pos === 'br';
+  // Coin visé avant miroir/retournement (le miroir ramène l'image à droite).
+  const target = isBottom && !flipY ? 'bl' : 'tl';
+  const order = ['tl', 'tr', 'br', 'bl'] as const; // sens horaire
+  const anchor = order[(order.indexOf(target) - rotation / 90 + 4) % 4];
+  const sx = right ? -1 : 1;
+  const sy = flipY ? -1 : 1;
+  const parts: string[] = [];
+  if (sx !== 1 || sy !== 1) parts.push(`scale(${sx}, ${sy})`);
+  if (rotation) parts.push(`rotate(${rotation}deg)`);
+  return {
+    objectPosition: `${anchor[1] === 'l' ? 'left' : 'right'} ${anchor[0] === 't' ? 'top' : 'bottom'}`,
+    transform: parts.length ? parts.join(' ') : undefined,
+  };
 }
 
 export interface SiteOptions {

@@ -1,6 +1,9 @@
+import { RotateCw } from 'lucide-react';
 import MediaUploader from './MediaUploader';
 import { storageUrl } from '../lib/media';
-import type { CornersConfig } from '../lib/siteOptions';
+import { cornerImageStyle, type CornerRotation, type CornersConfig } from '../lib/siteOptions';
+
+const nextRotation = (r: CornerRotation): CornerRotation => ((r + 90) % 360) as CornerRotation;
 
 /**
  * Thème → « Décors des coins » : images envoyées par l'admin (bouquets,
@@ -20,52 +23,65 @@ export default function CornersEditor({
   const chip = (active: boolean) =>
     `rounded-full border px-3 py-1.5 text-xs font-medium transition ${active ? 'border-gold bg-gold text-white' : 'border-borderlight bg-white text-ink-secondary hover:border-gold/50'}`;
   const top = storageUrl('media', value.top || null);
-  const bottom = storageUrl('media', value.bottom || null) ?? top;
-  const hasImage = !!(value.top || value.bottom);
+  const hasImage = !!value.top;
 
   return (
     <div className="space-y-4 rounded-xl border border-borderlight p-4">
       <div>
         <p className="font-medium text-ink">Décors des coins (images)</p>
         <p className="text-xs text-ink-secondary">
-          Vos images (bouquets, feuillages, dorures…) sont posées dans les coins de la page de garde et de la
-          couverture, dans un cadre carré fixe : elles ne sont jamais déformées ni coupées.
+          Une image (bouquet, feuillage, dorure…) posée dans un cadre carré fixe à chaque coin, sans être déformée ni
+          coupée. Pour les coins du bas, elle est retournée automatiquement.
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-[1fr,12rem]">
-        <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <MediaUploader
-              bucket="media"
-              folder={`${folder}/decors`}
-              accept="image/png,image/webp,image/gif,image/jpeg"
-              label="Image des coins du haut"
-              value={value.top}
-              onChange={(v) => set({ top: v ?? '' })}
-              hint="PNG transparent, carré 800 × 800 px, motif tourné vers le coin HAUT-GAUCHE"
-            />
-            <MediaUploader
-              bucket="media"
-              folder={`${folder}/decors`}
-              accept="image/png,image/webp,image/gif,image/jpeg"
-              label="Image des coins du bas (facultatif)"
-              value={value.bottom}
-              onChange={(v) => set({ bottom: v ?? '' })}
-              hint="Sinon : l'image du haut, retournée. Motif tourné vers le coin BAS-GAUCHE"
-            />
-          </div>
+      <div className="grid gap-5 sm:grid-cols-[1fr,16rem]">
+        <div className="space-y-5">
+          <div className="grid gap-5 sm:grid-cols-2">
+            {/* L'image et sa rotation */}
+            <div>
+              <MediaUploader
+                bucket="media"
+                folder={`${folder}/decors`}
+                accept="image/png,image/webp,image/gif,image/jpeg"
+                label="Image des coins"
+                value={value.top}
+                onChange={(v) => set({ top: v ?? '' })}
+                hint="PNG transparent, carré 800 × 800 px, motif tourné vers le coin HAUT-GAUCHE"
+              />
+              {value.top && (
+                <RotateButton rotation={value.rotateTop} onClick={() => set({ rotateTop: nextRotation(value.rotateTop) })} />
+              )}
+            </div>
 
-          <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-ink">
-            <label className="flex items-center gap-2">
-              <input type="checkbox" checked={value.showTop} onChange={(e) => set({ showTop: e.target.checked })} /> Coins du haut
-            </label>
-            <label className="flex items-center gap-2">
-              <input type="checkbox" checked={value.showBottom} onChange={(e) => set({ showBottom: e.target.checked })} /> Coins du bas
-            </label>
-            <label className="flex items-center gap-2">
-              <input type="checkbox" checked={value.mirror} onChange={(e) => set({ mirror: e.target.checked })} /> Des deux côtés (le droit en miroir)
-            </label>
+            {/* Où les afficher */}
+            <div>
+              <p className="label">Emplacements</p>
+              <div className="divide-y divide-borderlight rounded-lg border border-borderlight text-sm text-ink">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-3 py-2.5">
+                  <span className="w-28 font-medium">Page de garde</span>
+                  <label className="flex items-center gap-2">
+                    <input type="checkbox" checked={value.introTop} onChange={(e) => set({ introTop: e.target.checked })} /> En haut
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input type="checkbox" checked={value.introBottom} onChange={(e) => set({ introBottom: e.target.checked })} /> En bas
+                  </label>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-3 py-2.5">
+                  <span className="w-28 font-medium">Site</span>
+                  <label className="flex items-center gap-2" title="Coins du haut du premier bloc (couverture)">
+                    <input type="checkbox" checked={value.siteTop} onChange={(e) => set({ siteTop: e.target.checked })} /> En haut
+                  </label>
+                  <label className="flex items-center gap-2" title="Coins du bas du dernier bloc (pied de page)">
+                    <input type="checkbox" checked={value.siteBottom} onChange={(e) => set({ siteBottom: e.target.checked })} /> En bas
+                  </label>
+                </div>
+                <label className="flex items-center gap-2 px-3 py-2.5">
+                  <input type="checkbox" checked={value.mirror} onChange={(e) => set({ mirror: e.target.checked })} /> Des deux côtés (le droit en miroir)
+                </label>
+              </div>
+              <p className="mt-1 text-[11px] text-ink-secondary">Site : en haut du premier bloc, en bas du dernier bloc.</p>
+            </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -85,34 +101,14 @@ export default function CornersEditor({
               <input type="range" min={30} max={100} step={5} value={value.opacity} onChange={(e) => set({ opacity: Number(e.target.value) })} className="w-full accent-gold" />
             </div>
           </div>
-
-          <div>
-            <label className="label">Où les afficher</label>
-            <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-ink">
-              <label className="flex items-center gap-2">
-                <input type="checkbox" checked={value.intro} onChange={(e) => set({ intro: e.target.checked })} /> Page de garde
-              </label>
-              <label className="flex items-center gap-2">
-                <input type="checkbox" checked={value.cover} onChange={(e) => set({ cover: e.target.checked })} /> Couverture (coins du haut uniquement)
-              </label>
-            </div>
-          </div>
         </div>
 
-        {/* Aperçu : un écran de téléphone avec les 4 cadres */}
-        <div>
+        {/* Aperçus : la page de garde et le site, chacun avec ses coins */}
+        <div className="space-y-3">
           <p className="label">Aperçu</p>
-          <div className="relative mx-auto h-64 w-40 overflow-hidden rounded-2xl border-4 border-ink/80 bg-paper-warm">
-            {!hasImage && (
-              <p className="absolute inset-0 flex items-center justify-center px-3 text-center text-[11px] text-ink-secondary">
-                Ajoutez une image pour voir le rendu
-              </p>
-            )}
-            {value.showTop && top && <PreviewBox src={top} pos="tl" opacity={value.opacity} />}
-            {value.showTop && top && value.mirror && <PreviewBox src={top} pos="tr" opacity={value.opacity} />}
-            {value.showBottom && bottom && <PreviewBox src={bottom} pos="bl" flipY={!value.bottom} opacity={value.opacity} />}
-            {value.showBottom && bottom && value.mirror && <PreviewBox src={bottom} pos="br" flipY={!value.bottom} opacity={value.opacity} />}
-            <p className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center font-display text-sm text-ink">Camille &amp; Jean</p>
+          <div className="flex justify-center gap-3">
+            <PreviewScreen label="Page de garde" value={value} top={top} hasImage={hasImage} showTop={value.introTop} showBottom={value.introBottom} />
+            <PreviewScreen label="Site" value={value} top={top} hasImage={hasImage} showTop={value.siteTop} showBottom={value.siteBottom} />
           </div>
         </div>
       </div>
@@ -120,7 +116,53 @@ export default function CornersEditor({
   );
 }
 
-function PreviewBox({ src, pos, flipY = false, opacity }: { src: string; pos: 'tl' | 'tr' | 'bl' | 'br'; flipY?: boolean; opacity: number }) {
+function PreviewScreen({
+  label,
+  value,
+  top,
+  hasImage,
+  showTop,
+  showBottom,
+}: {
+  label: string;
+  value: CornersConfig;
+  top: string | null;
+  hasImage: boolean;
+  showTop: boolean;
+  showBottom: boolean;
+}) {
+  return (
+    <div className="text-center">
+      <div className="relative h-52 w-28 overflow-hidden rounded-2xl border-4 border-ink/80 bg-paper-warm">
+        {!hasImage && (
+          <p className="absolute inset-0 flex items-center justify-center px-2 text-center text-[10px] text-ink-secondary">
+            Ajoutez une image
+          </p>
+        )}
+        {showTop && top && <PreviewBox src={top} pos="tl" rotation={value.rotateTop} opacity={value.opacity} />}
+        {showTop && top && value.mirror && <PreviewBox src={top} pos="tr" rotation={value.rotateTop} opacity={value.opacity} />}
+        {showBottom && top && <PreviewBox src={top} pos="bl" flipY rotation={value.rotateTop} opacity={value.opacity} />}
+        {showBottom && top && value.mirror && <PreviewBox src={top} pos="br" flipY rotation={value.rotateTop} opacity={value.opacity} />}
+        <p className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center font-display text-xs text-ink">Camille &amp; Jean</p>
+      </div>
+      <p className="mt-1 text-[11px] text-ink-secondary">{label}</p>
+    </div>
+  );
+}
+
+function RotateButton({ rotation, onClick }: { rotation: CornerRotation; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-borderlight bg-white px-3 py-1.5 text-xs font-medium text-ink-secondary transition hover:border-gold/50"
+    >
+      <RotateCw className="h-3.5 w-3.5" /> Tourner d'un quart de tour{rotation ? ` (${rotation}°)` : ''}
+    </button>
+  );
+}
+
+function PreviewBox({ src, pos, flipY = false, rotation, opacity }: { src: string; pos: 'tl' | 'tr' | 'bl' | 'br'; flipY?: boolean; rotation: CornerRotation; opacity: number }) {
   const right = pos === 'tr' || pos === 'br';
   const bottom = pos === 'bl' || pos === 'br';
   return (
@@ -132,10 +174,7 @@ function PreviewBox({ src, pos, flipY = false, opacity }: { src: string; pos: 't
         src={src}
         alt=""
         className="h-full w-full object-contain"
-        style={{
-          objectPosition: `left ${bottom && !flipY ? 'bottom' : 'top'}`,
-          transform: right || flipY ? `scale(${right ? -1 : 1}, ${flipY ? -1 : 1})` : undefined,
-        }}
+        style={cornerImageStyle(pos, flipY, rotation)}
       />
     </div>
   );

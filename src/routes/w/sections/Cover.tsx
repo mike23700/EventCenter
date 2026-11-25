@@ -35,9 +35,9 @@ function hhmm(iso: string): string {
   return `${String(d.getHours()).padStart(2, '0')}H${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-/** Couverture : décors des coins en HAUT seulement (jamais en bas de la section). */
+/** Couverture : décors des coins en HAUT seulement (le bas du site est le pied de page). */
 function coverCorners(c: Parameters<typeof cornersAt>[0]) {
-  return { ...cornersAt(c, 'cover'), bottom: false };
+  return cornersAt(c, 'cover');
 }
 
 function scrollToSection(type: string) {

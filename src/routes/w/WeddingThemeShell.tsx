@@ -4,6 +4,8 @@ import { weddingTemplate, readThemeLook, patternBackground } from '../../lib/the
 import { DISPLAY_FONTS, BODY_FONTS } from '../../lib/format';
 import AudioToggle from './AudioToggle';
 import { storageUrl } from '../../lib/media';
+import { cornersAt, readCorners } from '../../lib/siteOptions';
+import CornerDecor, { CORNER_MIN_H } from './CornerDecor';
 
 /**
  * Habillage commun à toutes les pages publiques d'un mariage (site principal,
@@ -16,6 +18,9 @@ export default function WeddingThemeShell({ wedding, children }: { wedding: Wedd
     ? (wedding.theme as Record<string, unknown>)
     : {};
   const accent = (theme['primaryColor'] as string) ?? '#C9A34A';
+  // Décors des coins du bas du site : posés sur le dernier bloc (pied de page).
+  const corners = readCorners(theme['corners']);
+  const footerCorners = cornersAt(corners, 'footer');
   const displayFont = (theme['displayFont'] as string) ?? '';
   const bodyFont = (theme['bodyFont'] as string) ?? '';
   const footerText = (theme['footerText'] as string) || '';
@@ -108,9 +113,11 @@ export default function WeddingThemeShell({ wedding, children }: { wedding: Wedd
         {children}
 
         <footer
-          className="border-t py-10 text-center text-sm"
+          className={`relative overflow-hidden border-t py-10 text-center text-sm ${footerCorners.bottom ? `flex items-center justify-center ${CORNER_MIN_H[corners.size]}` : ''}`}
           style={{ borderColor: border, color: muted }}
         >
+          <CornerDecor corners={corners} {...footerCorners} />
+          <div className="relative z-[2]">
           {footerText ? (
             footerText
           ) : (
@@ -123,6 +130,7 @@ export default function WeddingThemeShell({ wedding, children }: { wedding: Wedd
               <span className="inline-flex items-center gap-1">{new Date().getFullYear()}</span>
             </>
           )}
+          </div>
         </footer>
       </div>
     </div>
