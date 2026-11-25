@@ -24,7 +24,10 @@ alter table public.sections
   check (type in ('cover','location','countdown','save_the_date','program',
                   'image_video','mixed','rsvp','gallery',
                   'tables','testimonials',
-                  'story','quote','info','thanks','dress_code','snapchat'));
+                  'story','quote','info','thanks','dress_code','snapchat',
+                  -- gifts / closing (migration 20) : déjà inclus pour que cette
+                  -- migration puisse être rejouée sur une base qui en contient.
+                  'gifts','closing'));
 
 -- (L'ouverture d'un lien personnel /w/slug?i=<qr_token> s'appuie sur l'index
 -- unique existant guests_qr_token_key : aucun index à ajouter.)

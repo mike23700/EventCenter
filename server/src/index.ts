@@ -14,6 +14,7 @@ import publicRoutes from './routes/public';
 import { weddingPreviewHandler } from './routes/og';
 import { shortLinkHandler, shortLinkLimit } from './routes/shortLink';
 import { backfillGuestShortCodes } from './shortCode';
+import { runMigrations } from './migrate';
 import { HttpError } from './httpError';
 import { securityHeaders, sameOriginWrites } from './security';
 import './types';
@@ -131,11 +132,29 @@ process.on('uncaughtException', (err) => {
 
 // Purge des sessions expirées : au démarrage puis toutes les 6 heures.
 purgeExpiredSessions().catch(() => {});
-// Codes courts des invités créés avant la migration 21.
-backfillGuestShortCodes().catch(() => {});
 setInterval(() => purgeExpiredSessions().catch(() => {}), 6 * 60 * 60 * 1000).unref();
 
 const port = Number(process.env.PORT ?? 4000);
-app.listen(port, () => {
-  console.log(`[api] listening on :${port}`);
-});
+
+/**
+ * AUTO_MIGRATE=true : applique les migrations en attente avant d'écouter
+ * (verrou Postgres : sûr avec plusieurs process). En cas d'échec, l'erreur
+ * est journalisée et l'API démarre quand même (la migration fautive n'a
+ * rien modifié) : corriger puis relancer « npm run migrate ».
+ */
+async function start(): Promise<void> {
+  if (process.env.AUTO_MIGRATE === 'true') {
+    try {
+      await runMigrations((line) => console.log(line));
+    } catch (e) {
+      console.error('[api] migrations au démarrage', e);
+    }
+  }
+  // Codes courts des invités créés avant la migration 21.
+  backfillGuestShortCodes().catch(() => {});
+  app.listen(port, () => {
+    console.log(`[api] listening on :${port}`);
+  });
+}
+
+start();
