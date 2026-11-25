@@ -28,7 +28,7 @@ Performances + Modèles + Liens de partage » (novembre 2026), **adapté à l'h�
 | `maj-o2switch.sh` | **Script de mise à jour automatique** (sauvegardes, migrations, fichiers, dépendances, redémarrage, vérifications) |
 | `1-site.zip` | Site compilé → `~/eventcenter-repo/dist` |
 | `2-api.zip` | API compilée → `~/eventcenter-repo/server` (`dist/`, `app.js`, `package.json`, `package-lock.json`) |
-| `3-sql.zip` | Migrations 18, 19, 20 et 21 (+ schéma complet pour une installation neuve) |
+| `3-sql.zip` | Migrations 18, 19, 20 et 21, **ou** `mise_a_niveau_production.sql` (les 4 en un seul fichier) + schéma complet pour une installation neuve |
 | `uploads.htaccess` | Seulement si les photos étaient un jour servies par Apache (pas le cas actuellement) |
 | `build.sh` | Régénère tous les zips (sur le PC) |
 | `sql/` | Sources des migrations |
@@ -171,7 +171,17 @@ unzip -o -q ~/maj/2-api.zip  -d ~/eventcenter-repo
 
 Ensuite, dans cPanel → *Setup Node.js App* : **Run NPM Install**, puis **Restart**.
 
-Sans terminal, les migrations peuvent se faire dans phpPgAdmin → `sc2biro3703_eventcenter` → **SQL** : collez le contenu de chaque fichier, dans l'ordre 18, 19, 20 puis 21.
+**Plus simple : un seul fichier.** `sql/mise_a_niveau_production.sql` regroupe les migrations 18 à 21
+(vérifié sur le dump de la base en ligne du 25/11/2026, PostgreSQL 9.6). Il s'exécute en une transaction
+(tout passe ou rien ne change), peut être relancé sans risque et ne touche à aucune donnée existante (sauf les
+sessions de connexion expirées) :
+
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/mise_a_niveau_production.sql
+```
+
+Sans terminal : phpPgAdmin → `sc2biro3703_eventcenter` → **SQL** → collez **tout** `mise_a_niveau_production.sql` → Exécuter
+(ou, au choix, les fichiers 18, 19, 20 puis 21, dans cet ordre).
 Au premier démarrage après la migration 21, l'API attribue un code court à chaque invité existant
 (visible dans `stderr.log` : « codes courts attribués à N invité(s) »).
 
