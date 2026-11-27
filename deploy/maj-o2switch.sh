@@ -7,7 +7,8 @@
 #
 #     cd ~/maj && bash maj-o2switch.sh
 #
-# Étapes : sauvegardes (base + code) → migrations SQL 18 à 21 → remplace le
+# Étapes : sauvegardes (base + code) → migrations (npm run migrate, suivies dans
+# la table schema_migrations) → remplace le
 # site et l'API → contrôle les variables de l'application → installe les
 # dépendances → redémarre → vérifie que tout répond.
 # Le script s'arrête à la première erreur.
@@ -94,13 +95,18 @@ fi
 ok "Code : code-$STAMP.zip"
 
 # ---------------------------------------------------------------------
-say "2/8 Migrations SQL"
-rm -rf "$MAJ/sql" && mkdir -p "$MAJ/sql" && unzip -o -q "$MAJ/3-sql.zip" -d "$MAJ/sql"
-for m in 18_invitation_personnalisee 19_securite_performances 20_modeles_reservation 21_liens_partage; do
-  psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -f "$MAJ/sql/$m.sql" >/dev/null 2>"$MAJ/sql/$m.log" \
-    || { cat "$MAJ/sql/$m.log"; die "Migration $m en erreur (rien n'a été remplacé ; sauvegardes dans $BACKUP)."; }
-  ok "$m"
-done
+say "2/8 Migrations de la base (Node : dist/migrate.js)"
+# Le nouveau migrate.js et ses fichiers SQL sont lancés depuis le paquet,
+# AVANT de remplacer le site : en cas d'erreur, rien n'est remplacé et la
+# migration fautive n'a rien modifié (transaction). Il utilise les modules
+# déjà installés de l'application (pg, dotenv) via NODE_PATH.
+rm -rf "$MAJ/api" && mkdir -p "$MAJ/api" && unzip -o -q "$MAJ/2-api.zip" -d "$MAJ/api"
+[ -f "$MAJ/api/server/dist/migrate.js" ] && [ -d "$MAJ/api/server/sql/migrations" ] \
+  || die "2-api.zip ne contient pas migrate.js ou sql/migrations : regénérez le paquet (bash deploy/build.sh)."
+( cd "$APP/server" && NODE_PATH="$APP/server/node_modules" node "$MAJ/api/server/dist/migrate.js" ) \
+  || die "Migration en erreur (rien n'a été remplacé ; sauvegardes dans $BACKUP)."
+( cd "$APP/server" && NODE_PATH="$APP/server/node_modules" node "$MAJ/api/server/dist/migrate.js" --status ) | sed 's/^/    /'
+ok "Base à jour"
 
 # ---------------------------------------------------------------------
 say "3/8 Remplacement du site et de l'API"

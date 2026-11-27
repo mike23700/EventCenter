@@ -36,6 +36,8 @@ cp -r dist "$WORK/site/dist"
 rm -rf -- "${WORK:?}/site/dist/uploads"
 cp -r server/dist "$WORK/api/server/dist"
 cp server/app.js server/package.json server/package-lock.json server/.env.example "$WORK/api/server/"
+# Migrations (lues par dist/migrate.js : server/sql/migrations).
+mkdir -p "$WORK/api/server/sql" && cp -r server/sql/migrations "$WORK/api/server/sql/"
 cp deploy/sql/*.sql "$WORK/sql/"
 cp server/sql/schema.sql "$WORK/sql/schema-complet-nouvelle-installation.sql"
 
