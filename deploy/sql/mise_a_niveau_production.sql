@@ -16,7 +16,8 @@
 -- AVANT : sauvegarder la base (pg_dump, ou phpPgAdmin → Exporter).
 -- Exécution :
 --   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f mise_a_niveau_production.sql
--- ou phpPgAdmin → base → SQL : coller tout le fichier, Exécuter.
+-- ou phpPgAdmin (connecté avec le compte cPanel = propriétaire des tables)
+--   → base sc2biro3703_eventcenter → SQL : coller tout le fichier, Exécuter.
 --
 -- APRÈS : redémarrer l'application (cPanel → Setup Node.js App → Restart).
 -- Au démarrage, l'API attribue un code court (lien /i/<code>) à chaque
@@ -86,6 +87,37 @@ drop index if exists public.guests_qr_token_idx;
 -- 5. Ménage : sessions de connexion expirées (migration 19)
 -- ---------------------------------------------------------------------
 delete from public.sessions where expires_at < now();
+
+-- ---------------------------------------------------------------------
+-- 6. Droits de l'application (utilisateur sc2biro3703_eventcenter_app)
+--    Ce fichier est exécuté par le PROPRIÉTAIRE des tables (compte cPanel,
+--    via phpPgAdmin) : la nouvelle table lui appartient, l'application doit
+--    pouvoir la lire et l'écrire. Les futures tables aussi (droits par défaut).
+-- ---------------------------------------------------------------------
+grant select, insert, update, delete on public.share_links to sc2biro3703_eventcenter_app;
+alter default privileges in schema public
+  grant select, insert, update, delete on tables to sc2biro3703_eventcenter_app;
+
+-- ---------------------------------------------------------------------
+-- 7. Suivi des migrations (comme « npm run migrate ») : 18 à 21 sont
+--    notées comme appliquées, avec l'empreinte de leur fichier, pour ne
+--    jamais être rejouées.
+-- ---------------------------------------------------------------------
+create table if not exists public.schema_migrations (
+  name       text primary key,
+  checksum   text not null,
+  applied_at timestamptz not null default now()
+);
+insert into public.schema_migrations (name, checksum)
+select v.name, v.checksum
+  from (values
+    ('18_invitation_personnalisee.sql', 'ea820afeb73bfb06a476f5c13750bdcaa14f3ae4b4c55208755c87e085c7ed09'),
+    ('19_securite_performances.sql',    'c0cdc07cc8e6623c236285bfd58a77beab0fc4002b20fcc65544297a23a22d9b'),
+    ('20_modeles_reservation.sql',      'a80c43ba07beb8cb58cf2ad507c2b72893591866873cc271c24e9d44e7f644e9'),
+    ('21_liens_partage.sql',            '8f14a4fd213cbc95dec3fe8b217b0413f221f7a40a1b31fe6d939c268de11abf')
+  ) as v(name, checksum)
+ where not exists (select 1 from public.schema_migrations m where m.name = v.name);
+grant select on public.schema_migrations to sc2biro3703_eventcenter_app;
 
 commit;
 
